@@ -29,6 +29,19 @@ python tools\transcode.py        # 720p-mp4 till media\, omslag till assets\post
 Finns ingen lokal mp4 spelar appen filmen via Google Drive-förhandsvisning
 i stället, vilket kräver ett Google-konto som fått filmen delad.
 
+## Artefakt på claude.ai
+
+Prototypen finns som privat artefakt: <https://claude.ai/artifact/J5Vw28eL5q5y2MAyhCRXao>
+(delas från sidans Share-meny). Den byggs av `artifact.html` plus de små
+filmerna från `media/small/`:
+
+```powershell
+python tools\transcode.py --small          # 480 px-filmer under 15 MB styck
+python tools\artifact-dist.py <utmapp>     # samlar allt som ska publiceras
+```
+
+Publicera sedan utmappens `index.html` med artefaktverktyget mot samma URL.
+
 ## Struktur
 
 | Väg | Innehåll |
