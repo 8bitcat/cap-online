@@ -1,0 +1,330 @@
+{
+  "brand": {
+    "name": "CAP Online",
+    "company": "Complete Athletic Performance",
+    "tagline": "Barnet får träningen. Föräldern får kunskapen. CAP ger vägledningen.",
+    "coach": "Haki",
+    "ages": "7–14 år"
+  },
+  "pillars": [
+    {
+      "id": "bollkontroll",
+      "name": "Bollkontroll",
+      "short": "Första touch · driv · förflyttning med boll · jonglering och bollkänsla",
+      "desc": "Grunden i allt. Ett barn som är trygg med bollen vid foten vågar mer, tänker snabbare och har roligare på planen."
+    },
+    {
+      "id": "teknik",
+      "name": "Teknik",
+      "short": "Dribblingar · tillslag: avslut, passningar, crossbollar och längre tillslag",
+      "desc": "Att våga utmana, slå en bra passning och avsluta rätt. Teknik som nöts in i rätt ålder sitter hela livet."
+    },
+    {
+      "id": "koordination",
+      "name": "Koordination",
+      "short": "Tajming · reaktion · perception och beslutsfattande · fin- och grovmotorik",
+      "desc": "Kroppen ska hänga med huvudet. Koordination gör att tekniken fungerar även i fart och under press."
+    }
+  ],
+  "sessions": [
+    {
+      "id": "uppvarmning-bollkontroll",
+      "title": "Uppvärmning + bollkontroll",
+      "pillar": "bollkontroll",
+      "type": "pass",
+      "level": "Alla nivåer",
+      "trainingMinutes": 50,
+      "videoSeconds": 66,
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
+      "space": "En yta på ungefär 10 × 10 meter",
+      "summary": "Ett komplett pass som börjar med uppvärmning med boll och går över i bollkontroll: första touch, driv och förflyttning med boll. Ett bra första pass för alla åldrar.",
+      "goals": [
+        "Komma igång med kroppen och bollen samtidigt",
+        "Många bolltouch på kort tid",
+        "Trygghet i att ha bollen nära foten i rörelse"
+      ],
+      "steps": [
+        { "name": "Sulrullningar och tåtouch", "minutes": 8, "desc": "Rulla bollen fram och tillbaka med sulan, snabba små touch med tårna. Som i början av filmen." },
+        { "name": "In- och utsida", "minutes": 10, "desc": "Flytta bollen mellan fötterna med insidan, sedan utsidan. Håll bollen nära." },
+        { "name": "Vändningar", "minutes": 10, "desc": "Driv några meter, vänd med sulan eller insidan och driv åt andra hållet." },
+        { "name": "Driv i fart", "minutes": 12, "desc": "Driv bollen över planen med få touch, stanna med sulan vid konen och byt riktning." },
+        { "name": "Bollkänsla till sist", "minutes": 10, "desc": "Lyft bollen och fånga den med foten, prova några jongleringar. Avsluta med något barnet kan." }
+      ],
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Kör passet två gånger i veckan i tre veckor. Byt gärna ordning på övningarna när barnet kan dem."
+      },
+      "video": {
+        "driveId": "1cue2ZXWEBrFFyDYEyPELCqxWCRMVhY_s",
+        "local": "media/uppvarmning-bollkontroll.mp4",
+        "poster": "assets/posters/uppvarmning-bollkontroll.jpg",
+        "portrait": true
+      }
+    },
+    {
+      "id": "forsta-touch",
+      "title": "Första touch",
+      "pillar": "bollkontroll",
+      "type": "pass",
+      "level": "Alla nivåer",
+      "trainingMinutes": 50,
+      "videoSeconds": 54,
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
+      "space": "En yta på ungefär 10 × 10 meter, gärna en vägg eller en medspelare",
+      "summary": "Första touchen avgör nästa aktion. Här tränar ni att ta emot bollen på ett sätt som gör passningen, driven eller avslutet enkelt.",
+      "goals": [
+        "Ta emot bollen med rätt del av foten",
+        "Rikta första touchen dit nästa aktion ska",
+        "Lugn i mottagningen även när bollen kommer i fart"
+      ],
+      "steps": [
+        { "name": "Mottagning med insidan", "minutes": 10, "desc": "Du rullar bollen, barnet tar emot med insidan mellan konerna och spelar tillbaka. Byt fot varannan gång." },
+        { "name": "Riktad första touch", "minutes": 12, "desc": "Ta emot och styr bollen åt sidan förbi konen i samma touch, spela sedan tillbaka." },
+        { "name": "Studsande boll", "minutes": 12, "desc": "Du kastar eller studsar bollen, barnet dämpar med insida, lår eller sula och lägger den framför sig." },
+        { "name": "På avstånd", "minutes": 12, "desc": "Längre bollar från andra sidan konerna. Barnet möter bollen i rörelse och tar den med sig." }
+      ],
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Passa gärna till barnet själv. Variera höjd och fart på bollen när mottagningen sitter."
+      },
+      "video": {
+        "driveId": "1Qq-mIfgJarv7BwjPla10wvayAyLlaSbO",
+        "local": "media/forsta-touch.mp4",
+        "poster": "assets/posters/forsta-touch.jpg",
+        "portrait": true
+      }
+    },
+    {
+      "id": "passningar",
+      "title": "Passningar",
+      "pillar": "teknik",
+      "type": "pass",
+      "level": "Alla nivåer",
+      "trainingMinutes": 50,
+      "videoSeconds": 32,
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
+      "space": "En yta på ungefär 10 × 15 meter, en vägg eller en medspelare",
+      "summary": "Tillslag och precision i passningsspelet. Insida, bredsida och tempo, med båda fötterna.",
+      "goals": [
+        "Rätt tillslag med insidan",
+        "Passa med båda fötterna",
+        "Passa så att mottagaren får en lätt boll"
+      ],
+      "steps": [
+        { "name": "Stödfoten bredvid bollen", "minutes": 8, "desc": "Ställ stödfoten intill bollen med tårna mot målet, som filmen visar. Passa lugnt med insidan." },
+        { "name": "Passning i konrutan", "minutes": 15, "desc": "Sitt eller stå mitt emot barnet. Passa genom konerna, barnet tar emot och passar tillbaka." },
+        { "name": "Båda fötterna", "minutes": 12, "desc": "Växla höger och vänster fot. Räkna passningar i rad utan miss." },
+        { "name": "Tempo", "minutes": 10, "desc": "Högre fart på bollen och färre touch innan passningen. Kvaliteten ska hålla." }
+      ],
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Räkna passningar i rad utan miss. Sätt ett nytt rekord varje vecka."
+      },
+      "video": {
+        "driveId": "1zejOW-2uw8jAs-PIGPQBjluhKygmM_x5",
+        "local": "media/passningar.mp4",
+        "poster": "assets/posters/passningar.jpg",
+        "portrait": true
+      }
+    },
+    {
+      "id": "dribblingar",
+      "title": "Dribblingar",
+      "pillar": "teknik",
+      "type": "pass",
+      "level": "Alla nivåer",
+      "trainingMinutes": 50,
+      "videoSeconds": 49,
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
+      "space": "En yta på ungefär 10 × 10 meter",
+      "summary": "Finter, riktningsbyten och mod att utmana en mot en. Övningar som bygger på varandra från långsamt till fart.",
+      "goals": [
+        "Bollen nära foten i riktningsbyten",
+        "Två eller tre finter som barnet kan i fart",
+        "Våga utmana en motståndare"
+      ],
+      "steps": [
+        { "name": "Driv till konen och vänd", "minutes": 10, "desc": "Driv bollen i fart till konerna längst bort, vänd och driv tillbaka. Få touch, titta upp." },
+        { "name": "Riktningsbyte vid konen", "minutes": 12, "desc": "Byt riktning med insidan eller utsidan vid varje kon. Bollen ska stanna nära foten." },
+        { "name": "Finter", "minutes": 12, "desc": "Lägg in en fint före varje riktningsbyte. Börja långsamt, öka farten när den sitter." },
+        { "name": "En mot en", "minutes": 12, "desc": "Du är motståndare, först passiv och sedan mer aktiv. Barnet ska ta sig förbi dig till konen." }
+      ],
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Var motståndare själv på slutet av passet. Börja passivt och öka motståndet vecka för vecka."
+      },
+      "video": {
+        "driveId": "12a3m67s_FwOBBFN5P00lz0Mv7mILYEFJ",
+        "local": "media/dribblingar.mp4",
+        "poster": "assets/posters/dribblingar.jpg",
+        "portrait": true
+      }
+    },
+    {
+      "id": "koordination",
+      "title": "Koordination",
+      "pillar": "koordination",
+      "type": "pass",
+      "level": "Alla nivåer",
+      "trainingMinutes": 50,
+      "videoSeconds": 54,
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
+      "space": "En yta på ungefär 10 × 10 meter",
+      "summary": "Tajming, reaktion och motorik med och utan boll. Passet gör att tekniken fungerar även i fart och under press.",
+      "goals": [
+        "Snabba fötter och bra balans",
+        "Reagera på signal och byta riktning",
+        "Koppla ihop rörelse med bollaktion"
+      ],
+      "steps": [
+        { "name": "Snabba fötter över bollen", "minutes": 8, "desc": "Tåtouch och sidosteg över bollen på stället, som i filmen. Korta set, vila emellan." },
+        { "name": "Konraden", "minutes": 12, "desc": "Sidosteg och hopp mellan konerna i rad. Lätta fötter, blicken upp." },
+        { "name": "Reagera på bollen", "minutes": 12, "desc": "Du sitter mitt emot och rullar bollen åt ena eller andra hållet. Barnet reagerar och tar bollen i första touchen." },
+        { "name": "Fötter plus bollaktion", "minutes": 12, "desc": "Fotarbete i konraden och direkt en passning eller ett driv när du rullar bollen." }
+      ],
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Korta intensiva moment med vila emellan. Kvalitet före mängd."
+      },
+      "video": {
+        "driveId": "1xHuc5FMzTAQVoExtvHujGWdkIYvPuclM",
+        "local": "media/koordination.mp4",
+        "poster": "assets/posters/koordination.jpg",
+        "portrait": true
+      }
+    }
+  ],
+  "guide": {
+    "title": "Föräldraguiden",
+    "intro": "Du behöver inte vara tränare för att vara en bra fotbollsförälder. Föräldraguiden hjälper dig skapa en miljö där barnet vågar, vill och utvecklas.",
+    "chapters": [
+      {
+        "id": "kommunikation",
+        "title": "Kommunikation",
+        "teaser": "Vad du säger före, under och efter träning och match.",
+        "body": [
+          "Barn hör tonen före orden. Korta, konkreta och positiva instruktioner fungerar bäst: \"Titta upp innan du passar\" slår \"Du måste titta upp!\" varje gång.",
+          "Under passet: säg en sak i taget. Efter passet: fråga vad barnet själv tyckte gick bra innan du säger något.",
+          "Utkast. Haki skriver den slutliga texten."
+        ]
+      },
+      {
+        "id": "feedback",
+        "title": "Feedback",
+        "teaser": "Hur du ger återkoppling som barnet tar till sig.",
+        "body": [
+          "Beröm ansträngning och försök, inte bara resultat. \"Du vågade prova finten tre gånger\" bygger mer än \"Bra mål\".",
+          "Rätta en sak åt gången och visa hellre än förklara. Låt barnet få känna skillnaden i kroppen.",
+          "Utkast. Haki skriver den slutliga texten."
+        ]
+      },
+      {
+        "id": "motivation",
+        "title": "Motivation",
+        "teaser": "Så håller ni lusten uppe över tid.",
+        "body": [
+          "Motivation kommer från att lyckas lite oftare än man misslyckas. Lägg träningen så att barnet lyckas tidigt i passet.",
+          "Rekord, räkna i rad och små tävlingar mot sig själv fungerar bättre än att jämföra med kompisar.",
+          "Utkast. Haki skriver den slutliga texten."
+        ]
+      },
+      {
+        "id": "press",
+        "title": "Press och förväntningar",
+        "teaser": "När engagemanget blir press utan att du märker det.",
+        "body": [
+          "Barn känner av förväntningar långt innan de uttalas. Frågan \"vann ni?\" säger något om vad som räknas.",
+          "Prata om vad barnet gjorde och lärde sig, inte vad barnet borde ha gjort.",
+          "Utkast. Haki skriver den slutliga texten."
+        ]
+      },
+      {
+        "id": "foralder-tranare",
+        "title": "Förälder kontra tränare",
+        "teaser": "Vilken roll du har hemma och vilken lagets tränare har.",
+        "body": [
+          "Hemma är du förälder först. Extraträningen är något ni gör tillsammans, inte ett krav ovanpå lagets träning.",
+          "Säg aldrig emot lagets tränare inför barnet. Ta frågor direkt med tränaren i stället.",
+          "Utkast. Haki skriver den slutliga texten."
+        ]
+      },
+      {
+        "id": "relationen",
+        "title": "Fotbollen och relationen",
+        "teaser": "Så blir fotbollen något som stärker er i stället för att skapa konflikter.",
+        "body": [
+          "Det viktigaste med extraträningen är inte tekniken, det är att ni har roligt ihop. Avsluta alltid passet medan det fortfarande är kul.",
+          "Låt barnet få bestämma en övning per pass. Det ökar ägandeskapet och minskar tjatet.",
+          "Utkast. Haki skriver den slutliga texten."
+        ]
+      }
+    ]
+  },
+  "choose": {
+    "title": "Hjälp mig välja",
+    "intro": "Berätta om ditt barn så föreslår vi var ni ska börja. Haki läser också dina svar och återkommer med en personlig rekommendation.",
+    "difficulties": [
+      {
+        "id": "touch",
+        "label": "Första touch och mottagning",
+        "sessions": [
+          "forsta-touch",
+          "uppvarmning-bollkontroll"
+        ]
+      },
+      {
+        "id": "passning",
+        "label": "Passningar och tillslag",
+        "sessions": [
+          "passningar"
+        ]
+      },
+      {
+        "id": "dribbling",
+        "label": "Dribbla, finta och våga utmana",
+        "sessions": [
+          "dribblingar"
+        ]
+      },
+      {
+        "id": "koordination",
+        "label": "Koordination, snabbhet och balans",
+        "sessions": [
+          "koordination"
+        ]
+      },
+      {
+        "id": "sjalvfortroende",
+        "label": "Självförtroende och mod",
+        "sessions": [
+          "dribblingar",
+          "uppvarmning-bollkontroll"
+        ],
+        "guide": [
+          "motivation",
+          "feedback"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+# Filmer: originalen (1,4 GB) och transkodade mp4 ligger utanför git.
+# Hämtas med tools/drive-download.py, transkodas med tools/transcode.ps1.
+media/
+
+# Lokalt
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
