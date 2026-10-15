@@ -6,6 +6,17 @@ konceptutkastet i `docs/CAP_Online_Konceptutkast_V0.1.pdf`.
 
 Vanilla HTML/CSS/JS, inget byggsteg. Innehållet ligger i `data/content.json`.
 
+Förstasidan väljer ett av tre spår som delar innehåll och sparad data:
+
+| Spår | Visar |
+|---|---|
+| 1 Träna mitt barn | biblioteket med de fem passen, Hjälp mig välja, Föräldraguiden |
+| 2 Spelarkortet | startguide (namn, ålder, position), Planera dagens pass, XP, nivåer, märken |
+| 3 Utbildningsvägen | fem nivåer med allmänna och positionsspecifika moduler, quiz, nivåprov |
+
+Knappen "PROTOTYP n" uppe till höger byter spår. Skärmdumpstest av hela
+flödet: `tools/screenshots-v2.js`.
+
 ## Köra lokalt
 
 ```powershell
