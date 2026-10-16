@@ -381,6 +381,22 @@ body.no-tabs { padding-bottom: 0; }
 .badge b { font-size: 14px; }
 .badge .small { color: var(--muted); font-size: 12px; }
 
+/* Filmdel per moment */
+.now {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 14px; margin: -6px 0 14px; min-height: 28px;
+}
+.now-btns { display: flex; gap: 6px; }
+.step-film { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.step-film .film { margin-top: 0; }
+.list .num {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: var(--surface2); font-weight: 800; font-size: 13px; color: var(--brand);
+}
+.card.program { border-color: var(--brand-deep); }
+.card.program .card-media { aspect-ratio: 16 / 9; }
+.card.program .card-media img { object-position: 50% 30%; }
+
 /* Planer */
 .eyebrow.phase { margin: 10px 0 2px; }
 .step .film {

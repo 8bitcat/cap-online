@@ -27,44 +27,204 @@
     }
   ],
   "positions": [
-    { "id": "mv", "name": "Målvakt", "short": "MV", "desc": "Händer, fötter och mod. Lagets sista utpost och första uppspelare." },
-    { "id": "back", "name": "Back", "short": "BACK", "desc": "Läser spelet, vinner bollen och startar anfallen." },
-    { "id": "mitt", "name": "Mittfältare", "short": "MITT", "desc": "Lagets motor. Tar emot, vänder och hittar passningen." },
-    { "id": "anf", "name": "Anfallare", "short": "ANF", "desc": "Löpningar, första touch mot mål och avslut." },
-    { "id": "okand", "name": "Vet inte än", "short": "NY", "desc": "Helt okej. Grunderna är samma för alla, positionen kommer med tiden." }
+    {
+      "id": "mv",
+      "name": "Målvakt",
+      "short": "MV",
+      "desc": "Händer, fötter och mod. Lagets sista utpost och första uppspelare."
+    },
+    {
+      "id": "back",
+      "name": "Back",
+      "short": "BACK",
+      "desc": "Läser spelet, vinner bollen och startar anfallen."
+    },
+    {
+      "id": "mitt",
+      "name": "Mittfältare",
+      "short": "MITT",
+      "desc": "Lagets motor. Tar emot, vänder och hittar passningen."
+    },
+    {
+      "id": "anf",
+      "name": "Anfallare",
+      "short": "ANF",
+      "desc": "Löpningar, första touch mot mål och avslut."
+    },
+    {
+      "id": "okand",
+      "name": "Vet inte än",
+      "short": "NY",
+      "desc": "Helt okej. Grunderna är samma för alla, positionen kommer med tiden."
+    }
   ],
-  "feet": ["Höger", "Vänster", "Båda"],
-  "experiences": ["Nybörjare", "Spelat 1–2 år", "Spelat 3 år eller mer"],
+  "feet": [
+    "Höger",
+    "Vänster",
+    "Båda"
+  ],
+  "experiences": [
+    "Nybörjare",
+    "Spelat 1–2 år",
+    "Spelat 3 år eller mer"
+  ],
   "game": {
     "levels": [
-      { "n": 1, "name": "Bollkompis", "xp": 0, "tagline": "Grunden för alla positioner" },
-      { "n": 2, "name": "Touchmästare", "xp": 200, "tagline": "Passning, dribbling och positionens första steg" },
-      { "n": 3, "name": "Dribblare", "xp": 500, "tagline": "Teknik i fart och tankarna före bollen" },
-      { "n": 4, "name": "Spelmotor", "xp": 1000, "tagline": "Press, tempo och ytor" },
-      { "n": 5, "name": "Matchvinnare", "xp": 2000, "tagline": "Avgör när det gäller" }
+      {
+        "n": 1,
+        "name": "Bollkompis",
+        "xp": 0,
+        "tagline": "Grunden för alla positioner"
+      },
+      {
+        "n": 2,
+        "name": "Touchmästare",
+        "xp": 200,
+        "tagline": "Passning, dribbling och positionens första steg"
+      },
+      {
+        "n": 3,
+        "name": "Dribblare",
+        "xp": 500,
+        "tagline": "Teknik i fart och tankarna före bollen"
+      },
+      {
+        "n": 4,
+        "name": "Spelmotor",
+        "xp": 1000,
+        "tagline": "Press, tempo och ytor"
+      },
+      {
+        "n": 5,
+        "name": "Matchvinnare",
+        "xp": 2000,
+        "tagline": "Avgör när det gäller"
+      }
     ],
-    "xp": { "pass": 50, "moment": 5, "traning": 40, "kunskap": 30, "prov": 100 },
+    "xp": {
+      "pass": 50,
+      "moment": 5,
+      "traning": 40,
+      "kunskap": 30,
+      "prov": 100
+    },
     "badges": [
-      { "id": "spelarkort", "name": "Spelarkortet", "desc": "Skapade spelarkortet", "icon": "🪪" },
-      { "id": "forsta-passet", "name": "Första passet", "desc": "Loggade ert första pass", "icon": "⚽" },
-      { "id": "planerare", "name": "Planeraren", "desc": "Lät appen planera ett pass", "icon": "🧠" },
-      { "id": "tre-pass", "name": "Tre pass", "desc": "Tre loggade pass", "icon": "🔥" },
-      { "id": "veckoplan", "name": "Veckans plan", "desc": "Två pass samma vecka", "icon": "📅" },
-      { "id": "bada-fotter", "name": "Båda fötterna", "desc": "Passningar tre gånger", "icon": "🦶" },
-      { "id": "teknikern", "name": "Teknikern", "desc": "Både Passningar och Dribblingar tränade", "icon": "🎯" },
-      { "id": "koordinator", "name": "Koordinatorn", "desc": "Koordination två gånger", "icon": "⚡" },
-      { "id": "kunskapstorst", "name": "Kunskapstörst", "desc": "Två kunskapsmoduler klara", "icon": "📘" },
-      { "id": "nivaprov", "name": "Nivåprov", "desc": "Ett nivåprov inskickat till Haris", "icon": "🏆" },
-      { "id": "hela-biblioteket", "name": "Hela biblioteket", "desc": "Alla fem pass i biblioteket", "icon": "📚" }
+      {
+        "id": "spelarkort",
+        "name": "Spelarkortet",
+        "desc": "Skapade spelarkortet",
+        "icon": "🪪"
+      },
+      {
+        "id": "forsta-passet",
+        "name": "Första passet",
+        "desc": "Loggade ert första pass",
+        "icon": "⚽"
+      },
+      {
+        "id": "planerare",
+        "name": "Planeraren",
+        "desc": "Lät appen planera ett pass",
+        "icon": "🧠"
+      },
+      {
+        "id": "tre-pass",
+        "name": "Tre pass",
+        "desc": "Tre loggade pass",
+        "icon": "🔥"
+      },
+      {
+        "id": "veckoplan",
+        "name": "Veckans plan",
+        "desc": "Två pass samma vecka",
+        "icon": "📅"
+      },
+      {
+        "id": "bada-fotter",
+        "name": "Båda fötterna",
+        "desc": "Passningar tre gånger",
+        "icon": "🦶"
+      },
+      {
+        "id": "teknikern",
+        "name": "Teknikern",
+        "desc": "Både Passningar och Dribblingar tränade",
+        "icon": "🎯"
+      },
+      {
+        "id": "koordinator",
+        "name": "Koordinatorn",
+        "desc": "Koordination två gånger",
+        "icon": "⚡"
+      },
+      {
+        "id": "kunskapstorst",
+        "name": "Kunskapstörst",
+        "desc": "Två kunskapsmoduler klara",
+        "icon": "📘"
+      },
+      {
+        "id": "nivaprov",
+        "name": "Nivåprov",
+        "desc": "Ett nivåprov inskickat till Haris",
+        "icon": "🏆"
+      },
+      {
+        "id": "hela-biblioteket",
+        "name": "Hela biblioteket",
+        "desc": "Alla fem pass i biblioteket",
+        "icon": "📚"
+      }
     ]
   },
   "planner": {
-    "durations": [20, 30, 45, 60],
+    "durations": [
+      20,
+      30,
+      45,
+      60
+    ],
     "cooldowns": [
-      { "name": "Avslut: jongleringsrekord", "desc": "Räkna hur många jongleringar barnet klarar i rad. Skriv upp rekordet.", "sessionId": "uppvarmning-bollkontroll", "pillar": "bollkontroll" },
-      { "name": "Avslut: straffar mot föräldern", "desc": "Fem straffar var. Den som gör flest mål väljer kvällens efterrätt.", "sessionId": "passningar", "pillar": "teknik" },
-      { "name": "Avslut: en mot en till konen", "desc": "Barnet ska ta sig förbi dig till konen. Bäst av fem.", "sessionId": "dribblingar", "pillar": "teknik" }
+      {
+        "name": "Avslut: jongleringsrekord",
+        "desc": "Räkna hur många jongleringar barnet klarar i rad. Skriv upp rekordet.",
+        "sessionId": "uppvarmning-bollkontroll",
+        "pillar": "bollkontroll",
+        "step": "ub4"
+      },
+      {
+        "name": "Avslut: straffar mot föräldern",
+        "desc": "Fem straffar var. Den som gör flest mål väljer kvällens efterrätt.",
+        "sessionId": "passningar",
+        "pillar": "teknik",
+        "step": "pa2"
+      },
+      {
+        "name": "Avslut: en mot en till konen",
+        "desc": "Barnet ska ta sig förbi dig till konen. Bäst av fem.",
+        "sessionId": "dribblingar",
+        "pillar": "teknik",
+        "step": "dr3"
+      }
     ]
+  },
+  "program": {
+    "id": "cap-passet",
+    "title": "CAP-passet",
+    "subtitle": "Teknik, bollkontroll och koordination",
+    "summary": "Hela passet på 55 minuter i fem delar, i den ordning Haris kör det. Varje del har sin film och varje moment hoppar till rätt ställe i filmen.",
+    "parts": [
+      "uppvarmning-bollkontroll",
+      "forsta-touch",
+      "passningar",
+      "dribblingar",
+      "koordination"
+    ],
+    "equipment": [
+      "Boll",
+      "Koner"
+    ],
+    "poster": "assets/posters/passningar.jpg"
   },
   "sessions": [
     {
@@ -73,25 +233,72 @@
       "pillar": "bollkontroll",
       "type": "pass",
       "level": "Alla nivåer",
-      "trainingMinutes": 50,
+      "trainingMinutes": 10,
       "videoSeconds": 66,
-      "equipment": ["Boll", "Koner"],
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
       "space": "En yta på ungefär 10 × 10 meter",
-      "summary": "Ett komplett pass som börjar med uppvärmning med boll och går över i bollkontroll: första touch, driv och förflyttning med boll. Ett bra första pass för alla åldrar.",
+      "summary": "Del 1 av CAP-passet. Uppvärmning med boll som går över i bollkontroll: touch på stället, driv, vändningar och riktningsbyten.",
       "goals": [
         "Komma igång med kroppen och bollen samtidigt",
         "Många bolltouch på kort tid",
         "Trygghet i att ha bollen nära foten i rörelse"
       ],
       "steps": [
-        { "name": "Sulrullningar och tåtouch", "minutes": 8, "desc": "Rulla bollen fram och tillbaka med sulan, snabba små touch med tårna. Som i början av filmen." },
-        { "name": "In- och utsida", "minutes": 10, "desc": "Flytta bollen mellan fötterna med insidan, sedan utsidan. Håll bollen nära." },
-        { "name": "Vändningar", "minutes": 10, "desc": "Driv några meter, vänd med sulan eller insidan och driv åt andra hållet." },
-        { "name": "Driv i fart", "minutes": 12, "desc": "Driv bollen över planen med få touch, stanna med sulan vid konen och byt riktning." },
-        { "name": "Bollkänsla till sist", "minutes": 10, "desc": "Lyft bollen och fånga den med foten, prova några jongleringar. Avsluta med något barnet kan." }
+        {
+          "id": "ub1",
+          "name": "Bollkänsla och första driv",
+          "minutes": 3,
+          "clip": {
+            "start": 1,
+            "end": 11
+          },
+          "desc": "Sulan, tårna och in- och utsida på stället, sedan ett lugnt driv över planen med bollen nära."
+        },
+        {
+          "id": "ub2",
+          "name": "In- och utsida i sidled",
+          "minutes": 2,
+          "clip": {
+            "start": 12,
+            "end": 26
+          },
+          "desc": "Flytta bollen mellan fötterna och följ med i sidled. Närbilden visar hur nära bollen ska vara."
+        },
+        {
+          "id": "ub3",
+          "name": "Driv, vändning och riktningsbyte",
+          "minutes": 3,
+          "clip": {
+            "start": 27,
+            "end": 49
+          },
+          "desc": "Driv iväg, vänd med sulan eller insidan och driv tillbaka. Byt riktning vid linjen."
+        },
+        {
+          "id": "ub4",
+          "name": "Snabba touch till sist",
+          "minutes": 2,
+          "clip": {
+            "start": 50,
+            "end": 66
+          },
+          "desc": "Många snabba touch på kort tid. Avsluta medan det är kul."
+        }
       ],
-      "plan": { "weeks": 3, "perWeek": 2, "note": "Kör passet två gånger i veckan i tre veckor. Byt gärna ordning på övningarna när barnet kan dem." },
-      "video": { "driveId": "1cue2ZXWEBrFFyDYEyPELCqxWCRMVhY_s", "local": "media/uppvarmning-bollkontroll.mp4", "poster": "assets/posters/uppvarmning-bollkontroll.jpg", "portrait": true }
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Kör passet två gånger i veckan i tre veckor. Byt gärna ordning på övningarna när barnet kan dem."
+      },
+      "video": {
+        "driveId": "1cue2ZXWEBrFFyDYEyPELCqxWCRMVhY_s",
+        "local": "media/uppvarmning-bollkontroll.mp4",
+        "poster": "assets/posters/uppvarmning-bollkontroll.jpg",
+        "portrait": true
+      }
     },
     {
       "id": "forsta-touch",
@@ -99,24 +306,72 @@
       "pillar": "bollkontroll",
       "type": "pass",
       "level": "Alla nivåer",
-      "trainingMinutes": 50,
+      "trainingMinutes": 10,
       "videoSeconds": 54,
-      "equipment": ["Boll", "Koner"],
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
       "space": "En yta på ungefär 10 × 10 meter, gärna en vägg eller en medspelare",
-      "summary": "Första touchen avgör nästa aktion. Här tränar ni att ta emot bollen på ett sätt som gör passningen, driven eller avslutet enkelt.",
+      "summary": "Del 2 av CAP-passet. Första touchen avgör nästa aktion: mottagning med insidan, riktad touch, längre bollar och studsande bollar.",
       "goals": [
         "Ta emot bollen med rätt del av foten",
         "Rikta första touchen dit nästa aktion ska",
         "Lugn i mottagningen även när bollen kommer i fart"
       ],
       "steps": [
-        { "name": "Mottagning med insidan", "minutes": 10, "desc": "Du rullar bollen, barnet tar emot med insidan mellan konerna och spelar tillbaka. Byt fot varannan gång." },
-        { "name": "Riktad första touch", "minutes": 12, "desc": "Ta emot och styr bollen åt sidan förbi konen i samma touch, spela sedan tillbaka." },
-        { "name": "Studsande boll", "minutes": 12, "desc": "Du kastar eller studsar bollen, barnet dämpar med insida, lår eller sula och lägger den framför sig." },
-        { "name": "På avstånd", "minutes": 12, "desc": "Längre bollar från andra sidan konerna. Barnet möter bollen i rörelse och tar den med sig." }
+        {
+          "id": "ft1",
+          "name": "Mottagning med insidan",
+          "minutes": 3,
+          "clip": {
+            "start": 0,
+            "end": 13
+          },
+          "desc": "Haris rullar bollen, barnet tar emot med insidan mellan konerna och spelar tillbaka. Byt fot varannan gång."
+        },
+        {
+          "id": "ft2",
+          "name": "Riktad första touch",
+          "minutes": 2,
+          "clip": {
+            "start": 14,
+            "end": 21
+          },
+          "desc": "Ta emot och styr bollen åt sidan i samma touch, spela sedan tillbaka."
+        },
+        {
+          "id": "ft3",
+          "name": "Längre bollar på avstånd",
+          "minutes": 3,
+          "clip": {
+            "start": 22,
+            "end": 41
+          },
+          "desc": "Haris spelar från andra sidan konerna. Barnet möter bollen i rörelse och tar den med sig."
+        },
+        {
+          "id": "ft4",
+          "name": "Dämpa en studsande boll",
+          "minutes": 2,
+          "clip": {
+            "start": 42,
+            "end": 54
+          },
+          "desc": "Bollen kastas eller studsar in. Dämpa med insida, lår eller sula och lägg den framför dig."
+        }
       ],
-      "plan": { "weeks": 3, "perWeek": 2, "note": "Passa gärna till barnet själv. Variera höjd och fart på bollen när mottagningen sitter." },
-      "video": { "driveId": "1Qq-mIfgJarv7BwjPla10wvayAyLlaSbO", "local": "media/forsta-touch.mp4", "poster": "assets/posters/forsta-touch.jpg", "portrait": true }
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Passa gärna till barnet själv. Variera höjd och fart på bollen när mottagningen sitter."
+      },
+      "video": {
+        "driveId": "1Qq-mIfgJarv7BwjPla10wvayAyLlaSbO",
+        "local": "media/forsta-touch.mp4",
+        "poster": "assets/posters/forsta-touch.jpg",
+        "portrait": true
+      }
     },
     {
       "id": "passningar",
@@ -124,24 +379,62 @@
       "pillar": "teknik",
       "type": "pass",
       "level": "Alla nivåer",
-      "trainingMinutes": 50,
+      "trainingMinutes": 10,
       "videoSeconds": 32,
-      "equipment": ["Boll", "Koner"],
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
       "space": "En yta på ungefär 10 × 15 meter, en vägg eller en medspelare",
-      "summary": "Tillslag och precision i passningsspelet. Insida, bredsida och tempo, med båda fötterna.",
+      "summary": "Del 3 av CAP-passet. Stödfoten, insidespassning i konrutan och mottag-och-passa, med båda fötterna.",
       "goals": [
         "Rätt tillslag med insidan",
         "Passa med båda fötterna",
         "Passa så att mottagaren får en lätt boll"
       ],
       "steps": [
-        { "name": "Stödfoten bredvid bollen", "minutes": 8, "desc": "Ställ stödfoten intill bollen med tårna mot målet, som filmen visar. Passa lugnt med insidan." },
-        { "name": "Passning i konrutan", "minutes": 15, "desc": "Sitt eller stå mitt emot barnet. Passa genom konerna, barnet tar emot och passar tillbaka." },
-        { "name": "Båda fötterna", "minutes": 12, "desc": "Växla höger och vänster fot. Räkna passningar i rad utan miss." },
-        { "name": "Tempo", "minutes": 10, "desc": "Högre fart på bollen och färre touch innan passningen. Kvaliteten ska hålla." }
+        {
+          "id": "pa1",
+          "name": "Stödfoten bredvid bollen",
+          "minutes": 2,
+          "clip": {
+            "start": 27,
+            "end": 32
+          },
+          "desc": "Ställ stödfoten intill bollen med tårna mot målet. Filmen ringar in den."
+        },
+        {
+          "id": "pa2",
+          "name": "Insidespassning i konrutan",
+          "minutes": 5,
+          "clip": {
+            "start": 2,
+            "end": 15
+          },
+          "desc": "Passa genom konerna till Haris, med både höger och vänster fot. Räkna passningar i rad."
+        },
+        {
+          "id": "pa3",
+          "name": "Ta emot och passa tillbaka",
+          "minutes": 3,
+          "clip": {
+            "start": 16,
+            "end": 26
+          },
+          "desc": "Ta emot bollen, ett touch, passa tillbaka. Öka tempot när det sitter."
+        }
       ],
-      "plan": { "weeks": 3, "perWeek": 2, "note": "Räkna passningar i rad utan miss. Sätt ett nytt rekord varje vecka." },
-      "video": { "driveId": "1zejOW-2uw8jAs-PIGPQBjluhKygmM_x5", "local": "media/passningar.mp4", "poster": "assets/posters/passningar.jpg", "portrait": true }
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Räkna passningar i rad utan miss. Sätt ett nytt rekord varje vecka."
+      },
+      "video": {
+        "driveId": "1zejOW-2uw8jAs-PIGPQBjluhKygmM_x5",
+        "local": "media/passningar.mp4",
+        "poster": "assets/posters/passningar.jpg",
+        "portrait": true
+      }
     },
     {
       "id": "dribblingar",
@@ -149,24 +442,62 @@
       "pillar": "teknik",
       "type": "pass",
       "level": "Alla nivåer",
-      "trainingMinutes": 50,
+      "trainingMinutes": 15,
       "videoSeconds": 49,
-      "equipment": ["Boll", "Koner"],
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
       "space": "En yta på ungefär 10 × 10 meter",
-      "summary": "Finter, riktningsbyten och mod att utmana en mot en. Övningar som bygger på varandra från långsamt till fart.",
+      "summary": "Del 4 av CAP-passet. Driv ut till konerna, riktningsbyten och finter i fart.",
       "goals": [
         "Bollen nära foten i riktningsbyten",
         "Två eller tre finter som barnet kan i fart",
         "Våga utmana en motståndare"
       ],
       "steps": [
-        { "name": "Driv till konen och vänd", "minutes": 10, "desc": "Driv bollen i fart till konerna längst bort, vänd och driv tillbaka. Få touch, titta upp." },
-        { "name": "Riktningsbyte vid konen", "minutes": 12, "desc": "Byt riktning med insidan eller utsidan vid varje kon. Bollen ska stanna nära foten." },
-        { "name": "Finter", "minutes": 12, "desc": "Lägg in en fint före varje riktningsbyte. Börja långsamt, öka farten när den sitter." },
-        { "name": "En mot en", "minutes": 12, "desc": "Du är motståndare, först passiv och sedan mer aktiv. Barnet ska ta sig förbi dig till konen." }
+        {
+          "id": "dr1",
+          "name": "Driv ut till konerna",
+          "minutes": 4,
+          "clip": {
+            "start": 2,
+            "end": 12
+          },
+          "desc": "Driv i fart till konerna längst bort och tillbaka. Få touch, titta upp."
+        },
+        {
+          "id": "dr2",
+          "name": "Riktningsbyten vid konerna",
+          "minutes": 5,
+          "clip": {
+            "start": 13,
+            "end": 29
+          },
+          "desc": "Byt riktning med insidan eller utsidan vid varje kon. Bollen stannar nära foten."
+        },
+        {
+          "id": "dr3",
+          "name": "Fint och vändning i fart",
+          "minutes": 6,
+          "clip": {
+            "start": 30,
+            "end": 45
+          },
+          "desc": "Lägg in en fint före riktningsbytet. Haris visar vid konen."
+        }
       ],
-      "plan": { "weeks": 3, "perWeek": 2, "note": "Var motståndare själv på slutet av passet. Börja passivt och öka motståndet vecka för vecka." },
-      "video": { "driveId": "12a3m67s_FwOBBFN5P00lz0Mv7mILYEFJ", "local": "media/dribblingar.mp4", "poster": "assets/posters/dribblingar.jpg", "portrait": true }
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Var motståndare själv på slutet av passet. Börja passivt och öka motståndet vecka för vecka."
+      },
+      "video": {
+        "driveId": "12a3m67s_FwOBBFN5P00lz0Mv7mILYEFJ",
+        "local": "media/dribblingar.mp4",
+        "poster": "assets/posters/dribblingar.jpg",
+        "portrait": true
+      }
     },
     {
       "id": "koordination",
@@ -174,24 +505,82 @@
       "pillar": "koordination",
       "type": "pass",
       "level": "Alla nivåer",
-      "trainingMinutes": 50,
+      "trainingMinutes": 10,
       "videoSeconds": 54,
-      "equipment": ["Boll", "Koner"],
+      "equipment": [
+        "Boll",
+        "Koner"
+      ],
       "space": "En yta på ungefär 10 × 10 meter",
-      "summary": "Tajming, reaktion och motorik med och utan boll. Passet gör att tekniken fungerar även i fart och under press.",
+      "summary": "Del 5 av CAP-passet. Snabba fötter, reaktion på bollen och fotarbete som kopplas till en bollaktion.",
       "goals": [
         "Snabba fötter och bra balans",
         "Reagera på signal och byta riktning",
         "Koppla ihop rörelse med bollaktion"
       ],
       "steps": [
-        { "name": "Snabba fötter över bollen", "minutes": 8, "desc": "Tåtouch och sidosteg över bollen på stället, som i filmen. Korta set, vila emellan." },
-        { "name": "Konraden", "minutes": 12, "desc": "Sidosteg och hopp mellan konerna i rad. Lätta fötter, blicken upp." },
-        { "name": "Reagera på bollen", "minutes": 12, "desc": "Du sitter mitt emot och rullar bollen åt ena eller andra hållet. Barnet reagerar och tar bollen i första touchen." },
-        { "name": "Fötter plus bollaktion", "minutes": 12, "desc": "Fotarbete i konraden och direkt en passning eller ett driv när du rullar bollen." }
+        {
+          "id": "ko1",
+          "name": "Snabba fötter vid konerna",
+          "minutes": 2,
+          "clip": {
+            "start": 2,
+            "end": 10
+          },
+          "desc": "Tåtouch och sidosteg över bollen. Lätta fötter, blicken upp."
+        },
+        {
+          "id": "ko2",
+          "name": "Reagera på bollen",
+          "minutes": 2,
+          "clip": {
+            "start": 11,
+            "end": 16
+          },
+          "desc": "Haris rullar bollen åt ena eller andra hållet. Reagera och ta den i första touchen."
+        },
+        {
+          "id": "ko3",
+          "name": "Konraden och tillbaka med boll",
+          "minutes": 3,
+          "clip": {
+            "start": 17,
+            "end": 31
+          },
+          "desc": "Sidosteg mellan konerna, hämta bollen och driv tillbaka."
+        },
+        {
+          "id": "ko4",
+          "name": "Reaktion och passning",
+          "minutes": 2,
+          "clip": {
+            "start": 32,
+            "end": 45
+          },
+          "desc": "Fotarbete, signal från Haris, och direkt en passning."
+        },
+        {
+          "id": "ko5",
+          "name": "Fotarbete över bollen",
+          "minutes": 1,
+          "clip": {
+            "start": 46,
+            "end": 54
+          },
+          "desc": "Avsluta med snabba fötter över bollen."
+        }
       ],
-      "plan": { "weeks": 3, "perWeek": 2, "note": "Korta intensiva moment med vila emellan. Kvalitet före mängd." },
-      "video": { "driveId": "1xHuc5FMzTAQVoExtvHujGWdkIYvPuclM", "local": "media/koordination.mp4", "poster": "assets/posters/koordination.jpg", "portrait": true }
+      "plan": {
+        "weeks": 3,
+        "perWeek": 2,
+        "note": "Korta intensiva moment med vila emellan. Kvalitet före mängd."
+      },
+      "video": {
+        "driveId": "1xHuc5FMzTAQVoExtvHujGWdkIYvPuclM",
+        "local": "media/koordination.mp4",
+        "poster": "assets/posters/koordination.jpg",
+        "portrait": true
+      }
     }
   ],
   "curriculum": {
@@ -200,105 +589,388 @@
       {
         "n": 1,
         "general": [
-          { "id": "n1-bollkontroll", "kind": "traning", "pillar": "bollkontroll", "title": "Bollkontroll A", "desc": "Sulan, in- och utsida, vändningar och driv.", "session": "uppvarmning-bollkontroll" },
-          { "id": "n1-touch", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch", "desc": "Ta emot bollen så att nästa aktion blir enkel.", "session": "forsta-touch" },
           {
-            "id": "n1-regler", "kind": "kunskap", "pillar": "kunskap", "title": "Så funkar fotboll", "desc": "Avspark, inkast, hörna och vem som får använda händerna.",
+            "id": "n1-bollkontroll",
+            "kind": "traning",
+            "pillar": "bollkontroll",
+            "title": "Bollkontroll A",
+            "desc": "Sulan, in- och utsida, vändningar och driv.",
+            "session": "uppvarmning-bollkontroll"
+          },
+          {
+            "id": "n1-touch",
+            "kind": "traning",
+            "pillar": "bollkontroll",
+            "title": "Första touch",
+            "desc": "Ta emot bollen så att nästa aktion blir enkel.",
+            "session": "forsta-touch"
+          },
+          {
+            "id": "n1-regler",
+            "kind": "kunskap",
+            "pillar": "kunskap",
+            "title": "Så funkar fotboll",
+            "desc": "Avspark, inkast, hörna och vem som får använda händerna.",
             "body": [
               "Fotboll är enkelt att börja med: två lag, en boll och två mål. Laget som gör flest mål vinner. Men några regler behöver barnet kunna för att känna sig trygg på planen.",
               "Spelet startar med avspark från mittpunkten, och efter varje mål startar det om på samma sätt. Går bollen över sidlinjen blir det inkast med händerna. Går den över kortlinjen blir det hörna eller inspark, beroende på vem som rörde bollen sist.",
               "Bara målvakten får använda händerna, och bara i sitt eget straffområde. Alla andra spelar med fötter, lår, bröst och huvud."
             ],
             "quiz": [
-              { "q": "Hur startar spelet om efter ett mål?", "a": ["Avspark från mitten", "Inkast", "Hörna"], "correct": 0 },
-              { "q": "Bollen går över sidlinjen. Vad händer?", "a": ["Frispark", "Inkast", "Straff"], "correct": 1 },
-              { "q": "Vem får ta bollen med händerna under spelet?", "a": ["Alla spelare", "Den som är närmast bollen", "Bara målvakten i sitt straffområde"], "correct": 2 }
+              {
+                "q": "Hur startar spelet om efter ett mål?",
+                "a": [
+                  "Avspark från mitten",
+                  "Inkast",
+                  "Hörna"
+                ],
+                "correct": 0
+              },
+              {
+                "q": "Bollen går över sidlinjen. Vad händer?",
+                "a": [
+                  "Frispark",
+                  "Inkast",
+                  "Straff"
+                ],
+                "correct": 1
+              },
+              {
+                "q": "Vem får ta bollen med händerna under spelet?",
+                "a": [
+                  "Alla spelare",
+                  "Den som är närmast bollen",
+                  "Bara målvakten i sitt straffområde"
+                ],
+                "correct": 2
+              }
             ]
           },
-          { "id": "n1-koordination", "kind": "traning", "pillar": "koordination", "title": "Koordination grund", "desc": "Snabba fötter, konraden och reaktion på bollen.", "session": "koordination" },
-          { "id": "n1-prov", "kind": "prov", "pillar": "bollkontroll", "title": "Nivåprov 1", "desc": "Filma barnet: 20 touch med bollen nära foten utan att tappa den, och tio mottagningar med insidan. Haris tittar och godkänner." }
+          {
+            "id": "n1-koordination",
+            "kind": "traning",
+            "pillar": "koordination",
+            "title": "Koordination grund",
+            "desc": "Snabba fötter, konraden och reaktion på bollen.",
+            "session": "koordination"
+          },
+          {
+            "id": "n1-prov",
+            "kind": "prov",
+            "pillar": "bollkontroll",
+            "title": "Nivåprov 1",
+            "desc": "Filma barnet: 20 touch med bollen nära foten utan att tappa den, och tio mottagningar med insidan. Haris tittar och godkänner."
+          }
         ],
         "positions": {}
       },
       {
         "n": 2,
         "general": [
-          { "id": "n2-passning", "kind": "traning", "pillar": "teknik", "title": "Passning insida", "desc": "Stödfoten, tillslaget och båda fötterna.", "session": "passningar" },
-          { "id": "n2-dribbling", "kind": "traning", "pillar": "teknik", "title": "Dribbling: riktningsbyten", "desc": "Driv, vänd och byt riktning vid konen.", "session": "dribblingar" },
           {
-            "id": "n2-titta-upp", "kind": "kunskap", "pillar": "kunskap", "title": "Titta upp", "desc": "Varför de bästa spelarna vet vad som händer innan bollen kommer.",
+            "id": "n2-passning",
+            "kind": "traning",
+            "pillar": "teknik",
+            "title": "Passning insida",
+            "desc": "Stödfoten, tillslaget och båda fötterna.",
+            "session": "passningar"
+          },
+          {
+            "id": "n2-dribbling",
+            "kind": "traning",
+            "pillar": "teknik",
+            "title": "Dribbling: riktningsbyten",
+            "desc": "Driv, vänd och byt riktning vid konen.",
+            "session": "dribblingar"
+          },
+          {
+            "id": "n2-titta-upp",
+            "kind": "kunskap",
+            "pillar": "kunskap",
+            "title": "Titta upp",
+            "desc": "Varför de bästa spelarna vet vad som händer innan bollen kommer.",
             "body": [
               "Skillnaden mellan en spelare som alltid verkar ha tid och en som alltid är stressad sitter ofta i blicken. Den som tittar upp innan bollen kommer vet redan vad nästa aktion ska bli.",
               "Träna det hemma: innan varje passning till barnet, håll upp ett antal fingrar. Barnet ska säga antalet innan bollen når foten.",
               "Första touchen är nästa steg. Tar barnet bollen bort från motståndaren vinner det både tid och plats."
             ],
             "quiz": [
-              { "q": "När ska du titta upp?", "a": ["Innan bollen kommer till dig", "Bara när du har bollen", "Aldrig, titta på bollen"], "correct": 0 },
-              { "q": "Varför tar man första touchen bort från motståndaren?", "a": ["För att det ser snyggt ut", "För att få tid och plats", "För att skjuta direkt"], "correct": 1 },
-              { "q": "Vad gör du direkt efter en passning?", "a": ["Står still och tittar", "Går tillbaka till mitten", "Rör dig till en ny yta"], "correct": 2 }
+              {
+                "q": "När ska du titta upp?",
+                "a": [
+                  "Innan bollen kommer till dig",
+                  "Bara när du har bollen",
+                  "Aldrig, titta på bollen"
+                ],
+                "correct": 0
+              },
+              {
+                "q": "Varför tar man första touchen bort från motståndaren?",
+                "a": [
+                  "För att det ser snyggt ut",
+                  "För att få tid och plats",
+                  "För att skjuta direkt"
+                ],
+                "correct": 1
+              },
+              {
+                "q": "Vad gör du direkt efter en passning?",
+                "a": [
+                  "Står still och tittar",
+                  "Går tillbaka till mitten",
+                  "Rör dig till en ny yta"
+                ],
+                "correct": 2
+              }
             ]
           },
           {
-            "id": "n2-kropp", "kind": "kunskap", "pillar": "kunskap", "title": "Mat, sömn och återhämtning", "desc": "Det som händer mellan passen avgör hur mycket passen ger.",
+            "id": "n2-kropp",
+            "kind": "kunskap",
+            "pillar": "kunskap",
+            "title": "Mat, sömn och återhämtning",
+            "desc": "Det som händer mellan passen avgör hur mycket passen ger.",
             "body": [
               "Kroppen blir inte starkare under träningen utan efteråt, när den vilar. Ett barn mellan sju och fjorton år behöver ungefär nio till elva timmars sömn.",
               "Ät något lagom stort ett par timmar före träning, gärna med kolhydrater: pasta, en smörgås eller gröt. Vatten räcker som dryck.",
               "Efter passet: något att äta inom en timme, och en lugn kväll."
             ],
             "quiz": [
-              { "q": "Hur mycket sömn behöver ett barn 7–14 år ungefär?", "a": ["5–6 timmar", "9–11 timmar", "Det spelar ingen roll"], "correct": 1 },
-              { "q": "Vad är bra att äta ett par timmar före träning?", "a": ["Ingenting", "Godis för energi", "Pasta, en smörgås eller gröt"], "correct": 2 },
-              { "q": "Varför är vila viktigt?", "a": ["Kroppen blir starkare när den vilar efter träning", "Vila gör dig sämre", "Bara vuxna behöver vila"], "correct": 0 }
+              {
+                "q": "Hur mycket sömn behöver ett barn 7–14 år ungefär?",
+                "a": [
+                  "5–6 timmar",
+                  "9–11 timmar",
+                  "Det spelar ingen roll"
+                ],
+                "correct": 1
+              },
+              {
+                "q": "Vad är bra att äta ett par timmar före träning?",
+                "a": [
+                  "Ingenting",
+                  "Godis för energi",
+                  "Pasta, en smörgås eller gröt"
+                ],
+                "correct": 2
+              },
+              {
+                "q": "Varför är vila viktigt?",
+                "a": [
+                  "Kroppen blir starkare när den vilar efter träning",
+                  "Vila gör dig sämre",
+                  "Bara vuxna behöver vila"
+                ],
+                "correct": 0
+              }
             ]
           },
-          { "id": "n2-prov", "kind": "prov", "pillar": "teknik", "title": "Nivåprov 2", "desc": "Filma: tio passningar i rad med insidan, fem med varje fot, och en dribbling genom fyra koner utan att tappa bollen." }
+          {
+            "id": "n2-prov",
+            "kind": "prov",
+            "pillar": "teknik",
+            "title": "Nivåprov 2",
+            "desc": "Filma: tio passningar i rad med insidan, fem med varje fot, och en dribbling genom fyra koner utan att tappa bollen."
+          }
         ],
         "positions": {
           "mv": [
-            { "id": "n2-mv-grepp", "kind": "traning", "pillar": "koordination", "title": "Grepp och fotarbete", "desc": "Händerna i W, fötterna i rörelse. Film kommer från Haris." },
             {
-              "id": "n2-mv-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Målvaktens jobb", "desc": "Var du står, när du pratar och när du inte får använda händerna.",
-              "body": ["Målvakten är den enda som ser hela planen. Därför är rösten lika viktig som händerna: säg till backarna var motståndarna är.", "Stå alltid mellan bollen och målets mitt. Då blir målet litet för den som skjuter.", "Får du bollen passad från en lagkamrat med foten får du inte ta upp den med händerna. Då spelar du med fötterna, precis som alla andra."],
+              "id": "n2-mv-grepp",
+              "kind": "traning",
+              "pillar": "koordination",
+              "title": "Grepp och fotarbete",
+              "desc": "Händerna i W, fötterna i rörelse. Film kommer från Haris."
+            },
+            {
+              "id": "n2-mv-jobb",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Målvaktens jobb",
+              "desc": "Var du står, när du pratar och när du inte får använda händerna.",
+              "body": [
+                "Målvakten är den enda som ser hela planen. Därför är rösten lika viktig som händerna: säg till backarna var motståndarna är.",
+                "Stå alltid mellan bollen och målets mitt. Då blir målet litet för den som skjuter.",
+                "Får du bollen passad från en lagkamrat med foten får du inte ta upp den med händerna. Då spelar du med fötterna, precis som alla andra."
+              ],
               "quiz": [
-                { "q": "Var ska målvakten stå när skottet kommer?", "a": ["Vid ena stolpen", "Mellan bollen och målets mitt", "Långt ut på planen"], "correct": 1 },
-                { "q": "Vad gör målvakten när det egna laget har bollen?", "a": ["Vilar", "Är redo som uppspelare och pratar med backarna", "Går och hämtar vatten"], "correct": 1 },
-                { "q": "En lagkamrat passar bollen till dig med foten. Får du ta upp den med händerna?", "a": ["Ja", "Nej", "Bara om det är nära mål"], "correct": 1 }
+                {
+                  "q": "Var ska målvakten stå när skottet kommer?",
+                  "a": [
+                    "Vid ena stolpen",
+                    "Mellan bollen och målets mitt",
+                    "Långt ut på planen"
+                  ],
+                  "correct": 1
+                },
+                {
+                  "q": "Vad gör målvakten när det egna laget har bollen?",
+                  "a": [
+                    "Vilar",
+                    "Är redo som uppspelare och pratar med backarna",
+                    "Går och hämtar vatten"
+                  ],
+                  "correct": 1
+                },
+                {
+                  "q": "En lagkamrat passar bollen till dig med foten. Får du ta upp den med händerna?",
+                  "a": [
+                    "Ja",
+                    "Nej",
+                    "Bara om det är nära mål"
+                  ],
+                  "correct": 1
+                }
               ]
             }
           ],
           "back": [
-            { "id": "n2-back-stallning", "kind": "traning", "pillar": "koordination", "title": "Försvarsställning", "desc": "Låg tyngdpunkt, sidledes fötter, rätt avstånd. Film kommer från Haris." },
             {
-              "id": "n2-back-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Backens jobb", "desc": "Sakta ner, vinn bollen, starta anfallet.",
-              "body": ["Backens första uppgift är att göra det svårt för motståndaren, inte att vinna bollen på direkten. Sakta ner spelaren, vänta på rätt läge.", "När du vunnit bollen: titta upp och spela en lugn passning. Det är så anfallen börjar.", "När bollen är på andra kanten drar du in mot mitten och täcker ytan framför målet."],
+              "id": "n2-back-stallning",
+              "kind": "traning",
+              "pillar": "koordination",
+              "title": "Försvarsställning",
+              "desc": "Låg tyngdpunkt, sidledes fötter, rätt avstånd. Film kommer från Haris."
+            },
+            {
+              "id": "n2-back-jobb",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Backens jobb",
+              "desc": "Sakta ner, vinn bollen, starta anfallet.",
+              "body": [
+                "Backens första uppgift är att göra det svårt för motståndaren, inte att vinna bollen på direkten. Sakta ner spelaren, vänta på rätt läge.",
+                "När du vunnit bollen: titta upp och spela en lugn passning. Det är så anfallen börjar.",
+                "När bollen är på andra kanten drar du in mot mitten och täcker ytan framför målet."
+              ],
               "quiz": [
-                { "q": "Motståndaren driver mot dig. Vad gör du först?", "a": ["Rusar fram och tacklar", "Saktar ner hen och väntar på rätt läge", "Backar in i målet"], "correct": 1 },
-                { "q": "Du vinner bollen. Vad gör du?", "a": ["Sparkar bort den så långt det går", "Tittar upp och spelar en lugn passning", "Dribblar förbi alla"], "correct": 1 },
-                { "q": "Var står du när bollen är på andra kanten?", "a": ["Kvar ute vid min kant", "Drar in mot mitten och täcker ytan", "Går upp och anfaller"], "correct": 1 }
+                {
+                  "q": "Motståndaren driver mot dig. Vad gör du först?",
+                  "a": [
+                    "Rusar fram och tacklar",
+                    "Saktar ner hen och väntar på rätt läge",
+                    "Backar in i målet"
+                  ],
+                  "correct": 1
+                },
+                {
+                  "q": "Du vinner bollen. Vad gör du?",
+                  "a": [
+                    "Sparkar bort den så långt det går",
+                    "Tittar upp och spelar en lugn passning",
+                    "Dribblar förbi alla"
+                  ],
+                  "correct": 1
+                },
+                {
+                  "q": "Var står du när bollen är på andra kanten?",
+                  "a": [
+                    "Kvar ute vid min kant",
+                    "Drar in mot mitten och täcker ytan",
+                    "Går upp och anfaller"
+                  ],
+                  "correct": 1
+                }
               ]
             }
           ],
           "mitt": [
-            { "id": "n2-mitt-vandning", "kind": "traning", "pillar": "bollkontroll", "title": "Vändningar", "desc": "Ta emot och vänd i samma rörelse. Film kommer från Haris." },
             {
-              "id": "n2-mitt-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Mittfältarens jobb", "desc": "Titta över axeln, första touch framåt, hitta passningen.",
-              "body": ["Mittfältaren får bollen oftast av alla, ofta med en motståndare i ryggen. Därför börjar jobbet innan bollen kommer: titta över axeln.", "Är ingen nära tar du första touchen framåt, i spelriktningen. Är någon nära skyddar du bollen och spelar enkelt.", "När laget tappar bollen är mittfältaren först att pressa eller att hitta en plats mellan bollen och det egna målet."],
+              "id": "n2-mitt-vandning",
+              "kind": "traning",
+              "pillar": "bollkontroll",
+              "title": "Vändningar",
+              "desc": "Ta emot och vänd i samma rörelse. Film kommer från Haris."
+            },
+            {
+              "id": "n2-mitt-jobb",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Mittfältarens jobb",
+              "desc": "Titta över axeln, första touch framåt, hitta passningen.",
+              "body": [
+                "Mittfältaren får bollen oftast av alla, ofta med en motståndare i ryggen. Därför börjar jobbet innan bollen kommer: titta över axeln.",
+                "Är ingen nära tar du första touchen framåt, i spelriktningen. Är någon nära skyddar du bollen och spelar enkelt.",
+                "När laget tappar bollen är mittfältaren först att pressa eller att hitta en plats mellan bollen och det egna målet."
+              ],
               "quiz": [
-                { "q": "Du ska få bollen. Vad gör du precis innan?", "a": ["Tittar över axeln", "Blundar", "Ropar på bollen och väntar"], "correct": 0 },
-                { "q": "Ingen är nära när du tar emot. Vart går första touchen?", "a": ["Bakåt", "Framåt, i spelriktningen", "Rakt upp i luften"], "correct": 1 },
-                { "q": "Laget tappar bollen. Vad gör du?", "a": ["Pressar eller hittar en plats mellan bollen och målet", "Väntar på att få bollen igen", "Går till sidlinjen"], "correct": 0 }
+                {
+                  "q": "Du ska få bollen. Vad gör du precis innan?",
+                  "a": [
+                    "Tittar över axeln",
+                    "Blundar",
+                    "Ropar på bollen och väntar"
+                  ],
+                  "correct": 0
+                },
+                {
+                  "q": "Ingen är nära när du tar emot. Vart går första touchen?",
+                  "a": [
+                    "Bakåt",
+                    "Framåt, i spelriktningen",
+                    "Rakt upp i luften"
+                  ],
+                  "correct": 1
+                },
+                {
+                  "q": "Laget tappar bollen. Vad gör du?",
+                  "a": [
+                    "Pressar eller hittar en plats mellan bollen och målet",
+                    "Väntar på att få bollen igen",
+                    "Går till sidlinjen"
+                  ],
+                  "correct": 0
+                }
               ]
             }
           ],
           "anf": [
-            { "id": "n2-anf-avslut", "kind": "traning", "pillar": "teknik", "title": "Avslut insida", "desc": "Placerat lågt i hörnet, från båda sidor. Film kommer från Haris." },
             {
-              "id": "n2-anf-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Anfallarens jobb", "desc": "Löpningen, första touchen mot mål och avslutet.",
-              "body": ["Anfallaren gör mål, men jobbet börjar långt innan skottet. Löpningen bakom backlinjen startar när passaren tittar upp och kan slå bollen, inte tidigare.", "Nära mål och lite tid: placera med insidan. Det är säkrare än ett hårt skott.", "Missar du ett läge skakar du av dig det. Nästa chans kommer, och den som grubblar missar den också."],
+              "id": "n2-anf-avslut",
+              "kind": "traning",
+              "pillar": "teknik",
+              "title": "Avslut insida",
+              "desc": "Placerat lågt i hörnet, från båda sidor. Film kommer från Haris."
+            },
+            {
+              "id": "n2-anf-jobb",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Anfallarens jobb",
+              "desc": "Löpningen, första touchen mot mål och avslutet.",
+              "body": [
+                "Anfallaren gör mål, men jobbet börjar långt innan skottet. Löpningen bakom backlinjen startar när passaren tittar upp och kan slå bollen, inte tidigare.",
+                "Nära mål och lite tid: placera med insidan. Det är säkrare än ett hårt skott.",
+                "Missar du ett läge skakar du av dig det. Nästa chans kommer, och den som grubblar missar den också."
+              ],
               "quiz": [
-                { "q": "När startar du löpningen bakom backlinjen?", "a": ["Så fort som möjligt", "När passaren tittar upp och kan slå bollen", "När bollen redan är slagen"], "correct": 1 },
-                { "q": "Nära mål, lite tid. Hur avslutar du?", "a": ["Så hårt som möjligt", "Placerat med insidan", "Med klacken"], "correct": 1 },
-                { "q": "Du missar ett läge. Vad gör du?", "a": ["Skakar av mig det och är redo för nästa", "Blir arg på passaren", "Går av planen"], "correct": 0 }
+                {
+                  "q": "När startar du löpningen bakom backlinjen?",
+                  "a": [
+                    "Så fort som möjligt",
+                    "När passaren tittar upp och kan slå bollen",
+                    "När bollen redan är slagen"
+                  ],
+                  "correct": 1
+                },
+                {
+                  "q": "Nära mål, lite tid. Hur avslutar du?",
+                  "a": [
+                    "Så hårt som möjligt",
+                    "Placerat med insidan",
+                    "Med klacken"
+                  ],
+                  "correct": 1
+                },
+                {
+                  "q": "Du missar ett läge. Vad gör du?",
+                  "a": [
+                    "Skakar av mig det och är redo för nästa",
+                    "Blir arg på passaren",
+                    "Går av planen"
+                  ],
+                  "correct": 0
+                }
               ]
             }
           ]
@@ -307,86 +979,310 @@
       {
         "n": 3,
         "general": [
-          { "id": "n3-finter", "kind": "traning", "pillar": "teknik", "title": "Finter i fart", "desc": "Kroppsfint, överstegsfint och sax i fart mot kon. Film kommer från Haris." },
-          { "id": "n3-jonglering", "kind": "traning", "pillar": "bollkontroll", "title": "Jonglering 20", "desc": "Fot, lår och båda fötterna. Målet är tjugo i rad. Film kommer från Haris." },
           {
-            "id": "n3-lagkamrat", "kind": "kunskap", "pillar": "kunskap", "title": "Att vara en bra lagkamrat", "desc": "Det som gör att tränare och kompisar vill ha dig i laget.",
-            "body": ["De spelare som alla vill spela med är inte alltid de bästa med bollen. De peppar, de lyssnar och de tar ansvar när det går dåligt.", "En kompis missar en straff: säg något peppande. Tränaren säger något du inte håller med om: lyssna, och fråga efteråt.", "Laget förlorar: tacka motståndarna och tänk på vad ni lärde er. Nästa match är en ny chans."],
+            "id": "n3-finter",
+            "kind": "traning",
+            "pillar": "teknik",
+            "title": "Finter i fart",
+            "desc": "Kroppsfint, överstegsfint och sax i fart mot kon. Film kommer från Haris."
+          },
+          {
+            "id": "n3-jonglering",
+            "kind": "traning",
+            "pillar": "bollkontroll",
+            "title": "Jonglering 20",
+            "desc": "Fot, lår och båda fötterna. Målet är tjugo i rad. Film kommer från Haris."
+          },
+          {
+            "id": "n3-lagkamrat",
+            "kind": "kunskap",
+            "pillar": "kunskap",
+            "title": "Att vara en bra lagkamrat",
+            "desc": "Det som gör att tränare och kompisar vill ha dig i laget.",
+            "body": [
+              "De spelare som alla vill spela med är inte alltid de bästa med bollen. De peppar, de lyssnar och de tar ansvar när det går dåligt.",
+              "En kompis missar en straff: säg något peppande. Tränaren säger något du inte håller med om: lyssna, och fråga efteråt.",
+              "Laget förlorar: tacka motståndarna och tänk på vad ni lärde er. Nästa match är en ny chans."
+            ],
             "quiz": [
-              { "q": "En kompis missar en straff. Vad gör du?", "a": ["Säger något peppande", "Suckar högt", "Säger att jag skulle ha skjutit"], "correct": 0 },
-              { "q": "Tränaren säger något du inte håller med om.", "a": ["Säger emot högt inför alla", "Lyssnar och frågar efteråt", "Går därifrån"], "correct": 1 },
-              { "q": "Laget förlorar. Vad gör du?", "a": ["Skyller på målvakten", "Slutar spela", "Tackar motståndarna och tänker på vad vi lärde oss"], "correct": 2 }
+              {
+                "q": "En kompis missar en straff. Vad gör du?",
+                "a": [
+                  "Säger något peppande",
+                  "Suckar högt",
+                  "Säger att jag skulle ha skjutit"
+                ],
+                "correct": 0
+              },
+              {
+                "q": "Tränaren säger något du inte håller med om.",
+                "a": [
+                  "Säger emot högt inför alla",
+                  "Lyssnar och frågar efteråt",
+                  "Går därifrån"
+                ],
+                "correct": 1
+              },
+              {
+                "q": "Laget förlorar. Vad gör du?",
+                "a": [
+                  "Skyller på målvakten",
+                  "Slutar spela",
+                  "Tackar motståndarna och tänker på vad vi lärde oss"
+                ],
+                "correct": 2
+              }
             ]
           },
-          { "id": "n3-avslut", "kind": "traning", "pillar": "teknik", "title": "Avslut från kanten av straffområdet", "desc": "Vrist och bredsida, efter en touch. Film kommer från Haris." },
-          { "id": "n3-prov", "kind": "prov", "pillar": "teknik", "title": "Nivåprov 3", "desc": "Filma: tjugo jongleringar i rad och tre olika finter i fart mot en passiv motståndare." }
+          {
+            "id": "n3-avslut",
+            "kind": "traning",
+            "pillar": "teknik",
+            "title": "Avslut från kanten av straffområdet",
+            "desc": "Vrist och bredsida, efter en touch. Film kommer från Haris."
+          },
+          {
+            "id": "n3-prov",
+            "kind": "prov",
+            "pillar": "teknik",
+            "title": "Nivåprov 3",
+            "desc": "Filma: tjugo jongleringar i rad och tre olika finter i fart mot en passiv motståndare."
+          }
         ],
         "positions": {
           "mv": [
-            { "id": "n3-mv-fall", "kind": "traning", "pillar": "koordination", "title": "Fallteknik", "desc": "Falla mjukt åt båda hållen och komma upp snabbt. Film kommer från Haris." },
-            { "id": "n3-mv-fotter", "kind": "traning", "pillar": "bollkontroll", "title": "Spel med fötterna", "desc": "Första touch och passning under press, som målvakt. Film kommer från Haris." }
+            {
+              "id": "n3-mv-fall",
+              "kind": "traning",
+              "pillar": "koordination",
+              "title": "Fallteknik",
+              "desc": "Falla mjukt åt båda hållen och komma upp snabbt. Film kommer från Haris."
+            },
+            {
+              "id": "n3-mv-fotter",
+              "kind": "traning",
+              "pillar": "bollkontroll",
+              "title": "Spel med fötterna",
+              "desc": "Första touch och passning under press, som målvakt. Film kommer från Haris."
+            }
           ],
           "back": [
-            { "id": "n3-back-nick", "kind": "traning", "pillar": "koordination", "title": "Nickar", "desc": "Pannan, ögonen öppna, nicka bort och nicka till en lagkamrat. Film kommer från Haris." },
-            { "id": "n3-back-forsta", "kind": "kunskap", "pillar": "kunskap", "title": "Första försvarare", "desc": "Press, täckning och när man går in i en duell. Text kommer från Haris." }
+            {
+              "id": "n3-back-nick",
+              "kind": "traning",
+              "pillar": "koordination",
+              "title": "Nickar",
+              "desc": "Pannan, ögonen öppna, nicka bort och nicka till en lagkamrat. Film kommer från Haris."
+            },
+            {
+              "id": "n3-back-forsta",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Första försvarare",
+              "desc": "Press, täckning och när man går in i en duell. Text kommer från Haris."
+            }
           ],
           "mitt": [
-            { "id": "n3-mitt-axel", "kind": "traning", "pillar": "bollkontroll", "title": "Titta över axeln innan bollen", "desc": "Mottagning med motståndare i ryggen. Film kommer från Haris." },
-            { "id": "n3-mitt-framat", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch framåt", "desc": "Ta bollen förbi motståndaren i första touchen. Film kommer från Haris." }
+            {
+              "id": "n3-mitt-axel",
+              "kind": "traning",
+              "pillar": "bollkontroll",
+              "title": "Titta över axeln innan bollen",
+              "desc": "Mottagning med motståndare i ryggen. Film kommer från Haris."
+            },
+            {
+              "id": "n3-mitt-framat",
+              "kind": "traning",
+              "pillar": "bollkontroll",
+              "title": "Första touch framåt",
+              "desc": "Ta bollen förbi motståndaren i första touchen. Film kommer från Haris."
+            }
           ],
           "anf": [
-            { "id": "n3-anf-touch", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch mot mål", "desc": "Ta emot så att skottet kommer direkt efter. Film kommer från Haris." },
-            { "id": "n3-anf-vrist", "kind": "traning", "pillar": "teknik", "title": "Avslut bredsida och vrist", "desc": "Hårt och lågt, efter mottagning. Film kommer från Haris." }
+            {
+              "id": "n3-anf-touch",
+              "kind": "traning",
+              "pillar": "bollkontroll",
+              "title": "Första touch mot mål",
+              "desc": "Ta emot så att skottet kommer direkt efter. Film kommer från Haris."
+            },
+            {
+              "id": "n3-anf-vrist",
+              "kind": "traning",
+              "pillar": "teknik",
+              "title": "Avslut bredsida och vrist",
+              "desc": "Hårt och lågt, efter mottagning. Film kommer från Haris."
+            }
           ]
         }
       },
       {
         "n": 4,
         "general": [
-          { "id": "n4-press", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch under press", "desc": "Mottagning med en aktiv motståndare. Film kommer från Haris." },
-          { "id": "n4-langa", "kind": "traning", "pillar": "teknik", "title": "Långa tillslag", "desc": "Vristen, lyftet och crossbollen. Film kommer från Haris." },
-          { "id": "n4-ytor", "kind": "kunskap", "pillar": "kunskap", "title": "Spelförståelse: ytor och tid", "desc": "Var finns platsen, och hur skapar man den? Text kommer från Haris." },
-          { "id": "n4-prov", "kind": "prov", "pillar": "teknik", "title": "Nivåprov 4", "desc": "Filma: fem långa passningar till en kompis på tjugo meter och tre mottagningar under press." }
+          {
+            "id": "n4-press",
+            "kind": "traning",
+            "pillar": "bollkontroll",
+            "title": "Första touch under press",
+            "desc": "Mottagning med en aktiv motståndare. Film kommer från Haris."
+          },
+          {
+            "id": "n4-langa",
+            "kind": "traning",
+            "pillar": "teknik",
+            "title": "Långa tillslag",
+            "desc": "Vristen, lyftet och crossbollen. Film kommer från Haris."
+          },
+          {
+            "id": "n4-ytor",
+            "kind": "kunskap",
+            "pillar": "kunskap",
+            "title": "Spelförståelse: ytor och tid",
+            "desc": "Var finns platsen, och hur skapar man den? Text kommer från Haris."
+          },
+          {
+            "id": "n4-prov",
+            "kind": "prov",
+            "pillar": "teknik",
+            "title": "Nivåprov 4",
+            "desc": "Filma: fem långa passningar till en kompis på tjugo meter och tre mottagningar under press."
+          }
         ],
         "positions": {
           "mv": [
-            { "id": "n4-mv-position", "kind": "kunskap", "pillar": "kunskap", "title": "Positionering i målet", "desc": "Vinklar, avstånd och när man går ut. Text kommer från Haris." },
-            { "id": "n4-mv-prat", "kind": "kunskap", "pillar": "kunskap", "title": "Kommunikation", "desc": "Vad målvakten säger, och när. Text kommer från Haris." }
+            {
+              "id": "n4-mv-position",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Positionering i målet",
+              "desc": "Vinklar, avstånd och när man går ut. Text kommer från Haris."
+            },
+            {
+              "id": "n4-mv-prat",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Kommunikation",
+              "desc": "Vad målvakten säger, och när. Text kommer från Haris."
+            }
           ],
           "back": [
-            { "id": "n4-back-ytor", "kind": "kunskap", "pillar": "kunskap", "title": "Täcka ytor", "desc": "Flytta med bollen, håll linjen. Text kommer från Haris." },
-            { "id": "n4-back-inlagg", "kind": "traning", "pillar": "teknik", "title": "Inlägg från kanten", "desc": "Slå inlägget i fart, mot första och bortre stolpen. Film kommer från Haris." }
+            {
+              "id": "n4-back-ytor",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Täcka ytor",
+              "desc": "Flytta med bollen, håll linjen. Text kommer från Haris."
+            },
+            {
+              "id": "n4-back-inlagg",
+              "kind": "traning",
+              "pillar": "teknik",
+              "title": "Inlägg från kanten",
+              "desc": "Slå inlägget i fart, mot första och bortre stolpen. Film kommer från Haris."
+            }
           ],
           "mitt": [
-            { "id": "n4-mitt-tempo", "kind": "traning", "pillar": "teknik", "title": "Tempo och spelvändning", "desc": "Få touch, lång passning till andra kanten. Film kommer från Haris." },
-            { "id": "n4-mitt-press", "kind": "kunskap", "pillar": "kunskap", "title": "Pressa rätt", "desc": "När laget pressar och när det faller tillbaka. Text kommer från Haris." }
+            {
+              "id": "n4-mitt-tempo",
+              "kind": "traning",
+              "pillar": "teknik",
+              "title": "Tempo och spelvändning",
+              "desc": "Få touch, lång passning till andra kanten. Film kommer från Haris."
+            },
+            {
+              "id": "n4-mitt-press",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Pressa rätt",
+              "desc": "När laget pressar och när det faller tillbaka. Text kommer från Haris."
+            }
           ],
           "anf": [
-            { "id": "n4-anf-lopvag", "kind": "kunskap", "pillar": "kunskap", "title": "Löpvägar bakom backlinjen", "desc": "Tajming, vinkel och offside. Text kommer från Haris." },
-            { "id": "n4-anf-nick", "kind": "traning", "pillar": "koordination", "title": "Nickskott", "desc": "Möta inlägget och styra nicken nedåt. Film kommer från Haris." }
+            {
+              "id": "n4-anf-lopvag",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Löpvägar bakom backlinjen",
+              "desc": "Tajming, vinkel och offside. Text kommer från Haris."
+            },
+            {
+              "id": "n4-anf-nick",
+              "kind": "traning",
+              "pillar": "koordination",
+              "title": "Nickskott",
+              "desc": "Möta inlägget och styra nicken nedåt. Film kommer från Haris."
+            }
           ]
         }
       },
       {
         "n": 5,
         "general": [
-          { "id": "n5-avslut-fart", "kind": "traning", "pillar": "teknik", "title": "Avslut i fart", "desc": "Driv, touch, skott. Allt i full fart. Film kommer från Haris." },
-          { "id": "n5-en-mot-en", "kind": "traning", "pillar": "teknik", "title": "En mot en i matchfart", "desc": "Fint, riktningsbyte och avslut mot en aktiv motståndare. Film kommer från Haris." },
-          { "id": "n5-mental", "kind": "kunskap", "pillar": "kunskap", "title": "Mental träning: nerver före match", "desc": "Andning, rutiner och att tänka på nästa aktion. Text kommer från Haris." },
-          { "id": "n5-prov", "kind": "prov", "pillar": "teknik", "title": "Diplom: Matchvinnare", "desc": "Haris tittar på en hel match eller ett längre träningsklipp och ger ett personligt omdöme." }
+          {
+            "id": "n5-avslut-fart",
+            "kind": "traning",
+            "pillar": "teknik",
+            "title": "Avslut i fart",
+            "desc": "Driv, touch, skott. Allt i full fart. Film kommer från Haris."
+          },
+          {
+            "id": "n5-en-mot-en",
+            "kind": "traning",
+            "pillar": "teknik",
+            "title": "En mot en i matchfart",
+            "desc": "Fint, riktningsbyte och avslut mot en aktiv motståndare. Film kommer från Haris."
+          },
+          {
+            "id": "n5-mental",
+            "kind": "kunskap",
+            "pillar": "kunskap",
+            "title": "Mental träning: nerver före match",
+            "desc": "Andning, rutiner och att tänka på nästa aktion. Text kommer från Haris."
+          },
+          {
+            "id": "n5-prov",
+            "kind": "prov",
+            "pillar": "teknik",
+            "title": "Diplom: Matchvinnare",
+            "desc": "Haris tittar på en hel match eller ett längre träningsklipp och ger ett personligt omdöme."
+          }
         ],
         "positions": {
           "mv": [
-            { "id": "n5-mv-straff", "kind": "traning", "pillar": "koordination", "title": "Straffar och en mot en", "desc": "Läsa skytten, stå stor, välja rätt. Film kommer från Haris." }
+            {
+              "id": "n5-mv-straff",
+              "kind": "traning",
+              "pillar": "koordination",
+              "title": "Straffar och en mot en",
+              "desc": "Läsa skytten, stå stor, välja rätt. Film kommer från Haris."
+            }
           ],
           "back": [
-            { "id": "n5-back-lasa", "kind": "kunskap", "pillar": "kunskap", "title": "Läsa spelet", "desc": "Se passningen innan den slås. Text kommer från Haris." }
+            {
+              "id": "n5-back-lasa",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Läsa spelet",
+              "desc": "Se passningen innan den slås. Text kommer från Haris."
+            }
           ],
           "mitt": [
-            { "id": "n5-mitt-dirigera", "kind": "kunskap", "pillar": "kunskap", "title": "Dirigera laget", "desc": "Rösten, tempot och ansvaret. Text kommer från Haris." }
+            {
+              "id": "n5-mitt-dirigera",
+              "kind": "kunskap",
+              "pillar": "kunskap",
+              "title": "Dirigera laget",
+              "desc": "Rösten, tempot och ansvaret. Text kommer från Haris."
+            }
           ],
           "anf": [
-            { "id": "n5-anf-press", "kind": "traning", "pillar": "teknik", "title": "Avslut under press", "desc": "Kallt huvud med en back i ryggen. Film kommer från Haris." }
+            {
+              "id": "n5-anf-press",
+              "kind": "traning",
+              "pillar": "teknik",
+              "title": "Avslut under press",
+              "desc": "Kallt huvud med en back i ryggen. Film kommer från Haris."
+            }
           ]
         }
       }
@@ -462,11 +1358,52 @@
     "title": "Hjälp mig välja",
     "intro": "Berätta om ditt barn så föreslår vi var ni ska börja. Haris läser också dina svar och återkommer med en personlig rekommendation.",
     "difficulties": [
-      { "id": "touch", "label": "Första touch och mottagning", "pillar": "bollkontroll", "sessions": ["forsta-touch", "uppvarmning-bollkontroll"] },
-      { "id": "passning", "label": "Passningar och tillslag", "pillar": "teknik", "sessions": ["passningar"] },
-      { "id": "dribbling", "label": "Dribbla, finta och våga utmana", "pillar": "teknik", "sessions": ["dribblingar"] },
-      { "id": "koordination", "label": "Koordination, snabbhet och balans", "pillar": "koordination", "sessions": ["koordination"] },
-      { "id": "sjalvfortroende", "label": "Självförtroende och mod", "pillar": "teknik", "sessions": ["dribblingar", "uppvarmning-bollkontroll"], "guide": ["motivation", "feedback"] }
+      {
+        "id": "touch",
+        "label": "Första touch och mottagning",
+        "pillar": "bollkontroll",
+        "sessions": [
+          "forsta-touch",
+          "uppvarmning-bollkontroll"
+        ]
+      },
+      {
+        "id": "passning",
+        "label": "Passningar och tillslag",
+        "pillar": "teknik",
+        "sessions": [
+          "passningar"
+        ]
+      },
+      {
+        "id": "dribbling",
+        "label": "Dribbla, finta och våga utmana",
+        "pillar": "teknik",
+        "sessions": [
+          "dribblingar"
+        ]
+      },
+      {
+        "id": "koordination",
+        "label": "Koordination, snabbhet och balans",
+        "pillar": "koordination",
+        "sessions": [
+          "koordination"
+        ]
+      },
+      {
+        "id": "sjalvfortroende",
+        "label": "Självförtroende och mod",
+        "pillar": "teknik",
+        "sessions": [
+          "dribblingar",
+          "uppvarmning-bollkontroll"
+        ],
+        "guide": [
+          "motivation",
+          "feedback"
+        ]
+      }
     ]
   }
 }

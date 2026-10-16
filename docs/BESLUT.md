@@ -3,6 +3,23 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-16 – filmerna knutna till momenten (v0.2.1)
+
+- **De fem filmerna är fem delar av ETT pass.** Titelskyltarna i filmerna
+  säger det själva: "Uppvärmning med boll (10 min)", "Passningar (10 min)",
+  "Dribblingar (15 min)", "Koordination (10 min)". Första touch saknar skylt
+  och antas vara 10 min. Summa 55 min = konceptets "kompletta pass på 50–60
+  minuter". Appen har därför **CAP-passet** (`program` i content.json) med
+  delarna i filmernas ordning, och delarna var för sig under "Träna något
+  specifikt". Antagandet om 50 min per del är borttaget.
+- **Varje moment har ett klipp** (`steps[].clip`, sekunder i delens film).
+  ▶-knappen hoppar dit och upprepar klippet tills man byter (🔁 går att
+  stänga av). Tiderna är satta från bildrutor en gång per sekund
+  (`tools/frames.py`), inte från att ha sett filmerna, så Haris bör
+  finjustera sekunderna och namnen på momenten.
+- Planeraren plockar moment via id (`ub1`, `ft2` …) så klippen följer med.
+  Hela passet loggat ger 50 XP per del.
+
 ## 2026-10-15 kväll – v0.2.0: tre spår att välja mellan
 
 - **Förstasidan väljer spår** (Carl: "en första sida där man väljer vilken

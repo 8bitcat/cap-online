@@ -21,11 +21,13 @@ flödet: `tools/screenshots-v2.js`.
 
 ```powershell
 cd D:\CAPOnline
-python -m http.server 8808
+python tools\serve.py
 ```
 
 Öppna <http://localhost:8808/>. Appen är mobil-först, testa gärna med
-telefonläge i webbläsaren.
+telefonläge i webbläsaren. Använd `tools\serve.py`, inte `python -m
+http.server`: den vanliga servern saknar Range-stöd och då kan webbläsaren
+inte spola i filmerna, så ▶-knapparna per moment slutar fungera.
 
 ## Filmerna
 

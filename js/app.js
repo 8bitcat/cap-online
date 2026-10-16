@@ -21,6 +21,25 @@ const position = id => C.positions.find(p => p.id === id) || C.positions[C.posit
 const module = id => MODS.find(m => m.id === id);
 const levelDef = n => C.game.levels.find(L => L.n === n);
 const GEN = { mv: 'målvaktens', back: 'backens', mitt: 'mittfältarens', anf: 'anfallarens' };
+let loopClip = true; // upprepa momentets filmdel tills man byter
+
+const fmtT = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+const fmtClip = c => c ? `${fmtT(c.start)}–${fmtT(c.end)}` : '';
+function stepById(id) {
+  for (const s of C.sessions) { const st = s.steps.find(x => x.id === id); if (st) return { s, st }; }
+  return null;
+}
+// Hela CAP-passet: delarnas moment i ordning, med film och klipp per moment.
+function program() {
+  const P = C.program;
+  const parts = P.parts.map(session);
+  return {
+    id: P.id, kind: 'program', title: P.title, subtitle: P.subtitle, summary: P.summary, parts,
+    minutes: parts.reduce((a, s) => a + s.trainingMinutes, 0),
+    pillars: [...new Set(parts.map(s => s.pillar))],
+    steps: parts.flatMap((s, pi) => s.steps.map(st => ({ ...st, sessionId: s.id, pillar: s.pillar, phase: `Del ${pi + 1} · ${s.title} · ${s.trainingMinutes} min` }))),
+  };
+}
 
 const PROTOS = {
   bibliotek: { n: 1, name: 'Träna mitt barn' },
@@ -71,6 +90,9 @@ const routes = [
   [/^\/pass\/([\w-]+)\/logga$/, id => logForm('pass', id)],
   [/^\/pass\/([\w-]+)$/, sessionPage],
   [/^\/pelare\/([\w-]+)$/, pillarPage],
+  [/^\/passet$/, programPage],
+  [/^\/passet\/kor$/, () => run('program', C.program.id)],
+  [/^\/passet\/logga$/, () => logForm('program', C.program.id)],
   [/^\/planera$/, planera],
   [/^\/plan\/([\w-]+)\/kor$/, id => run('plan', id)],
   [/^\/plan\/([\w-]+)\/logga$/, id => logForm('plan', id)],
@@ -117,7 +139,7 @@ function renderTabs() {
 }
 
 function activeTab(path) {
-  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort' };
+  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/' };
   for (const k in alias) if (path.startsWith(k)) return alias[k];
   const tabs = TABS[store.proto] || [];
   const hit = tabs.map(t => t[0]).filter(h => h !== '/' && path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
@@ -152,6 +174,7 @@ function demoSet() {
 function sessionTrained(sid) {
   let n = store.logs(sid).length;
   for (const l of store.logs()) {
+    if (l.kind === 'program' && l.parts?.includes(sid)) n++;
     if (l.kind !== 'plan') continue;
     const p = store.plan(l.sessionId);
     if (p?.steps.some(s => s.sessionId === sid && s.phase === 'Huvuddel')) n++;
@@ -174,7 +197,7 @@ function moduleStatus(m) {
 function xp() {
   const X = C.game.xp;
   let total = 0;
-  for (const l of store.logs()) total += X.pass + X.moment * (l.checked || 0);
+  for (const l of store.logs()) total += X.pass * (l.parts?.length || 1) + X.moment * (l.checked || 0);
   for (const m of MODS) if (moduleDone(m)) total += X[m.kind] || 0;
   return total;
 }
@@ -194,7 +217,7 @@ function ratings() {
   const base = { 'Nybörjare': 42, 'Spelat 1–2 år': 50, 'Spelat 3 år eller mer': 58 }[p.experience] || 46;
   const r = { bollkontroll: base, teknik: base, koordination: base };
   for (const l of store.logs()) {
-    const pillars = l.kind === 'plan' ? (l.pillars || []) : [session(l.sessionId)?.pillar];
+    const pillars = l.pillars || [session(l.sessionId)?.pillar];
     for (const pl of pillars) if (r[pl] != null) r[pl] += 3;
   }
   for (const m of MODS) if (r[m.pillar] != null && moduleDone(m)) r[m.pillar] += 4;
@@ -256,18 +279,18 @@ function nextModule(pos) {
 function planSession({ minutes, focus }) {
   const p = store.profile || {};
   const pos = p.position || 'okand';
-  const pick = (id, i) => { const s = session(id); const st = s.steps[i]; return { name: st.name, desc: st.desc, base: st.minutes, sessionId: id, pillar: s.pillar }; };
-  const warm = [pick('uppvarmning-bollkontroll', 0), pick('uppvarmning-bollkontroll', 1)];
+  const pick = id => { const { s, st } = stepById(id); return { name: st.name, desc: st.desc, base: st.minutes, sessionId: s.id, clip: st.clip, pillar: s.pillar }; };
+  const warm = [pick('ub1'), pick('ub2')];
   const byFocus = {
-    bollkontroll: [pick('forsta-touch', 0), pick('forsta-touch', 1), pick('uppvarmning-bollkontroll', 3), pick('forsta-touch', 2)],
-    teknik: [pick('passningar', 1), pick('dribblingar', 1), pick('passningar', 2), pick('dribblingar', 2)],
-    koordination: [pick('koordination', 1), pick('koordination', 2), pick('koordination', 3), pick('uppvarmning-bollkontroll', 3)],
+    bollkontroll: [pick('ft1'), pick('ft2'), pick('ub3'), pick('ft3')],
+    teknik: [pick('pa2'), pick('dr2'), pick('pa3'), pick('dr3')],
+    koordination: [pick('ko2'), pick('ko3'), pick('ko4'), pick('ko1')],
   };
   const byPos = {
-    anf: [pick('dribblingar', 3), pick('forsta-touch', 1), pick('passningar', 3), pick('dribblingar', 2)],
-    back: [pick('passningar', 2), pick('koordination', 2), pick('forsta-touch', 3), pick('passningar', 1)],
-    mitt: [pick('forsta-touch', 1), pick('passningar', 1), pick('dribblingar', 1), pick('koordination', 3)],
-    mv: [pick('koordination', 2), pick('forsta-touch', 2), pick('koordination', 0), pick('passningar', 0)],
+    anf: [pick('dr3'), pick('ft2'), pick('pa3'), pick('dr2')],
+    back: [pick('pa3'), pick('ko2'), pick('ft3'), pick('pa2')],
+    mitt: [pick('ft2'), pick('pa2'), pick('dr2'), pick('ko4')],
+    mv: [pick('ko2'), pick('ft4'), pick('ko1'), pick('pa1')],
   };
   const name = p.name || 'Barnet';
   let main, why, label;
@@ -297,7 +320,7 @@ function planSession({ minutes, focus }) {
   const steps = [
     ...warm.map(b => ({ ...b, phase: 'Uppvärmning', minutes: Math.max(2, Math.round(warmT / warm.length)) })),
     ...main.map(b => ({ ...b, phase: 'Huvuddel', minutes: Math.max(3, Math.round(mainT * b.base / sum)) })),
-    { name: cool.name, desc: cool.desc, sessionId: cool.sessionId, pillar: cool.pillar, phase: 'Avslut', minutes: coolT },
+    { name: cool.name, desc: cool.desc, sessionId: cool.sessionId, clip: stepById(cool.step)?.st.clip, pillar: cool.pillar, phase: 'Avslut', minutes: coolT },
   ];
   return {
     id: 'plan-' + Date.now().toString(36), title: `${p.name ? p.name + 's' : 'Dagens'} pass`, minutes, focus: label, why,
@@ -334,7 +357,47 @@ function sessionCard(s) {
 }
 
 function player(s) {
-  return `<div class="player ${s.video.portrait ? 'portrait' : ''}" data-local="${esc(s.video.local)}" data-drive="${esc(s.video.driveId)}" data-poster="${esc(s.video.poster)}"></div>`;
+  return `<div class="player ${s.video.portrait ? 'portrait' : ''}" data-sid="${s.id}" data-local="${esc(s.video.local)}" data-drive="${esc(s.video.driveId)}" data-poster="${esc(s.video.poster)}"></div>
+  <div class="now" id="now"><span class="muted small">Hela filmen · ${esc(s.title)}</span></div>`;
+}
+
+// Hoppar till ett moments filmdel och upprepar den. Byter film om momentet hör till en annan del.
+function playClip(sid, clip, label) {
+  const el = $('.player', view);
+  const s = session(sid);
+  if (!el || !s) return;
+  if (el.dataset.sid !== sid) {
+    Object.assign(el.dataset, { sid, local: s.video.local, drive: s.video.driveId, poster: s.video.poster });
+    el.classList.toggle('portrait', !!s.video.portrait);
+    wirePlayer(el);
+  }
+  el.dataset.clipStart = clip ? clip.start : '';
+  el.dataset.clipEnd = clip ? clip.end : '';
+  const v = $('video', el);
+  if (v) {
+    const start = clip ? clip.start : 0;
+    const seek = () => {
+      v.currentTime = start;
+      v.play().catch(() => {});
+      // Vissa webbläsare tappar spolningen om den sker innan data finns; rätta när filmen väl rullar.
+      v.addEventListener('playing', () => { if (Math.abs(v.currentTime - start) > 1.5) v.currentTime = start; }, { once: true });
+    };
+    v.readyState >= 1 ? seek() : v.addEventListener('loadedmetadata', seek, { once: true });
+  }
+  const now = $('#now');
+  if (now) {
+    now.innerHTML = clip
+      ? `<span>▶ <b>${esc(label)}</b> <span class="muted">${esc(s.title)} ${fmtClip(clip)}</span></span>
+         <span class="now-btns"><button class="film ${loopClip ? 'current' : ''}" data-action="loop">🔁 Upprepa</button><button class="film" data-action="hela" data-sid="${sid}">Hela filmen</button></span>`
+      : `<span class="muted small">Hela filmen · ${esc(s.title)}</span>`;
+    $$('[data-action]', now).forEach(b => b.addEventListener('click', onAction));
+  }
+  $$('.film[data-action=klipp]', view).forEach(b => b.classList.toggle('current', b.dataset.sid === sid && b.dataset.start === String(clip ? clip.start : '')));
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function clipButton(sid, clip, label) {
+  if (!clip) return '';
+  return `<button class="film" data-action="klipp" data-sid="${sid}" data-start="${clip.start}" data-end="${clip.end}" data-label="${esc(label)}">▶ ${fmtClip(clip)}</button>`;
 }
 
 // Spelar lokal mp4 om den finns, annars Google Drive-förhandsvisning.
@@ -352,6 +415,15 @@ function wirePlayer(el) {
       : `<iframe src="https://drive.google.com/file/d/${esc(drive)}/preview" allow="autoplay; fullscreen" allowfullscreen title="Film"></iframe>
       <div class="note">Visas via Google Drive i prototypen. Kräver ett Google-konto som fått filmen delad.</div>`;
   });
+  const restart = () => { v.currentTime = Number(el.dataset.clipStart) || 0; v.play().catch(() => {}); };
+  v.addEventListener('timeupdate', () => {
+    const end = Number(el.dataset.clipEnd);
+    if (!end || v.currentTime < end) return;
+    if (loopClip) restart();
+    else v.pause();
+  });
+  // Klipp som slutar där filmen slutar: filmen tar slut innan timeupdate hinner se det.
+  v.addEventListener('ended', () => { if (loopClip && el.dataset.clipStart !== '' && el.dataset.clipStart != null) restart(); });
   v.appendChild(src);
   el.appendChild(v);
 }
@@ -509,11 +581,7 @@ function homeLibrary() {
       ${C.pillars.map(p => `<a class="pillar" href="#/pelare/${p.id}"><i></i><b>${esc(p.name)}</b><span>${esc(p.short)}</span></a>`).join('')}
     </div>
   </section>
-  <section>
-    <div class="section-head"><h2>Färdiga pass</h2><span class="small muted">${C.sessions.length} pass</span></div>
-    <p class="muted small">Kompletta pass på ungefär en timme. CAP planerar passet, ni genomför det.</p>
-    <div class="cards">${C.sessions.map(sessionCard).join('')}</div>
-  </section>
+  ${passSections()}
   <section class="cards">
     <a class="card" href="#/valj"><div class="card-body">
       <div class="eyebrow">Osäker på var ni ska börja?</div>
@@ -547,12 +615,9 @@ function homePlayer() {
   </section>
   ${last ? `<section class="panel">
     <div class="section-head"><h3>Senast tränat</h3><span class="small muted">${fmtDate(last.date)}</span></div>
-    <p class="small muted" style="margin:0">${esc(last.kind === 'plan' ? store.plan(last.sessionId)?.title : session(last.sessionId)?.title)} · ${esc(ratingLabel(last.rating))}${last.note ? ` · ${esc(last.note)}` : ''}</p>
+    <p class="small muted" style="margin:0">${esc(itemOf(last.kind || 'pass', last.sessionId)?.title)} · ${esc(ratingLabel(last.rating))}${last.note ? ` · ${esc(last.note)}` : ''}</p>
   </section>` : `<section class="panel brand"><h3>Första passet väntar</h3><p class="small muted" style="margin:0">Låt appen planera ett pass på den tid ni har, kör det och logga. Då börjar XP och märkena ticka.</p></section>`}
-  <section>
-    <div class="section-head"><h2>Haris pass</h2><a class="small" href="#/bibliotek">Biblioteket ›</a></div>
-    <div class="cards">${C.sessions.map(sessionCard).join('')}</div>
-  </section>
+  ${passSections()}
   <section class="cards">
     <a class="card" href="#/foralder"><div class="card-body"><div class="eyebrow">För dig som förälder</div><h3>${esc(C.guide.title)}</h3><p class="desc">${esc(C.guide.intro)}</p></div></a>
     <a class="card" href="#/start/1"><div class="card-body"><div class="eyebrow">Profil</div><h3>Ändra ${esc(p.name)}s uppgifter</h3><p class="desc">Position ${esc(position(p.position).name.toLowerCase())}, ${esc(p.experience.toLowerCase())}, ${esc(p.freq)} pass i veckan.</p></div></a>
@@ -591,6 +656,55 @@ function homeUtbildning() {
   ${footer()}`;
 }
 
+function passSections() {
+  const P = program();
+  return `
+  <section>
+    <div class="section-head"><h2>Färdiga pass</h2><span class="small muted">CAP planerar, ni genomför</span></div>
+    ${programCard(P)}
+  </section>
+  <section>
+    <div class="section-head"><h2>Träna något specifikt</h2><span class="small muted">${C.sessions.length} delar</span></div>
+    <p class="muted small">Delarna ur passet var för sig, med film och moment.</p>
+    <div class="cards">${C.sessions.map(sessionCard).join('')}</div>
+  </section>`;
+}
+
+function programCard(P) {
+  const n = store.logs(P.id).length;
+  return `<a class="card program" href="#/passet">
+    <div class="card-media"><img src="${esc(C.program.poster)}" alt="" onerror="this.style.display='none'"><span class="tag">Hela passet</span><span class="len">⏱ ${P.minutes} min</span></div>
+    <div class="card-body">
+      <h3>${esc(P.title)} · ${esc(P.subtitle)}</h3>
+      <p class="desc">${esc(P.summary)}</p>
+      <div class="meta"><span><b>${P.parts.length} delar</b></span><span>${P.steps.length} moment med film</span><span>🎒 ${esc(C.program.equipment.join(', '))}</span></div>
+      ${n ? `<div class="status">✓ Genomfört ${n} gånger</div>` : ''}
+    </div>
+  </a>`;
+}
+
+function programPage() {
+  const P = program();
+  const logs = store.logs(P.id);
+  return `
+  <a class="back" href="#/">‹ Hem</a>
+  <section>
+    <div class="eyebrow">Hela passet · ${P.minutes} min</div>
+    <h1>${esc(P.title)}</h1>
+    <p class="muted">${esc(P.subtitle)}. ${esc(P.summary)}</p>
+    <div class="chips"><span class="chip brand">⏱ ${P.minutes} min</span><span class="chip">${P.parts.length} delar</span><span class="chip">${P.steps.length} moment</span>${C.program.equipment.map(e => `<span class="chip">${esc(e)}</span>`).join('')}</div>
+  </section>
+  <section class="btn-row two">
+    <a class="btn grad" href="#/passet/kor">▶ Kör hela passet</a>
+    <a class="btn secondary" href="#/passet/logga">Logga ett genomfört pass</a>
+  </section>
+  <section>
+    <h2>Delarna i ordning</h2>
+    <ul class="list">${P.parts.map((s, i) => `<li class="row"><span class="num">${i + 1}</span><a class="grow" href="#/pass/${s.id}"><b>${esc(s.title)}</b><div class="small muted">${s.steps.length} moment · ${esc(pillar(s.pillar).name)}</div></a><span class="small muted">${s.trainingMinutes} min</span></li>`).join('')}</ul>
+  </section>
+  ${logs.length ? `<section><h2>Genomfört</h2><ul class="list">${logs.slice().reverse().map(l => `<li><b>${fmtDate(l.date)}</b> · ${esc(ratingLabel(l.rating))}${l.note ? `<div class="small muted">${esc(l.note)}</div>` : ''}</li>`).join('')}</ul></section>` : ''}`;
+}
+
 function footer() {
   return `<div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP Online v${VERSION} · <a href="#/prototyper">byt prototyp</a></div>`;
 }
@@ -625,7 +739,7 @@ function sessionPage(id) {
   return `
   <a class="back" href="#/">‹ Alla pass</a>
   <section>
-    <div class="eyebrow">${esc(pillar(s.pillar).name)} · ${esc(s.level)}</div>
+    <div class="eyebrow">Del ${C.program.parts.indexOf(s.id) + 1} av ${C.program.parts.length} i <a href="#/passet">${esc(C.program.title)}</a> · ${esc(pillar(s.pillar).name)}</div>
     <h1>${esc(s.title)}</h1>
     ${player(s)}
     <p>${esc(s.summary)}</p>
@@ -659,8 +773,8 @@ function sessionPage(id) {
     <p class="muted small">${esc(s.space)}</p>
   </section>
   <section>
-    <h2>Passets delar</h2>
-    <div class="list">${s.steps.map((st, i) => `<div class="step"><span class="num">${i + 1}</span><div><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc || '')}</div></div><span class="min">${st.minutes ? st.minutes + ' min' : ''}</span></div>`).join('')}</div>
+    <div class="section-head"><h2>Moment</h2><span class="small muted">▶ hoppar till rätt del av filmen</span></div>
+    <div class="list">${s.steps.map((st, i) => `<div class="step"><span class="num">${i + 1}</span><div><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc || '')}</div>${clipButton(s.id, st.clip, st.name)}</div><span class="min">${st.minutes ? st.minutes + ' min' : ''}</span></div>`).join('')}</div>
   </section>
   ${logs.length ? `
   <section>
@@ -672,39 +786,41 @@ function sessionPage(id) {
 
 function ratingLabel(r) { return { latt: 'Lätt', lagom: 'Lagom', svart: 'Svårt' }[r] || r; }
 
-function itemOf(kind, id) { return kind === 'plan' ? store.plan(id) : session(id); }
+function itemOf(kind, id) { return kind === 'plan' ? store.plan(id) : kind === 'program' ? program() : session(id); }
 
 function run(kind, id) {
   const item = itemOf(kind, id);
   if (!item) return go('/');
-  const backHref = kind === 'plan' ? `#/plan/${id}` : `#/pass/${id}`;
+  const backHref = kind === 'plan' ? `#/plan/${id}` : kind === 'program' ? '#/passet' : `#/pass/${id}`;
   const done = new Set(store.stepsDone(id));
-  const firstMain = kind === 'plan' ? (item.steps.find(s => s.phase === 'Huvuddel') || item.steps[0]) : null;
-  const vid = kind === 'plan' ? session(firstMain.sessionId) : item;
+  const first = item.steps.find(s => s.phase === 'Huvuddel') || item.steps[0];
+  const vid = kind === 'pass' ? item : session(first.sessionId);
+  const total = kind === 'pass' ? item.trainingMinutes : item.minutes;
   let phase = '';
   const rows = item.steps.map((st, i) => {
-    const head = kind === 'plan' && st.phase !== phase ? `<div class="eyebrow phase">${esc(phase = st.phase)}</div>` : '';
-    const film = kind === 'plan' && st.sessionId ? `<button class="film ${st.sessionId === vid.id ? 'current' : ''}" data-action="film" data-sid="${st.sessionId}" title="Visa filmen för momentet">▶ ${esc(session(st.sessionId).title)}</button>` : '';
+    const sid = st.sessionId || item.id;
+    const head = st.phase && st.phase !== phase ? `<div class="eyebrow phase">${esc(phase = st.phase)}</div>` : '';
     return `${head}<div class="step ${done.has(i) ? 'done' : ''}">
       <span class="num">${i + 1}</span>
-      <label><input type="checkbox" data-step="${i}" ${done.has(i) ? 'checked' : ''}><span><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc || '')}</div>${film}</span></label>
-      <span class="min">${st.minutes ? st.minutes + ' min' : ''}</span></div>`;
+      <label><input type="checkbox" data-step="${i}" ${done.has(i) ? 'checked' : ''}><span><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc || '')}</div></span></label>
+      <span class="min">${st.minutes ? st.minutes + ' min' : ''}</span>
+      <div class="step-film">${clipButton(sid, st.clip, st.name)}${kind !== 'pass' ? `<span class="small muted">ur ${esc(session(sid).title)}</span>` : ''}</div></div>`;
   }).join('');
   return `
   <a class="back" href="${backHref}">‹ ${esc(item.title)}</a>
   <section>
-    <div class="eyebrow">Kör passet</div>
+    <div class="eyebrow">Kör passet${kind === 'program' ? ` · ${item.parts.length} delar` : ''}</div>
     <h1>${esc(item.title)}</h1>
     ${player(vid)}
     <div class="timer">
-      <div><div class="small muted">Träningstid${kind === 'plan' ? ` · mål ${item.minutes} min` : ''}</div><div class="clock" id="clock">00:00</div></div>
+      <div><div class="small muted">Träningstid · mål ${total} min</div><div class="clock" id="clock">00:00</div></div>
       <button class="btn secondary" data-action="timer">Starta</button>
     </div>
   </section>
   <section>
     <h2>Moment</h2>
-    <p class="small muted">Bocka av varje moment. Varje avbockat moment ger XP när passet loggas.</p>
-    <div class="list">${rows}</div>
+    <p class="small muted">Tryck ▶ så hoppar filmen till momentet och upprepar det. Bocka av när ni är klara, varje avbockat moment ger XP.</p>
+    <div class="list" data-item="${esc(item.id)}">${rows}</div>
   </section>
   <section class="btn-row">
     <a class="btn grad" href="${backHref}/logga">Vi är klara – logga passet</a>
@@ -728,7 +844,7 @@ function startTimer() {
 }
 
 function onStepToggle(e) {
-  const id = location.hash.match(/\/(?:pass|plan)\/([\w-]+)/)[1];
+  const id = e.target.closest('.list').dataset.item;
   store.setStepDone(id, Number(e.target.dataset.step), e.target.checked);
   e.target.closest('.step').classList.toggle('done', e.target.checked);
 }
@@ -736,7 +852,7 @@ function onStepToggle(e) {
 function logForm(kind, id) {
   const item = itemOf(kind, id);
   if (!item) return go('/');
-  const backHref = kind === 'plan' ? `#/plan/${id}` : `#/pass/${id}`;
+  const backHref = kind === 'plan' ? `#/plan/${id}` : kind === 'program' ? '#/passet' : `#/pass/${id}`;
   const checked = store.stepsDone(id).length;
   return `
   <a class="back" href="${backHref}">‹ ${esc(item.title)}</a>
@@ -761,7 +877,7 @@ function logForm(kind, id) {
         <label for="date">Datum</label>
         <input type="date" id="date" name="date" value="${today()}" max="${today()}">
       </div>
-      <p class="small muted">Ger ${C.game.xp.pass} XP${checked ? ` + ${checked * C.game.xp.moment} XP för ${checked} avbockade moment` : ''}.</p>
+      <p class="small muted">Ger ${C.game.xp.pass * (kind === 'program' ? item.parts.length : 1)} XP${checked ? ` + ${checked * C.game.xp.moment} XP för ${checked} avbockade moment` : ''}.</p>
       <button class="btn grad block" type="submit">Spara passet</button>
     </form>
   </section>`;
@@ -814,7 +930,7 @@ function planPage(id) {
     <h2>Upplägg</h2>
     <div class="list">${pl.steps.map((st, i) => {
       const head = st.phase !== phase ? `<div class="eyebrow phase">${esc(phase = st.phase)}</div>` : '';
-      return `${head}<div class="step"><span class="num">${i + 1}</span><div><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc)}</div>${st.sessionId ? `<a class="small" href="#/pass/${st.sessionId}">▶ Ur ${esc(session(st.sessionId).title)}</a>` : ''}</div><span class="min">${st.minutes} min</span></div>`;
+      return `${head}<div class="step"><span class="num">${i + 1}</span><div><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc)}</div><span class="small muted">Ur <a href="#/pass/${st.sessionId}">${esc(session(st.sessionId).title)}</a>${st.clip ? ` · ${fmtClip(st.clip)}` : ''}</span></div><span class="min">${st.minutes} min</span></div>`;
     }).join('')}</div>
   </section>
   ${logs.length ? `<section><h2>Genomfört</h2><ul class="list">${logs.slice().reverse().map(l => `<li><b>${fmtDate(l.date)}</b> · ${esc(ratingLabel(l.rating))}${l.note ? `<div class="small muted">${esc(l.note)}</div>` : ''}</li>`).join('')}</ul></section>` : ''}
@@ -1131,17 +1247,6 @@ function armed(el, label) {
   return false;
 }
 
-function switchFilm(sid) {
-  const el = $('.player', view);
-  const s = session(sid);
-  if (!el || !s) return;
-  el.dataset.local = s.video.local; el.dataset.drive = s.video.driveId; el.dataset.poster = s.video.poster;
-  el.classList.toggle('portrait', !!s.video.portrait);
-  wirePlayer(el);
-  $$('.film', view).forEach(b => b.classList.toggle('current', b.dataset.sid === sid));
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 function onAction(e) {
   const el = e.currentTarget;
   const { action, id } = el.dataset;
@@ -1153,7 +1258,9 @@ function onAction(e) {
   } else if (action === 'reset') {
     e.preventDefault();
     if (armed(el, 'Tryck igen för att nollställa allt')) store.reset();
-  } else if (action === 'film') { e.preventDefault(); switchFilm(el.dataset.sid); }
+  } else if (action === 'klipp') { e.preventDefault(); playClip(el.dataset.sid, { start: Number(el.dataset.start), end: Number(el.dataset.end) }, el.dataset.label); }
+  else if (action === 'hela') { e.preventDefault(); playClip(el.dataset.sid, null, ''); }
+  else if (action === 'loop') { e.preventDefault(); loopClip = !loopClip; el.classList.toggle('current', loopClip); toast(loopClip ? 'Upprepar momentet' : 'Spelar vidare efter momentet'); }
   else if (action === 'demo') { store.demo = Number(el.dataset.v); toast(store.demo ? 'Förhandsvisning på' : 'Visar verklig progression'); route(); }
   else if (action === 'modul-klar') { const b = snapshot(); store.setModule(id, { done: true }); celebrate(b, 'Modulen är klar'); route(); }
   else if (action === 'quiz-igen') { store.setModule(id, { done: false, score: null }); route(); }
@@ -1169,16 +1276,17 @@ function onSubmit(e) {
   const before = snapshot();
   if (kind === 'log') {
     const id = f.dataset.id;
-    const isPlan = f.dataset.kind === 'plan';
-    const pl = isPlan ? store.plan(id) : null;
+    const kindOf = f.dataset.kind;
+    const item = itemOf(kindOf, id);
     store.addLog({
-      sessionId: id, kind: isPlan ? 'plan' : 'pass', pillars: pl?.pillars, rating: fd.get('rating'),
+      sessionId: id, kind: kindOf, pillars: kindOf === 'pass' ? undefined : item?.pillars,
+      parts: kindOf === 'program' ? C.program.parts : undefined, rating: fd.get('rating'),
       note: (fd.get('note') || '').trim(), date: fd.get('date') || today(), checked: store.stepsDone(id).length,
     });
     store.clearSteps(id);
-    if (!isPlan && !store.has(id)) store.add(id);
+    if (kindOf === 'pass' && !store.has(id)) store.add(id);
     celebrate(before, 'Passet är loggat 💪');
-    go(isPlan ? `/plan/${id}` : `/pass/${id}`);
+    go(kindOf === 'plan' ? `/plan/${id}` : kindOf === 'program' ? '/passet' : `/pass/${id}`);
   } else if (kind === 'wiz1') {
     store.draft = { ...store.draft, name: (fd.get('name') || '').trim(), age: fd.get('age') };
     go('/start/2');
