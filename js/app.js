@@ -379,8 +379,14 @@ function playClip(sid, clip, label) {
     const seek = () => {
       v.currentTime = start;
       v.play().catch(() => {});
-      // Vissa webbläsare tappar spolningen om den sker innan data finns; rätta när filmen väl rullar.
-      v.addEventListener('playing', () => { if (Math.abs(v.currentTime - start) > 1.5) v.currentTime = start; }, { once: true });
+      // Servrar utan Range-stöd tappar spolningen tills filmen buffrat fram; försök igen en stund.
+      clearInterval(el._retry);
+      let tries = 0;
+      el._retry = setInterval(() => {
+        const off = Math.abs(v.currentTime - start) > 1.5 && v.currentTime < start;
+        if (!off || ++tries > 40 || Number(el.dataset.clipStart || 0) !== start) return clearInterval(el._retry);
+        v.currentTime = start;
+      }, 500);
     };
     v.readyState >= 1 ? seek() : v.addEventListener('loadedmetadata', seek, { once: true });
   }
