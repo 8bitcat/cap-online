@@ -65,7 +65,7 @@ export const store = {
   get demo() { return data.demo || 0; },
   set demo(v) { data.demo = v; save(); },
 
-  // Förfrågningar till Haki (prototyp: sparas bara lokalt)
+  // Förfrågningar till Haris (prototyp: sparas bara lokalt)
   get requests() { return data.requests.slice(); },
   addRequest(req) {
     data.requests.push(Object.assign({ id: Date.now().toString(36), date: today(), status: 'skickad' }, req));

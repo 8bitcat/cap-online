@@ -3,7 +3,7 @@
     "name": "CAP Online",
     "company": "Complete Athletic Performance",
     "tagline": "Barnet får träningen. Föräldern får kunskapen. CAP ger vägledningen.",
-    "coach": "Haki",
+    "coach": "Haris",
     "ages": "7–14 år"
   },
   "pillars": [
@@ -54,7 +54,7 @@
       { "id": "teknikern", "name": "Teknikern", "desc": "Både Passningar och Dribblingar tränade", "icon": "🎯" },
       { "id": "koordinator", "name": "Koordinatorn", "desc": "Koordination två gånger", "icon": "⚡" },
       { "id": "kunskapstorst", "name": "Kunskapstörst", "desc": "Två kunskapsmoduler klara", "icon": "📘" },
-      { "id": "nivaprov", "name": "Nivåprov", "desc": "Ett nivåprov inskickat till Haki", "icon": "🏆" },
+      { "id": "nivaprov", "name": "Nivåprov", "desc": "Ett nivåprov inskickat till Haris", "icon": "🏆" },
       { "id": "hela-biblioteket", "name": "Hela biblioteket", "desc": "Alla fem pass i biblioteket", "icon": "📚" }
     ]
   },
@@ -195,7 +195,7 @@
     }
   ],
   "curriculum": {
-    "intro": "Utbildningsvägen tar barnet från bollkompis till matchvinnare i fem nivåer. Varje nivå blandar träning med boll, fotbollskunskap som gäller alla, och det som är särskilt för barnets position. Nivåprovet bedöms av Haki.",
+    "intro": "Utbildningsvägen tar barnet från bollkompis till matchvinnare i fem nivåer. Varje nivå blandar träning med boll, fotbollskunskap som gäller alla, och det som är särskilt för barnets position. Nivåprovet bedöms av Haris.",
     "levels": [
       {
         "n": 1,
@@ -216,7 +216,7 @@
             ]
           },
           { "id": "n1-koordination", "kind": "traning", "pillar": "koordination", "title": "Koordination grund", "desc": "Snabba fötter, konraden och reaktion på bollen.", "session": "koordination" },
-          { "id": "n1-prov", "kind": "prov", "pillar": "bollkontroll", "title": "Nivåprov 1", "desc": "Filma barnet: 20 touch med bollen nära foten utan att tappa den, och tio mottagningar med insidan. Haki tittar och godkänner." }
+          { "id": "n1-prov", "kind": "prov", "pillar": "bollkontroll", "title": "Nivåprov 1", "desc": "Filma barnet: 20 touch med bollen nära foten utan att tappa den, och tio mottagningar med insidan. Haris tittar och godkänner." }
         ],
         "positions": {}
       },
@@ -255,7 +255,7 @@
         ],
         "positions": {
           "mv": [
-            { "id": "n2-mv-grepp", "kind": "traning", "pillar": "koordination", "title": "Grepp och fotarbete", "desc": "Händerna i W, fötterna i rörelse. Film kommer från Haki." },
+            { "id": "n2-mv-grepp", "kind": "traning", "pillar": "koordination", "title": "Grepp och fotarbete", "desc": "Händerna i W, fötterna i rörelse. Film kommer från Haris." },
             {
               "id": "n2-mv-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Målvaktens jobb", "desc": "Var du står, när du pratar och när du inte får använda händerna.",
               "body": ["Målvakten är den enda som ser hela planen. Därför är rösten lika viktig som händerna: säg till backarna var motståndarna är.", "Stå alltid mellan bollen och målets mitt. Då blir målet litet för den som skjuter.", "Får du bollen passad från en lagkamrat med foten får du inte ta upp den med händerna. Då spelar du med fötterna, precis som alla andra."],
@@ -267,7 +267,7 @@
             }
           ],
           "back": [
-            { "id": "n2-back-stallning", "kind": "traning", "pillar": "koordination", "title": "Försvarsställning", "desc": "Låg tyngdpunkt, sidledes fötter, rätt avstånd. Film kommer från Haki." },
+            { "id": "n2-back-stallning", "kind": "traning", "pillar": "koordination", "title": "Försvarsställning", "desc": "Låg tyngdpunkt, sidledes fötter, rätt avstånd. Film kommer från Haris." },
             {
               "id": "n2-back-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Backens jobb", "desc": "Sakta ner, vinn bollen, starta anfallet.",
               "body": ["Backens första uppgift är att göra det svårt för motståndaren, inte att vinna bollen på direkten. Sakta ner spelaren, vänta på rätt läge.", "När du vunnit bollen: titta upp och spela en lugn passning. Det är så anfallen börjar.", "När bollen är på andra kanten drar du in mot mitten och täcker ytan framför målet."],
@@ -279,7 +279,7 @@
             }
           ],
           "mitt": [
-            { "id": "n2-mitt-vandning", "kind": "traning", "pillar": "bollkontroll", "title": "Vändningar", "desc": "Ta emot och vänd i samma rörelse. Film kommer från Haki." },
+            { "id": "n2-mitt-vandning", "kind": "traning", "pillar": "bollkontroll", "title": "Vändningar", "desc": "Ta emot och vänd i samma rörelse. Film kommer från Haris." },
             {
               "id": "n2-mitt-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Mittfältarens jobb", "desc": "Titta över axeln, första touch framåt, hitta passningen.",
               "body": ["Mittfältaren får bollen oftast av alla, ofta med en motståndare i ryggen. Därför börjar jobbet innan bollen kommer: titta över axeln.", "Är ingen nära tar du första touchen framåt, i spelriktningen. Är någon nära skyddar du bollen och spelar enkelt.", "När laget tappar bollen är mittfältaren först att pressa eller att hitta en plats mellan bollen och det egna målet."],
@@ -291,7 +291,7 @@
             }
           ],
           "anf": [
-            { "id": "n2-anf-avslut", "kind": "traning", "pillar": "teknik", "title": "Avslut insida", "desc": "Placerat lågt i hörnet, från båda sidor. Film kommer från Haki." },
+            { "id": "n2-anf-avslut", "kind": "traning", "pillar": "teknik", "title": "Avslut insida", "desc": "Placerat lågt i hörnet, från båda sidor. Film kommer från Haris." },
             {
               "id": "n2-anf-jobb", "kind": "kunskap", "pillar": "kunskap", "title": "Anfallarens jobb", "desc": "Löpningen, första touchen mot mål och avslutet.",
               "body": ["Anfallaren gör mål, men jobbet börjar långt innan skottet. Löpningen bakom backlinjen startar när passaren tittar upp och kan slå bollen, inte tidigare.", "Nära mål och lite tid: placera med insidan. Det är säkrare än ett hårt skott.", "Missar du ett läge skakar du av dig det. Nästa chans kommer, och den som grubblar missar den också."],
@@ -307,8 +307,8 @@
       {
         "n": 3,
         "general": [
-          { "id": "n3-finter", "kind": "traning", "pillar": "teknik", "title": "Finter i fart", "desc": "Kroppsfint, överstegsfint och sax i fart mot kon. Film kommer från Haki." },
-          { "id": "n3-jonglering", "kind": "traning", "pillar": "bollkontroll", "title": "Jonglering 20", "desc": "Fot, lår och båda fötterna. Målet är tjugo i rad. Film kommer från Haki." },
+          { "id": "n3-finter", "kind": "traning", "pillar": "teknik", "title": "Finter i fart", "desc": "Kroppsfint, överstegsfint och sax i fart mot kon. Film kommer från Haris." },
+          { "id": "n3-jonglering", "kind": "traning", "pillar": "bollkontroll", "title": "Jonglering 20", "desc": "Fot, lår och båda fötterna. Målet är tjugo i rad. Film kommer från Haris." },
           {
             "id": "n3-lagkamrat", "kind": "kunskap", "pillar": "kunskap", "title": "Att vara en bra lagkamrat", "desc": "Det som gör att tränare och kompisar vill ha dig i laget.",
             "body": ["De spelare som alla vill spela med är inte alltid de bästa med bollen. De peppar, de lyssnar och de tar ansvar när det går dåligt.", "En kompis missar en straff: säg något peppande. Tränaren säger något du inte håller med om: lyssna, och fråga efteråt.", "Laget förlorar: tacka motståndarna och tänk på vad ni lärde er. Nästa match är en ny chans."],
@@ -318,75 +318,75 @@
               { "q": "Laget förlorar. Vad gör du?", "a": ["Skyller på målvakten", "Slutar spela", "Tackar motståndarna och tänker på vad vi lärde oss"], "correct": 2 }
             ]
           },
-          { "id": "n3-avslut", "kind": "traning", "pillar": "teknik", "title": "Avslut från kanten av straffområdet", "desc": "Vrist och bredsida, efter en touch. Film kommer från Haki." },
+          { "id": "n3-avslut", "kind": "traning", "pillar": "teknik", "title": "Avslut från kanten av straffområdet", "desc": "Vrist och bredsida, efter en touch. Film kommer från Haris." },
           { "id": "n3-prov", "kind": "prov", "pillar": "teknik", "title": "Nivåprov 3", "desc": "Filma: tjugo jongleringar i rad och tre olika finter i fart mot en passiv motståndare." }
         ],
         "positions": {
           "mv": [
-            { "id": "n3-mv-fall", "kind": "traning", "pillar": "koordination", "title": "Fallteknik", "desc": "Falla mjukt åt båda hållen och komma upp snabbt. Film kommer från Haki." },
-            { "id": "n3-mv-fotter", "kind": "traning", "pillar": "bollkontroll", "title": "Spel med fötterna", "desc": "Första touch och passning under press, som målvakt. Film kommer från Haki." }
+            { "id": "n3-mv-fall", "kind": "traning", "pillar": "koordination", "title": "Fallteknik", "desc": "Falla mjukt åt båda hållen och komma upp snabbt. Film kommer från Haris." },
+            { "id": "n3-mv-fotter", "kind": "traning", "pillar": "bollkontroll", "title": "Spel med fötterna", "desc": "Första touch och passning under press, som målvakt. Film kommer från Haris." }
           ],
           "back": [
-            { "id": "n3-back-nick", "kind": "traning", "pillar": "koordination", "title": "Nickar", "desc": "Pannan, ögonen öppna, nicka bort och nicka till en lagkamrat. Film kommer från Haki." },
-            { "id": "n3-back-forsta", "kind": "kunskap", "pillar": "kunskap", "title": "Första försvarare", "desc": "Press, täckning och när man går in i en duell. Text kommer från Haki." }
+            { "id": "n3-back-nick", "kind": "traning", "pillar": "koordination", "title": "Nickar", "desc": "Pannan, ögonen öppna, nicka bort och nicka till en lagkamrat. Film kommer från Haris." },
+            { "id": "n3-back-forsta", "kind": "kunskap", "pillar": "kunskap", "title": "Första försvarare", "desc": "Press, täckning och när man går in i en duell. Text kommer från Haris." }
           ],
           "mitt": [
-            { "id": "n3-mitt-axel", "kind": "traning", "pillar": "bollkontroll", "title": "Titta över axeln innan bollen", "desc": "Mottagning med motståndare i ryggen. Film kommer från Haki." },
-            { "id": "n3-mitt-framat", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch framåt", "desc": "Ta bollen förbi motståndaren i första touchen. Film kommer från Haki." }
+            { "id": "n3-mitt-axel", "kind": "traning", "pillar": "bollkontroll", "title": "Titta över axeln innan bollen", "desc": "Mottagning med motståndare i ryggen. Film kommer från Haris." },
+            { "id": "n3-mitt-framat", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch framåt", "desc": "Ta bollen förbi motståndaren i första touchen. Film kommer från Haris." }
           ],
           "anf": [
-            { "id": "n3-anf-touch", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch mot mål", "desc": "Ta emot så att skottet kommer direkt efter. Film kommer från Haki." },
-            { "id": "n3-anf-vrist", "kind": "traning", "pillar": "teknik", "title": "Avslut bredsida och vrist", "desc": "Hårt och lågt, efter mottagning. Film kommer från Haki." }
+            { "id": "n3-anf-touch", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch mot mål", "desc": "Ta emot så att skottet kommer direkt efter. Film kommer från Haris." },
+            { "id": "n3-anf-vrist", "kind": "traning", "pillar": "teknik", "title": "Avslut bredsida och vrist", "desc": "Hårt och lågt, efter mottagning. Film kommer från Haris." }
           ]
         }
       },
       {
         "n": 4,
         "general": [
-          { "id": "n4-press", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch under press", "desc": "Mottagning med en aktiv motståndare. Film kommer från Haki." },
-          { "id": "n4-langa", "kind": "traning", "pillar": "teknik", "title": "Långa tillslag", "desc": "Vristen, lyftet och crossbollen. Film kommer från Haki." },
-          { "id": "n4-ytor", "kind": "kunskap", "pillar": "kunskap", "title": "Spelförståelse: ytor och tid", "desc": "Var finns platsen, och hur skapar man den? Text kommer från Haki." },
+          { "id": "n4-press", "kind": "traning", "pillar": "bollkontroll", "title": "Första touch under press", "desc": "Mottagning med en aktiv motståndare. Film kommer från Haris." },
+          { "id": "n4-langa", "kind": "traning", "pillar": "teknik", "title": "Långa tillslag", "desc": "Vristen, lyftet och crossbollen. Film kommer från Haris." },
+          { "id": "n4-ytor", "kind": "kunskap", "pillar": "kunskap", "title": "Spelförståelse: ytor och tid", "desc": "Var finns platsen, och hur skapar man den? Text kommer från Haris." },
           { "id": "n4-prov", "kind": "prov", "pillar": "teknik", "title": "Nivåprov 4", "desc": "Filma: fem långa passningar till en kompis på tjugo meter och tre mottagningar under press." }
         ],
         "positions": {
           "mv": [
-            { "id": "n4-mv-position", "kind": "kunskap", "pillar": "kunskap", "title": "Positionering i målet", "desc": "Vinklar, avstånd och när man går ut. Text kommer från Haki." },
-            { "id": "n4-mv-prat", "kind": "kunskap", "pillar": "kunskap", "title": "Kommunikation", "desc": "Vad målvakten säger, och när. Text kommer från Haki." }
+            { "id": "n4-mv-position", "kind": "kunskap", "pillar": "kunskap", "title": "Positionering i målet", "desc": "Vinklar, avstånd och när man går ut. Text kommer från Haris." },
+            { "id": "n4-mv-prat", "kind": "kunskap", "pillar": "kunskap", "title": "Kommunikation", "desc": "Vad målvakten säger, och när. Text kommer från Haris." }
           ],
           "back": [
-            { "id": "n4-back-ytor", "kind": "kunskap", "pillar": "kunskap", "title": "Täcka ytor", "desc": "Flytta med bollen, håll linjen. Text kommer från Haki." },
-            { "id": "n4-back-inlagg", "kind": "traning", "pillar": "teknik", "title": "Inlägg från kanten", "desc": "Slå inlägget i fart, mot första och bortre stolpen. Film kommer från Haki." }
+            { "id": "n4-back-ytor", "kind": "kunskap", "pillar": "kunskap", "title": "Täcka ytor", "desc": "Flytta med bollen, håll linjen. Text kommer från Haris." },
+            { "id": "n4-back-inlagg", "kind": "traning", "pillar": "teknik", "title": "Inlägg från kanten", "desc": "Slå inlägget i fart, mot första och bortre stolpen. Film kommer från Haris." }
           ],
           "mitt": [
-            { "id": "n4-mitt-tempo", "kind": "traning", "pillar": "teknik", "title": "Tempo och spelvändning", "desc": "Få touch, lång passning till andra kanten. Film kommer från Haki." },
-            { "id": "n4-mitt-press", "kind": "kunskap", "pillar": "kunskap", "title": "Pressa rätt", "desc": "När laget pressar och när det faller tillbaka. Text kommer från Haki." }
+            { "id": "n4-mitt-tempo", "kind": "traning", "pillar": "teknik", "title": "Tempo och spelvändning", "desc": "Få touch, lång passning till andra kanten. Film kommer från Haris." },
+            { "id": "n4-mitt-press", "kind": "kunskap", "pillar": "kunskap", "title": "Pressa rätt", "desc": "När laget pressar och när det faller tillbaka. Text kommer från Haris." }
           ],
           "anf": [
-            { "id": "n4-anf-lopvag", "kind": "kunskap", "pillar": "kunskap", "title": "Löpvägar bakom backlinjen", "desc": "Tajming, vinkel och offside. Text kommer från Haki." },
-            { "id": "n4-anf-nick", "kind": "traning", "pillar": "koordination", "title": "Nickskott", "desc": "Möta inlägget och styra nicken nedåt. Film kommer från Haki." }
+            { "id": "n4-anf-lopvag", "kind": "kunskap", "pillar": "kunskap", "title": "Löpvägar bakom backlinjen", "desc": "Tajming, vinkel och offside. Text kommer från Haris." },
+            { "id": "n4-anf-nick", "kind": "traning", "pillar": "koordination", "title": "Nickskott", "desc": "Möta inlägget och styra nicken nedåt. Film kommer från Haris." }
           ]
         }
       },
       {
         "n": 5,
         "general": [
-          { "id": "n5-avslut-fart", "kind": "traning", "pillar": "teknik", "title": "Avslut i fart", "desc": "Driv, touch, skott. Allt i full fart. Film kommer från Haki." },
-          { "id": "n5-en-mot-en", "kind": "traning", "pillar": "teknik", "title": "En mot en i matchfart", "desc": "Fint, riktningsbyte och avslut mot en aktiv motståndare. Film kommer från Haki." },
-          { "id": "n5-mental", "kind": "kunskap", "pillar": "kunskap", "title": "Mental träning: nerver före match", "desc": "Andning, rutiner och att tänka på nästa aktion. Text kommer från Haki." },
-          { "id": "n5-prov", "kind": "prov", "pillar": "teknik", "title": "Diplom: Matchvinnare", "desc": "Haki tittar på en hel match eller ett längre träningsklipp och ger ett personligt omdöme." }
+          { "id": "n5-avslut-fart", "kind": "traning", "pillar": "teknik", "title": "Avslut i fart", "desc": "Driv, touch, skott. Allt i full fart. Film kommer från Haris." },
+          { "id": "n5-en-mot-en", "kind": "traning", "pillar": "teknik", "title": "En mot en i matchfart", "desc": "Fint, riktningsbyte och avslut mot en aktiv motståndare. Film kommer från Haris." },
+          { "id": "n5-mental", "kind": "kunskap", "pillar": "kunskap", "title": "Mental träning: nerver före match", "desc": "Andning, rutiner och att tänka på nästa aktion. Text kommer från Haris." },
+          { "id": "n5-prov", "kind": "prov", "pillar": "teknik", "title": "Diplom: Matchvinnare", "desc": "Haris tittar på en hel match eller ett längre träningsklipp och ger ett personligt omdöme." }
         ],
         "positions": {
           "mv": [
-            { "id": "n5-mv-straff", "kind": "traning", "pillar": "koordination", "title": "Straffar och en mot en", "desc": "Läsa skytten, stå stor, välja rätt. Film kommer från Haki." }
+            { "id": "n5-mv-straff", "kind": "traning", "pillar": "koordination", "title": "Straffar och en mot en", "desc": "Läsa skytten, stå stor, välja rätt. Film kommer från Haris." }
           ],
           "back": [
-            { "id": "n5-back-lasa", "kind": "kunskap", "pillar": "kunskap", "title": "Läsa spelet", "desc": "Se passningen innan den slås. Text kommer från Haki." }
+            { "id": "n5-back-lasa", "kind": "kunskap", "pillar": "kunskap", "title": "Läsa spelet", "desc": "Se passningen innan den slås. Text kommer från Haris." }
           ],
           "mitt": [
-            { "id": "n5-mitt-dirigera", "kind": "kunskap", "pillar": "kunskap", "title": "Dirigera laget", "desc": "Rösten, tempot och ansvaret. Text kommer från Haki." }
+            { "id": "n5-mitt-dirigera", "kind": "kunskap", "pillar": "kunskap", "title": "Dirigera laget", "desc": "Rösten, tempot och ansvaret. Text kommer från Haris." }
           ],
           "anf": [
-            { "id": "n5-anf-press", "kind": "traning", "pillar": "teknik", "title": "Avslut under press", "desc": "Kallt huvud med en back i ryggen. Film kommer från Haki." }
+            { "id": "n5-anf-press", "kind": "traning", "pillar": "teknik", "title": "Avslut under press", "desc": "Kallt huvud med en back i ryggen. Film kommer från Haris." }
           ]
         }
       }
@@ -403,7 +403,7 @@
         "body": [
           "Barn hör tonen före orden. Korta, konkreta och positiva instruktioner fungerar bäst: \"Titta upp innan du passar\" slår \"Du måste titta upp!\" varje gång.",
           "Under passet: säg en sak i taget. Efter passet: fråga vad barnet själv tyckte gick bra innan du säger något.",
-          "Utkast. Haki skriver den slutliga texten."
+          "Utkast. Haris skriver den slutliga texten."
         ]
       },
       {
@@ -413,7 +413,7 @@
         "body": [
           "Beröm ansträngning och försök, inte bara resultat. \"Du vågade prova finten tre gånger\" bygger mer än \"Bra mål\".",
           "Rätta en sak åt gången och visa hellre än förklara. Låt barnet få känna skillnaden i kroppen.",
-          "Utkast. Haki skriver den slutliga texten."
+          "Utkast. Haris skriver den slutliga texten."
         ]
       },
       {
@@ -423,7 +423,7 @@
         "body": [
           "Motivation kommer från att lyckas lite oftare än man misslyckas. Lägg träningen så att barnet lyckas tidigt i passet.",
           "Rekord, räkna i rad och små tävlingar mot sig själv fungerar bättre än att jämföra med kompisar.",
-          "Utkast. Haki skriver den slutliga texten."
+          "Utkast. Haris skriver den slutliga texten."
         ]
       },
       {
@@ -433,7 +433,7 @@
         "body": [
           "Barn känner av förväntningar långt innan de uttalas. Frågan \"vann ni?\" säger något om vad som räknas.",
           "Prata om vad barnet gjorde och lärde sig, inte vad barnet borde ha gjort.",
-          "Utkast. Haki skriver den slutliga texten."
+          "Utkast. Haris skriver den slutliga texten."
         ]
       },
       {
@@ -443,7 +443,7 @@
         "body": [
           "Hemma är du förälder först. Extraträningen är något ni gör tillsammans, inte ett krav ovanpå lagets träning.",
           "Säg aldrig emot lagets tränare inför barnet. Ta frågor direkt med tränaren i stället.",
-          "Utkast. Haki skriver den slutliga texten."
+          "Utkast. Haris skriver den slutliga texten."
         ]
       },
       {
@@ -453,14 +453,14 @@
         "body": [
           "Det viktigaste med extraträningen är inte tekniken, det är att ni har roligt ihop. Avsluta alltid passet medan det fortfarande är kul.",
           "Låt barnet få bestämma en övning per pass. Det ökar ägandeskapet och minskar tjatet.",
-          "Utkast. Haki skriver den slutliga texten."
+          "Utkast. Haris skriver den slutliga texten."
         ]
       }
     ]
   },
   "choose": {
     "title": "Hjälp mig välja",
-    "intro": "Berätta om ditt barn så föreslår vi var ni ska börja. Haki läser också dina svar och återkommer med en personlig rekommendation.",
+    "intro": "Berätta om ditt barn så föreslår vi var ni ska börja. Haris läser också dina svar och återkommer med en personlig rekommendation.",
     "difficulties": [
       { "id": "touch", "label": "Första touch och mottagning", "pillar": "bollkontroll", "sessions": ["forsta-touch", "uppvarmning-bollkontroll"] },
       { "id": "passning", "label": "Passningar och tillslag", "pillar": "teknik", "sessions": ["passningar"] },

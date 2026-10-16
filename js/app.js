@@ -394,7 +394,7 @@ function moduleCard(m) {
     <div class="eyebrow">${ic} ${kind} · Nivå ${m.level} · ${esc(track)}</div>
     <h3>${esc(m.title)}</h3>
     <p class="desc">${esc(m.desc)}</p>
-    <div class="status">${st === 'done' ? '✓ Klar' : st === 'sent' ? '⏳ Skickad till Haki' : m.session || m.quiz ? 'Öppna' : 'Kommer snart'}</div>
+    <div class="status">${st === 'done' ? '✓ Klar' : st === 'sent' ? '⏳ Skickad till Haris' : m.session || m.quiz ? 'Öppna' : 'Kommer snart'}</div>
   </div></a>`;
 }
 
@@ -403,10 +403,10 @@ function moduleCard(m) {
 function prototyper() {
   const cards = [
     ['bibliotek', 'Träna mitt barn', 'Biblioteket med Haris fem pass, Hjälp mig välja och Föräldraguiden. Produkt för produkt enligt konceptets V1.',
-      ['Färdiga pass med film och moment', 'Logga pass och be Haki om nästa steg', 'Föräldraguiden']],
+      ['Färdiga pass med film och moment', 'Logga pass och be Haris om nästa steg', 'Föräldraguiden']],
     ['spelare', 'Spelarkortet', 'Föräldern beskriver barnet, appen planerar dagens pass och barnet samlar XP, nivåer och märken.',
       ['Startguide: namn, ålder, position, fot', 'Planera ett pass på 20 till 60 minuter', 'Spelarkort med betyg, märken och svit']],
-    ['utbildning', 'Utbildningsvägen', 'En hel utbildning i fem nivåer: träning, allmän fotbollskunskap och det som är särskilt för positionen. Nivåproven bedöms av Haki.',
+    ['utbildning', 'Utbildningsvägen', 'En hel utbildning i fem nivåer: träning, allmän fotbollskunskap och det som är särskilt för positionen. Nivåproven bedöms av Haris.',
       ['Fem nivåer från Bollkompis till Matchvinnare', 'Allmänt plus Målvakt, Back, Mittfältare, Anfallare', 'Kunskapsquiz och förhandsvisning av progression']],
   ];
   return `
@@ -518,7 +518,7 @@ function homeLibrary() {
     <a class="card" href="#/valj"><div class="card-body">
       <div class="eyebrow">Osäker på var ni ska börja?</div>
       <h3>${esc(C.choose.title)}</h3>
-      <p class="desc">Svara på några frågor om ditt barn så föreslår vi ett upplägg. Haki läser också svaren.</p>
+      <p class="desc">Svara på några frågor om ditt barn så föreslår vi ett upplägg. Haris läser också svaren.</p>
     </div></a>
     <a class="card" href="#/foralder"><div class="card-body">
       <div class="eyebrow">För dig som förälder</div>
@@ -579,7 +579,7 @@ function homeUtbildning() {
     <p class="small muted" style="margin:10px 0 0">${esc(C.curriculum.intro)}</p>
   </section>
   ${nm ? `<section><div class="section-head"><h2>Nästa steg</h2><a class="small" href="#/utbildning">Hela vägen ›</a></div>${moduleCard(nm)}</section>`
-       : `<section class="panel"><h3>Allt klart på öppnade nivåer</h3><p class="small muted" style="margin:0">Skicka in nivåprovet så låser Haki upp nästa nivå.</p></section>`}
+       : `<section class="panel"><h3>Allt klart på öppnade nivåer</h3><p class="small muted" style="margin:0">Skicka in nivåprovet så låser Haris upp nästa nivå.</p></section>`}
   <section class="btn-row two">
     <a class="btn grad" href="#/utbildning">Visa utbildningsvägen</a>
     <a class="btn secondary" href="#/planera">Planera dagens pass</a>
@@ -647,7 +647,7 @@ function sessionPage(id) {
     <div class="section-head"><h3>Er plan</h3><span class="small muted">${logs.length} av ${total} pass</span></div>
     <div class="progress"><i style="width:${pct}%"></i></div>
     <p class="small muted" style="margin:10px 0 0">${s.plan.perWeek} pass i veckan i ${s.plan.weeks} veckor. ${esc(s.plan.note)}</p>
-    ${pct >= 100 ? `<a class="btn ghost block" href="#/nasta-steg" style="margin-top:12px">Planen är klar – be Haki om nästa steg</a>` : ''}
+    ${pct >= 100 ? `<a class="btn ghost block" href="#/nasta-steg" style="margin-top:12px">Planen är klar – be Haris om nästa steg</a>` : ''}
   </section>` : ''}
   <section>
     <h2>Det här tränar ni</h2>
@@ -755,7 +755,7 @@ function logForm(kind, id) {
       <div class="field">
         <label for="note">Vad fungerade och vad var svårt?</label>
         <textarea id="note" name="note" placeholder="T.ex. Driven med höger fot sitter, men vänster är fortfarande svår."></textarea>
-        <span class="hint">Det du skriver här blir underlaget när ni ber Haki om nästa steg.</span>
+        <span class="hint">Det du skriver här blir underlaget när ni ber Haris om nästa steg.</span>
       </div>
       <div class="field">
         <label for="date">Datum</label>
@@ -889,8 +889,8 @@ function library() {
   ${plans.length ? `<section><div class="section-head"><h2>Planerade pass</h2><a class="small" href="#/planera">Nytt ›</a></div><ul class="list">${plans.slice().reverse().slice(0, 5).map(pl => `<li class="row"><a class="grow" href="#/plan/${pl.id}"><b>${esc(pl.title)}</b> · ${pl.minutes} min · ${esc(pl.focus)}<div class="small muted">${fmtDate(pl.date)}${store.logs(pl.id).length ? ' · genomfört' : ''}</div></a></li>`).join('')}</ul></section>` : ''}
   <section class="panel brand">
     <h3>Nästa steg</h3>
-    <p class="muted small">Har ni tränat ett tag? Berätta för Haki vad som fungerar och vad som fortfarande är svårt, så får ni en rekommendation på nästa produkt eller en justering.</p>
-    <a class="btn block" href="#/nasta-steg">Be Haki om nästa steg</a>
+    <p class="muted small">Har ni tränat ett tag? Berätta för Haris vad som fungerar och vad som fortfarande är svårt, så får ni en rekommendation på nästa produkt eller en justering.</p>
+    <a class="btn block" href="#/nasta-steg">Be Haris om nästa steg</a>
     ${reqs.length ? `<ul class="list" style="margin-top:12px">${reqs.slice().reverse().map(r => `<li><b>${fmtDate(r.date)}</b> · ${esc(r.kind === 'valj' ? 'Hjälp mig välja' : 'Nästa steg')} · <span class="muted">${esc(r.status)}</span>${r.text ? `<div class="small muted">${esc(r.text)}</div>` : ''}</li>`).join('')}</ul>` : ''}
   </section>
   ${p ? `
@@ -933,7 +933,7 @@ function choose() {
   ${p.recommended ? recommendation(p) : ''}`;
 }
 
-// Enkel regel i prototypen. Haki rekommenderar manuellt i V1, detta ger föräldern något direkt.
+// Enkel regel i prototypen. Haris rekommenderar manuellt i V1, detta ger föräldern något direkt.
 function recommend(p) {
   const picks = [];
   const add = id => { if (!picks.includes(id)) picks.push(id); };
@@ -952,7 +952,7 @@ function recommendation(p) {
   <section class="panel brand" id="forslag">
     <div class="eyebrow">Vårt förslag</div>
     <h3>Börja här${p.name ? `, ${esc(p.name)}` : ''}</h3>
-    <p class="muted small">Utifrån ålder, erfarenhet och det ni tycker är svårt. Haki läser dina svar och återkommer om han vill justera.</p>
+    <p class="muted small">Utifrån ålder, erfarenhet och det ni tycker är svårt. Haris läser dina svar och återkommer om han vill justera.</p>
     <div class="cards">${r.sessions.map(id => session(id)).filter(Boolean).map(sessionCard).join('')}</div>
     ${r.guides.length ? `<p class="small" style="margin-top:14px"><b>Ur Föräldraguiden:</b> ${r.guides.map(g => `<a href="#/foralder/${g}">${esc(chapter(g)?.title)}</a>`).join(' · ')}</p>` : ''}
   </section>`;
@@ -971,7 +971,7 @@ function utbildning(posParam) {
   const node = (m, unlocked) => {
     const st = moduleDone(m) ? 'done' : !unlocked ? 'locked' : m.id === nextId ? 'next' : moduleStatus(m) === 'sent' ? 'sent' : 'open';
     const [ic, kind] = KIND[m.kind];
-    const label = { done: '✓ Klar', locked: '🔒 Låst', next: '▶ Nästa', sent: '⏳ Hos Haki', open: m.session || m.quiz ? 'Öppen' : 'Kommer' }[st];
+    const label = { done: '✓ Klar', locked: '🔒 Låst', next: '▶ Nästa', sent: '⏳ Hos Haris', open: m.session || m.quiz ? 'Öppen' : 'Kommer' }[st];
     return `<a class="node ${st}" href="#/modul/${m.id}">
       <span class="node-ic">${ic}</span>
       <span class="node-body"><b>${esc(m.title)}</b><span class="small muted">${kind} · ${esc(m.desc)}</span></span>
@@ -1035,10 +1035,10 @@ function modulPage(id) {
     body = s
       ? `<section><h2>Passet</h2><div class="cards">${sessionCard(s)}</div><p class="small muted">Modulen räknas som klar när passet, eller ett planerat pass med moment ur det, är loggat.</p>
          <div class="btn-row two"><a class="btn grad" href="#/pass/${s.id}/kor">▶ Starta passet</a><a class="btn secondary" href="#/planera">Planera ett pass med fokus</a></div></section>`
-      : `<section class="panel"><h3>🎬 Filmen spelas in av Haki</h3><p class="small muted">Här kommer instruktionsfilmen och momenten, på samma sätt som för de fem passen som redan finns. Rutan visar bara var modulen hamnar i vägen.</p>
+      : `<section class="panel"><h3>🎬 Filmen spelas in av Haris</h3><p class="small muted">Här kommer instruktionsfilmen och momenten, på samma sätt som för de fem passen som redan finns. Rutan visar bara var modulen hamnar i vägen.</p>
          ${done ? '<p class="small">✓ Markerad som klar.</p>' : `<button class="btn secondary block" data-action="modul-klar" data-id="${m.id}">Markera klar (prototyp)</button>`}</section>`;
   } else if (m.kind === 'kunskap') {
-    body = `<section>${(m.body || ['Texten skrivs av Haki. Rutan visar var kunskapsmodulen hamnar i vägen.']).map(t => `<p>${esc(t)}</p>`).join('')}</section>`;
+    body = `<section>${(m.body || ['Texten skrivs av Haris. Rutan visar var kunskapsmodulen hamnar i vägen.']).map(t => `<p>${esc(t)}</p>`).join('')}</section>`;
     if (m.quiz) {
       body += done
         ? `<section class="panel"><h3>✓ Klar${rec.score != null ? ` · ${rec.score} av ${m.quiz.length} rätt` : ''}</h3><p class="small muted" style="margin:0">Du kan göra quizet igen när som helst.</p><button class="btn secondary block" data-action="quiz-igen" data-id="${m.id}" style="margin-top:10px">Gör quizet igen</button></section>`
@@ -1053,8 +1053,8 @@ function modulPage(id) {
   } else {
     body = `<section class="panel">
       <h3>Så går provet till</h3>
-      <p class="small muted">Filma barnet med mobilen och skicka in. Haki tittar, ger återkoppling och godkänner. Ett godkänt prov ger ${C.game.xp.prov} XP och öppnar nästa nivå.</p>
-      ${done ? '<p class="small">✓ Godkänt av Haki.</p>' : st === 'sent' ? `<p class="small">⏳ Skickat ${fmtDate(rec.date)}. Haki återkommer.</p><button class="btn secondary block" data-action="prov-godkann" data-id="${m.id}">Simulera: Haki godkänner (prototyp)</button>` : `<button class="btn grad block" data-action="prov-skicka" data-id="${m.id}">📹 Skicka film till Haki (prototyp)</button>`}
+      <p class="small muted">Filma barnet med mobilen och skicka in. Haris tittar, ger återkoppling och godkänner. Ett godkänt prov ger ${C.game.xp.prov} XP och öppnar nästa nivå.</p>
+      ${done ? '<p class="small">✓ Godkänt av Haris.</p>' : st === 'sent' ? `<p class="small">⏳ Skickat ${fmtDate(rec.date)}. Haris återkommer.</p><button class="btn secondary block" data-action="prov-godkann" data-id="${m.id}">Simulera: Haris godkänner (prototyp)</button>` : `<button class="btn grad block" data-action="prov-skicka" data-id="${m.id}">📹 Skicka film till Haris (prototyp)</button>`}
     </section>`;
   }
   return `
@@ -1063,7 +1063,7 @@ function modulPage(id) {
     <div class="eyebrow">${ic} ${kind} · Nivå ${m.level} ${esc(def.name)} · ${m.track === 'general' ? 'Allmänt' : esc(position(m.track).name)}</div>
     <h1>${esc(m.title)}</h1>
     <p class="muted">${esc(m.desc)}</p>
-    <div class="chips"><span class="chip ${done ? 'brand' : ''}">${done ? '✓ Klar' : st === 'sent' ? '⏳ Hos Haki' : unlocked ? 'Öppen' : '🔒 Nivån är låst, men du kan titta'}</span>${m.pillar !== 'kunskap' ? `<span class="chip">${esc(pillar(m.pillar).name)}</span>` : '<span class="chip">Fotbollskunskap</span>'}</div>
+    <div class="chips"><span class="chip ${done ? 'brand' : ''}">${done ? '✓ Klar' : st === 'sent' ? '⏳ Hos Haris' : unlocked ? 'Öppen' : '🔒 Nivån är låst, men du kan titta'}</span>${m.pillar !== 'kunskap' ? `<span class="chip">${esc(pillar(m.pillar).name)}</span>` : '<span class="chip">Fotbollskunskap</span>'}</div>
   </section>
   ${body}`;
 }
@@ -1103,9 +1103,9 @@ function nextStep() {
   return `
   <a class="back" href="#/bibliotek">‹ Mitt bibliotek</a>
   <section>
-    <div class="eyebrow">Återkoppling till Haki</div>
+    <div class="eyebrow">Återkoppling till Haris</div>
     <h1>Nästa steg</h1>
-    <p class="muted">Berätta hur det gått. Haki svarar med en rekommendation på nästa pass eller en justering av det ni redan har.</p>
+    <p class="muted">Berätta hur det gått. Haris svarar med en rekommendation på nästa pass eller en justering av det ni redan har.</p>
     <form data-form="next">
       <div class="field"><label for="session">Vad har ni tränat på?</label>
         <select id="session" name="session">${all.map(s => `<option value="${s.id}">${esc(s.title)}</option>`).join('')}</select></div>
@@ -1113,8 +1113,8 @@ function nextStep() {
         <select id="weeks" name="weeks">${['1 vecka', '2 veckor', '3 veckor', '4 veckor eller mer'].map((w, i) => `<option ${i === 2 ? 'selected' : ''}>${w}</option>`).join('')}</select></div>
       <div class="field"><label for="text">Det här fungerar, men barnet har fortfarande svårt med…</label>
         <textarea id="text" name="text" required placeholder="T.ex. Första touchen med höger sitter, men bollen studsar iväg när den kommer på vänster."></textarea></div>
-      <button class="btn grad block" type="submit">Skicka till Haki</button>
-      <p class="small muted" style="margin-top:10px">Prototyp: sparas på den här enheten. Riktig inkorg för Haki kommer med kontot.</p>
+      <button class="btn grad block" type="submit">Skicka till Haris</button>
+      <p class="small muted" style="margin-top:10px">Prototyp: sparas på den här enheten. Riktig inkorg för Haris kommer med kontot.</p>
     </form>
   </section>`;
 }
@@ -1157,8 +1157,8 @@ function onAction(e) {
   else if (action === 'demo') { store.demo = Number(el.dataset.v); toast(store.demo ? 'Förhandsvisning på' : 'Visar verklig progression'); route(); }
   else if (action === 'modul-klar') { const b = snapshot(); store.setModule(id, { done: true }); celebrate(b, 'Modulen är klar'); route(); }
   else if (action === 'quiz-igen') { store.setModule(id, { done: false, score: null }); route(); }
-  else if (action === 'prov-skicka') { const b = snapshot(); store.setModule(id, { sent: true }); celebrate(b, 'Skickat till Haki'); route(); }
-  else if (action === 'prov-godkann') { const b = snapshot(); store.setModule(id, { done: true }); celebrate(b, 'Haki godkände provet'); route(); }
+  else if (action === 'prov-skicka') { const b = snapshot(); store.setModule(id, { sent: true }); celebrate(b, 'Skickat till Haris'); route(); }
+  else if (action === 'prov-godkann') { const b = snapshot(); store.setModule(id, { done: true }); celebrate(b, 'Haris godkände provet'); route(); }
 }
 
 function onSubmit(e) {
@@ -1225,7 +1225,7 @@ function onSubmit(e) {
   } else if (kind === 'next') {
     const s = session(fd.get('session'));
     store.addRequest({ kind: 'next', session: s?.id, text: `${s?.title} i ${fd.get('weeks')}: ${(fd.get('text') || '').trim()}` });
-    toast('Skickat till Haki');
+    toast('Skickat till Haris');
     go('/bibliotek');
   }
 }

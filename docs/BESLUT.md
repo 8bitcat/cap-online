@@ -29,7 +29,7 @@ bekräftat är markerade **(antagande)**.
   barnets position) är klara. Träningsmoduler med film blir klara när passet
   loggats, kunskapsmoduler via quiz (minst 2 av 3 rätt), nivåprov via
   "skicka film" + simulerat godkännande. Moduler utan film/text är
-  **fejkade rutor** märkta "Film kommer från Haki" med knappen "Markera klar
+  **fejkade rutor** märkta "Film kommer från Haris" med knappen "Markera klar
   (prototyp)". Förhandsvisningsknapparna (Verklig / Nivå 1 klar / Halvvägs)
   finns bara för demon.
 - **Innehållet i nivå 2–5 är mitt förslag** på kursplan, skrivet för att visa
@@ -64,5 +64,5 @@ bekräftat är markerade **(antagande)**.
 - **Spelarens data** (loggade pass, bibliotek, formulärsvar) sparas i
   `localStorage` i prototypen. Backend (Firebase eller .NET) väljs när
   betalsättet är valt.
-- **Hakis adminvy** finns inte i V0.1 – innehållet redigeras i
+- **Haris adminvy** finns inte i V0.1 – innehållet redigeras i
   `data/content.json`.
