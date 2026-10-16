@@ -1,13 +1,13 @@
 // Lokal lagring i prototypen. Byts mot backend när betalsätt och konto är valt.
-const KEY = 'caponline.v2';
-const OLD = 'caponline.v1';
+// Nyckeln bumpades 2026-10-16 (Carl: "nollställ hela artefakten"): allt som
+// sparats under äldre nycklar rensas vid start så att alla börjar från tomt.
+const KEY = 'caponline.v3';
+const OLD = 'caponline.v2';
 
 function load() {
   try {
-    const v2 = JSON.parse(localStorage.getItem(KEY));
-    if (v2) return v2;
-    const v1 = JSON.parse(localStorage.getItem(OLD));
-    return v1 ? { library: v1.library, logs: v1.logs, profile: v1.profile, requests: v1.requests } : {};
+    ['caponline.v1', 'caponline.v2'].forEach(k => localStorage.removeItem(k));
+    return JSON.parse(localStorage.getItem(KEY)) || {};
   } catch { return {}; }
 }
 const data = Object.assign(
