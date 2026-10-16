@@ -1,0 +1,18 @@
+{
+  "name": "cap-online-app",
+  "private": true,
+  "appVersion": "0.2",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "sync": "node build.mjs && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@fontsource-variable/dm-sans": "^5.2.5"
+  }
+}

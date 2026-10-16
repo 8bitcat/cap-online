@@ -1,0 +1,64 @@
+# CAP Online som iOS-app för TestFlight: Codemagic bygger app/ (Capacitor) på en Mac i molnet och
+# laddar upp bygget till App Store Connect. Samma upplägg som Pixelcity (snabbfilen/codemagic.yaml).
+#   Starta: Codemagic → cap-online → Start new build → ios-testflight
+#   Före första bygget: APP_STORE_APPLE_ID nedan (App Store Connect → appen → App Information → Apple ID)
+#   och en App Store-profil för se.completeathletic.caponline sparad i Codemagic (Code signing identities).
+workflows:
+  ios-testflight:
+    name: iOS → TestFlight
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Codemagic        # API-nyckelns namn i Codemagic (Integrations → Developer Portal)
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: se.completeathletic.caponline
+      vars:
+        APP_STORE_APPLE_ID: 0              # FYLL I: CAP Online i App Store Connect (App Information → Apple ID)
+        XCODE_PROJECT: App.xcodeproj
+        XCODE_SCHEME: App
+      node: 22
+      xcode: latest
+    scripts:
+      - name: Installera
+        script: cd app && npm ci
+      - name: Små filmer
+        script: |
+          # media/ ligger utanför git; i molnet hämtas originalen inte, utan de små mp4-filerna
+          # tas från gh-pages-branchen (samma filer som webbplatsen använder)
+          mkdir -p media/small
+          git fetch --depth 1 origin gh-pages
+          git --work-tree=/tmp/pages checkout origin/gh-pages -- media 2>/dev/null || (mkdir -p /tmp/pages && git archive origin/gh-pages media | tar -x -C /tmp/pages)
+          cp /tmp/pages/media/*.mp4 media/small/
+          ls -la media/small
+      - name: Prototypen in i appen
+        script: cd app && node build.mjs && npx cap sync ios
+      - name: Signering
+        script: xcode-project use-profiles
+      - name: Version och byggnummer
+        script: |
+          VERSION=$(node -p "require('./app/package.json').appVersion")
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
+          BUILD=$((LATEST + 1))
+          echo "CAP Online $VERSION (bygge $BUILD)"
+          sed -i '' -E "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $VERSION;/; s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD;/" app/ios/App/App.xcodeproj/project.pbxproj
+      - name: Bygg ipa
+        script: |
+          cd app/ios/App
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME" || {
+            echo "--- felen från xcodebuild ---"
+            grep -h -E "error:|Provisioning profile|doesn't (include|support|match)" /tmp/xcodebuild_logs/*.log | sort -u | head -40
+            exit 1
+          }
+    artifacts:
+      - app/ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Uppladdning räcker för interna testare (Carl och Haris som App Store Connect-användare).
+        # Extern testning via publik TestFlight-länk kräver testinformation + Apples betagranskning:
+        # slå då på submit_to_testflight och ange beta_groups.
+        submit_to_testflight: false
+        submit_to_app_store: false

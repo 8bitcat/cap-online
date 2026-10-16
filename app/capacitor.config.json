@@ -1,0 +1,11 @@
+{
+  "appId": "se.completeathletic.caponline",
+  "appName": "CAP Online",
+  "webDir": "www",
+  "backgroundColor": "#000912",
+  "ios": {
+    "contentInset": "automatic",
+    "allowsLinkPreview": false,
+    "preferredContentMode": "mobile"
+  }
+}

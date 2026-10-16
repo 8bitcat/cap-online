@@ -3,6 +3,22 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-16 – Haris ska kunna köra den hos sig
+
+- **GitHub Pages** på https://8bitcat.github.io/cap-online/ (repo 8bitcat/cap-online,
+  publikt eftersom Pages kräver det på gratiskontot). Valdes före artefakten
+  eftersom claude.ai-länken inte gick att öppna oinloggad i test. De små
+  filmerna (480 px, ca 40 MB) ligger med på sidan. Pages svarar med
+  Accept-Ranges, så ▶ per moment fungerar.
+- **TestFlight** (Carl: "kan vi göra detta till en app han får prova via
+  testflight?"): `app/` = Capacitor 8 med prototypen inbyggd, `codemagic.yaml`
+  som Pixelcity. App ID **se.completeathletic.caponline** (antagande, varje led
+  börjar med bokstav), appnamn "CAP Online", stående läge på iPhone, svenska,
+  ITSAppUsesNonExemptEncryption=false. Byggs under Carls Apple-konto (8bitcat,
+  Team GYTVJ3CTBJ) tills Haris har ett eget. Filmerna hämtas i molnbygget från
+  gh-pages eftersom media/ inte ligger i git. Haris bjuds enklast in som intern
+  testare (App Store Connect-användare), då krävs ingen betagranskning.
+
 ## 2026-10-16 – filmerna knutna till momenten (v0.2.1)
 
 - **De fem filmerna är fem delar av ETT pass.** Titelskyltarna i filmerna

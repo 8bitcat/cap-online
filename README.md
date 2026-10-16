@@ -42,6 +42,38 @@ python tools\transcode.py        # 720p-mp4 till media\, omslag till assets\post
 Finns ingen lokal mp4 spelar appen filmen via Google Drive-förhandsvisning
 i stället, vilket kräver ett Google-konto som fått filmen delad.
 
+## Webbplats för Haris (GitHub Pages)
+
+Prototypen ligger publikt på <https://8bitcat.github.io/cap-online/> och
+fungerar utan inloggning, på mobil och dator. Publicera om efter ändringar:
+
+```powershell
+python tools\deploy-pages.py     # bygger och force-pushar branchen gh-pages
+```
+
+Repot: <https://github.com/8bitcat/cap-online> (publikt, krav för Pages på
+gratiskontot). De små filmerna följer med sidan.
+
+## iOS-app via TestFlight (Capacitor + Codemagic)
+
+`app/` är en Capacitor-app med prototypen inbyggd, samma upplägg som
+Pixelcity. `codemagic.yaml` i roten bygger och laddar upp till App Store
+Connect. Lokalt: `cd app && npm install && npm run sync` (bygger `app/www`
+med små filmer och DM Sans lokalt). `python tools\app-ikon.py` gör ikon och
+startbild och patchar Info.plist.
+
+Det Carl gör en gång i Apple/Codemagic innan första bygget:
+1. Developer-portalen: App ID `se.completeathletic.caponline`, en App Store-
+   provisioning profile för den, hämtad till Codemagic (Code signing identities).
+2. App Store Connect: skapa appen "CAP Online" med det App ID:t, läs av
+   Apple ID (App Information) och skriv in det i `codemagic.yaml`
+   (`APP_STORE_APPLE_ID`).
+3. Codemagic: lägg till repot 8bitcat/cap-online, starta workflow
+   `ios-testflight`.
+4. TestFlight: bjud in Haris som intern testare (App Store Connect →
+   Users and Access, roll Developer eller Marketing, kryssa i TestFlight),
+   eller skapa en extern grupp med publik länk (kräver Apples betagranskning).
+
 ## Artefakt på claude.ai
 
 Prototypen finns som privat artefakt: <https://claude.ai/artifact/J5Vw28eL5q5y2MAyhCRXao>

@@ -1,9 +1,10 @@
-"""Samlar filerna som publiceras som claude.ai-artefakt i en utmapp.
+"""Samlar filerna som publiceras i en utmapp.
 
-    python tools/artifact-dist.py <utmapp>
+    python tools/artifact-dist.py <utmapp>           # claude.ai-artefakt (index.html = artifact.html)
+    python tools/artifact-dist.py <utmapp> --pages   # vanlig webbplats (index.html, manifest, sw)
 
-Utmappen får: index.html (= artifact.html), css/, js/, data/, assets/ (logga,
-ikon, omslag) och media/<slug>.mp4 från media/small/ (under 15 MB styck).
+Utmappen får: index.html, css/, js/, data/, assets/ (logga, ikon, omslag) och
+media/<slug>.mp4 från media/small/ (under 15 MB styck).
 """
 import shutil
 import sys
@@ -12,15 +13,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def main():
-    if len(sys.argv) < 2:
-        sys.exit("ange utmapp")
-    out = Path(sys.argv[1])
+def build(out, pages=False):
+    out = Path(out)
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
-    shutil.copy(ROOT / "artifact.html", out / "index.html")
+    if pages:
+        for name in ("index.html", "manifest.json", "sw.js"):
+            shutil.copy(ROOT / name, out / name)
+        (out / ".nojekyll").write_text("")
+    else:
+        shutil.copy(ROOT / "artifact.html", out / "index.html")
     for d in ("css", "js", "data"):
         shutil.copytree(ROOT / d, out / d)
     (out / "assets" / "posters").mkdir(parents=True)
@@ -37,6 +41,14 @@ def main():
     for x in files:
         print(f"{x.stat().st_size / 1_000_000:6.1f} MB  {x.relative_to(out).as_posix()}")
     print(f"{total / 1_000_000:.1f} MB totalt, {len(files)} filer")
+    return out
+
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    if not args:
+        sys.exit("ange utmapp")
+    build(args[0], pages="--pages" in sys.argv)
 
 
 if __name__ == "__main__":
