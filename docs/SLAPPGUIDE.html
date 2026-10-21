@@ -75,7 +75,7 @@
     <img src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
     <div class="eyebrow">Släppguide · TestFlight via Codemagic</div>
     <h1>Så släpper vi CAP Online till Haris</h1>
-    <p class="lead">Åtta faser i ordning. Fas 1 till 4 gör du en gång. Fas 7 är rutinen för varje ny version. Bockarna sparas i din webbläsare.</p>
+    <p class="lead">Nio faser i ordning. Fas 1 till 4 gör du en gång. Fas 7 är rutinen för varje ny version, fas 9 är Haris adminsida. Bockarna sparas i din webbläsare.</p>
     <div class="progress"><i id="bar" style="width:0%"></i></div>
     <div class="small muted" id="barText">0 av 0 steg klara</div>
   </header>
@@ -218,7 +218,19 @@ Vill du titta i webbläsaren i stället: https://8bitcat.github.io/cap-online/
     </ol>
   </section>
 
-  <footer>Complete Athletic Performance · CAP Online · guiden skriven 2026-10-21</footer>
+  <section class="phase" data-phase="9">
+    <div class="phase-head"><div class="phase-n">9</div><div><h2>Adminsidan: filmer, taggar och inbjudningar</h2><div class="where">8bitcat.github.io/cap-online/#/admin, även i appen</div></div><span class="count"></span></div>
+    <p class="small muted">Lösenordet ligger i <code>C:\Users\palss\.secrets\cap-admin-losen.txt</code>. Ge det till Haris på säkert sätt.</p>
+    <ol class="steps">
+      <li><input type="checkbox" id="s9a"><label for="s9a"><div class="t">Slå på R2 hos Cloudflare, så att Haris kan ladda upp filmer från telefonen</div><div class="d">dash.cloudflare.com → R2 Object Storage → Enable (gratisnivån räcker: 10 GB). Sedan Manage account → API tokens → redigera Workers-token → lägg till <code>Workers R2 Storage: Edit</code>. Säg till mig, så kör jag <code>bash tools\api-deploy.sh --r2</code>. Tills dess läggs filmer in som länk.</div></label></li>
+      <li><input type="checkbox" id="s9b"><label for="s9b"><div class="t">Lägg upp en film: Filmer → Ny film</div><div class="d">Titel, beskrivning, träningstid, filmen, taggar och moment. Spela filmen i rutan och tryck "start = spelaren" där ett moment börjar, så får föräldrarna en ▶-knapp per moment. Publicerad = syns i appen, Utkast = bara här.</div></label></li>
+      <li><input type="checkbox" id="s9c"><label for="s9c"><div class="t">Bjud in en förälder: Inbjudningar → e-post, namn, barnets namn → Skapa kod</div><div class="d">Kopiera meddelandet och skicka via sms eller WhatsApp. Föräldern skriver koden på första sidan i appen, eller öppnar länken i webbläsaren. Kontot skapas när koden används.</div></label></li>
+      <li><input type="checkbox" id="s9d"><label for="s9d"><div class="t">Skicka en nyhet: Nyhet → text → Skicka till alla</div><div class="d">Går som push till alla som slagit på Nyheter från Haris.</div></label></li>
+    </ol>
+    <div class="note">Taggarna: ålder, nivå, position, område, färdighet, typ, fas i passet, svårighet, utrustning, yta, sällskap och plats. Flera per rad går bra, och "Alla" betyder att filmen passar oavsett. Appen visar föräldern de filmer som matchar barnets ålder, position och nivå.</div>
+  </section>
+
+  <footer>Complete Athletic Performance · CAP Online · guiden skriven 2026-10-21, uppdaterad 2026-10-22</footer>
 </main>
 
 <script>

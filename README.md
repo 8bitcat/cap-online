@@ -14,8 +14,29 @@ Förstasidan väljer ett av tre spår som delar innehåll och sparad data:
 | 2 Spelarkortet | startguide (namn, ålder, position), Planera dagens pass, XP, nivåer, märken |
 | 3 Utbildningsvägen | fem nivåer med allmänna och positionsspecifika moduler, quiz, nivåprov |
 
+| 4 Träningsstigen | gamifierad stig nedåt: drömspelare, etapper, frågetecken, tidtagning som låses, film till Haris, grindar |
+
 Knappen "PROTOTYP n" uppe till höger byter spår. Skärmdumpstest av hela
-flödet: `tools/screenshots-v2.js`.
+flödet: `tools/screenshots-v2.js`, `tools/screenshots-v3.js`, `tools/admin-test.js`.
+
+## Konto, admin och API
+
+- **API:** `server/cap-api/` är en Cloudflare Worker på <https://cap-api.8bitcat.io>
+  (KV). Driftsätt med `bash tools/api-deploy.sh` (`--secrets` första gången,
+  `--r2` när R2 är påslaget). Adminlösenordet ligger i `.secrets/cap-admin-losen.txt`.
+- **Inloggning:** första sidan kräver en kod. Haris skapar den i admin
+  (e-post + barnets namn) och skickar koden eller länken `#/k/KOD`. Koden
+  skapar kontot på mejladressen och ger en session på enheten i 180 dagar.
+  Telefonens egen låsning skyddar appen, ingen extra PIN. "Prova utan konto"
+  finns för demo och kan tas bort.
+- **Admin:** `#/admin`. Filmer med titel, beskrivning, träningstid, länk eller
+  uppladdning (R2), omslag ur filmen, taggar i tolv dimensioner
+  (`data/taggar.json`, flera per dimension, "Alla" där det är rimligt), moment
+  med start/slut som ger ▶-knappar, utkast/publicerad. Inbjudningar med kod,
+  lista över koder och konton. Nyhet som push till alla.
+- **R2 (fillagring) är inte påslaget** på Cloudflare-kontot än. Tills dess läggs
+  filmer in som länk. Slå på R2 i dashboarden, ge API-token rättigheten
+  "Workers R2 Storage: Edit" och kör `bash tools/api-deploy.sh --r2`.
 
 ## Köra lokalt
 

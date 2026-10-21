@@ -76,6 +76,12 @@ export const store = {
   get filmer() { return data.filmer || []; },
   set filmer(f) { data.filmer = f; save(); },
 
+  // Träningsstigen: { done: {nod: t}, tider: {nod: [{sek, t}]}, video: {nod: {t, namn, status}} }
+  get stig() { return Object.assign({ done: {}, tider: {}, video: {} }, data.stig || {}); },
+  stigKlar(id) { const s = this.stig; s.done[id] = today(); data.stig = s; save(); },
+  stigTid(id, sek) { const s = this.stig; (s.tider[id] = s.tider[id] || []).push({ sek, t: new Date().toISOString() }); data.stig = s; save(); },
+  stigVideo(id, info) { const s = this.stig; s.video[id] = Object.assign({ t: new Date().toISOString(), dag: today(), status: 'skickad' }, info); data.stig = s; save(); },
+
   // Notiser i appen: { paminn, push, token }
   get notiser() { return Object.assign({ paminn: false, push: false, token: null }, data.notiser || {}); },
   set notiser(n) { data.notiser = n; save(); },

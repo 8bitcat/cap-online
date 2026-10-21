@@ -476,6 +476,52 @@ a.chip.on:hover { color: var(--brand-ink); }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+/* Träningsstigen */
+.stig-top { margin-top: 14px; }
+.stig-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.stig-drom { font-size: 44px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0, 212, 203, .35)); }
+.stig { position: relative; padding: 10px 0 10px; margin: 18px 0; }
+.stig::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: repeating-linear-gradient(180deg, var(--line) 0 10px, transparent 10px 18px); }
+.stig-etapp {
+  position: relative; display: flex; align-items: center; gap: 12px; margin: 18px 0 10px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px;
+}
+.stig-etapp.done { border-color: var(--brand-deep); }
+.stig-node {
+  position: relative; display: flex; align-items: center; gap: 12px; width: calc(50% + 26px); margin: 12px 0;
+  color: var(--text); text-decoration: none;
+}
+.stig-node.l { flex-direction: row-reverse; text-align: right; margin-right: auto; }
+.stig-node.r { margin-left: auto; }
+.stig-node.l .stig-label { align-items: flex-end; }
+.stig-dot {
+  width: 52px; height: 52px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  font-size: 20px; font-weight: 800; background: var(--surface2); border: 2px solid var(--line); color: var(--muted);
+  box-shadow: 0 0 0 6px var(--bg);
+}
+.stig-node.typ-fraga .stig-dot { border-radius: 16px; font-size: 26px; }
+.stig-node.done .stig-dot { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+.stig-node.next .stig-dot { border-color: var(--brand); color: var(--brand); box-shadow: 0 0 0 6px var(--bg), 0 0 0 10px rgba(0, 212, 203, .25); animation: pulsa 1.6s ease-in-out infinite; }
+.stig-node.open .stig-dot { border-color: var(--brand-deep); color: var(--text); }
+.stig-node.locked { opacity: .5; }
+.stig-label { display: flex; flex-direction: column; min-width: 0; }
+.stig-label b { font-size: 15px; line-height: 1.2; }
+.stig-label small { font-size: 12px; color: var(--muted); }
+.stig-bast { color: var(--brand); font-weight: 700; margin-left: 6px; }
+.stig-grind {
+  position: relative; display: flex; align-items: center; gap: 12px; margin: 16px 0; padding: 12px 14px;
+  background: linear-gradient(90deg, rgba(251, 191, 36, .14), transparent 60%), var(--surface);
+  border: 1px solid var(--warn); border-radius: var(--radius); color: var(--text);
+}
+.stig-grind.done { border-color: var(--brand-deep); background: linear-gradient(90deg, rgba(0, 212, 203, .12), transparent 60%), var(--surface); }
+.stig-grind.locked { opacity: .55; border-style: dashed; }
+.stig-grind-ic { font-size: 22px; flex: none; }
+.stig-grind .small { color: var(--muted); }
+@keyframes pulsa { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@media (prefers-reduced-motion: reduce) { .stig-node.next .stig-dot { animation: none; } }
+.stopur-klocka { font-size: 64px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: .02em; margin: 10px 0; }
+.options.drom label span small { font-weight: 400; }
+
 /* Admin */
 .note { border-left: 3px solid var(--brand); background: rgba(0, 212, 203, .06); padding: 10px 12px; border-radius: 0 10px 10px 0; margin: 10px 0; }
 .note.warn { border-color: var(--warn); background: rgba(251, 191, 36, .07); }

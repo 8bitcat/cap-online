@@ -3,6 +3,35 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-22 – admin, taggar, inloggning, prototyp 4
+
+- **Inloggning med kod** (Carl: "en inloggning på första sidan … länk … kod"):
+  Haris skapar en inbjudan i admin, föräldern får en 6-teckenskod (och en länk
+  `#/k/KOD`). Koden skapar kontot på mejladressen och ger en enhetssession
+  (180 dagar). Ingen extra PIN: telefonens egen låsning räcker, som i andra
+  appar. Ingen mejlutskickning än, Haris skickar koden själv (sms/WhatsApp).
+  "Prova utan konto" finns kvar för demon och kan tas bort.
+- **Taggar** (`data/taggar.json`): ålder (7–8/9–10/11–12/13–14), nivå, position,
+  område, färdighet (14 st), typ, fas i passet, svårighet (= nivåerna),
+  utrustning, yta, sällskap, plats. Flera per dimension, "Alla" på ålder, nivå,
+  position, svårighet och plats. Träningstid är ett tal, filmlängd läses ur
+  filen. Filmer filtreras på barnets ålder, position och nivå i appen.
+- **Backend = Cloudflare Worker + KV** (`server/cap-api`), samma konto som
+  pushservern. R2 för filmfiler är inte påslaget på kontot (kräver aktivering
+  i dashboarden + R2-rättighet på token). Koden är redo: uppladdning i delar,
+  omslag ur filmen i webbläsaren. Cloudflare Stream (transkodning, HLS) är
+  nästa steg om telefonfilmerna blir för tunga; det är en ny kostnad och tas
+  med Carl.
+- **Prototyp 4 Träningsstigen** (Carl: "gamifierad … följer en träningsstig …
+  nivåer, stopp och gränser, assessments … frågetecken … ta tid … skicka film
+  till Haris"): `stig` i content.json, 5 etapper, 35 steg (filtrerade på
+  position). Stegtyper: film (klar när passet loggats), frågetecken (text eller
+  quiz), tid (stoppur, låst resultat med tidsstämpel, bästa tid, mål ger ⭐),
+  block (film kommer, markeras klar i prototypen), grind (film till Haris
+  öppnar nästa etapp direkt, Haris godkänner i efterhand). Drömspelare väljs i
+  startguiden. Allt låses upp i ordning. XP: fråga 30, tid 50 (+20 vid mål),
+  block 20, film-till-Haris 60, grind 100.
+
 ## 2026-10-21 – appen uppdaterar sig själv, notiser
 
 - **Appen laddar webben** (Carl: "uppdatera appen härifrån så den alltid hämtar

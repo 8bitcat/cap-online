@@ -1405,5 +1405,335 @@
         ]
       }
     ]
+  },
+  "stig": {
+    "intro": "En stig nedåt genom fem etapper. Varje steg låses upp när steget före är klart. Frågetecknen är kunskap, klockorna är tidtagning som låses i appen, kamerorna skickar en film till Haris, och grindarna släpper vidare till nästa etapp.",
+    "drommar": [
+      {
+        "id": "dribbler",
+        "namn": "Dribblern",
+        "ikon": "⚡",
+        "desc": "Vågar utmana. Finter, fart och mod en mot en."
+      },
+      {
+        "id": "passare",
+        "namn": "Passningsmästaren",
+        "ikon": "🎯",
+        "desc": "Ser spelet före alla andra och hittar lagkamraten."
+      },
+      {
+        "id": "malskytt",
+        "namn": "Målskytten",
+        "ikon": "🥅",
+        "desc": "Är där när det gäller och avslutar kallt."
+      },
+      {
+        "id": "vagg",
+        "namn": "Väggen",
+        "ikon": "🧱",
+        "desc": "Ingen kommer förbi. Lugn, stark och först på bollen."
+      },
+      {
+        "id": "burvaktare",
+        "namn": "Burväktaren",
+        "ikon": "🧤",
+        "desc": "Lagets sista utpost, med händer, fötter och röst."
+      },
+      {
+        "id": "motor",
+        "namn": "Motorn",
+        "ikon": "🔋",
+        "desc": "Springer mest, kämpar hårdast, är med överallt."
+      }
+    ],
+    "etapper": [
+      {
+        "n": 1,
+        "noder": [
+          {
+            "id": "e1-upp",
+            "typ": "film",
+            "titel": "Uppvärmning + bollkontroll",
+            "desc": "Första passet: många touch, bollen nära foten.",
+            "session": "uppvarmning-bollkontroll"
+          },
+          {
+            "id": "e1-varfor",
+            "typ": "fraga",
+            "titel": "Varför bollen nära foten?",
+            "desc": "Det första alla proffs lärde sig.",
+            "text": [
+              "Ju närmare foten bollen ligger, desto fler val har du. Du kan passa, driva eller vända utan att först springa ikapp bollen.",
+              "Därför börjar stigen med touch, touch och touch igen. Räkna gärna: hur många touch hinner ni på en minut?"
+            ]
+          },
+          {
+            "id": "e1-touch",
+            "typ": "film",
+            "titel": "Första touch",
+            "desc": "Ta emot så att nästa aktion blir enkel.",
+            "session": "forsta-touch"
+          },
+          {
+            "id": "e1-slalom",
+            "typ": "tid",
+            "titel": "Slalom genom fem koner",
+            "desc": "Ställ fem koner med en meter mellan. Dribbla tur och retur så fort du kan utan att missa en kon. Föräldern tar tiden i appen.",
+            "mal": 25
+          },
+          {
+            "id": "e1-regler",
+            "typ": "fraga",
+            "titel": "Så funkar fotboll",
+            "desc": "Avspark, inkast, hörna och händerna.",
+            "modul": "n1-regler"
+          },
+          {
+            "id": "e1-jong",
+            "typ": "block",
+            "titel": "Jonglering, steg 1",
+            "desc": "Fem i rad med foten. Film kommer från Haris."
+          },
+          {
+            "id": "e1-grind",
+            "typ": "grind",
+            "krav": "video",
+            "titel": "Grind 1: visa Haris",
+            "desc": "Filma 20 touch utan att tappa bollen och tio mottagningar med insidan. Skicka till Haris så öppnas etapp 2."
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "noder": [
+          {
+            "id": "e2-pass",
+            "typ": "film",
+            "titel": "Passningar",
+            "desc": "Stödfoten, insidan och båda fötterna.",
+            "session": "passningar"
+          },
+          {
+            "id": "e2-vagg",
+            "typ": "tid",
+            "titel": "20 passningar mot vägg",
+            "desc": "Stå tre meter från en vägg. Passa med insidan, ta emot, passa igen. Tiden för 20 passningar.",
+            "mal": 40
+          },
+          {
+            "id": "e2-dribb",
+            "typ": "film",
+            "titel": "Dribblingar",
+            "desc": "Driv, riktningsbyten och finter i fart.",
+            "session": "dribblingar"
+          },
+          {
+            "id": "e2-titta",
+            "typ": "fraga",
+            "titel": "Titta upp",
+            "desc": "Varför de bästa vet vad som händer innan bollen kommer.",
+            "modul": "n2-titta-upp"
+          },
+          {
+            "id": "e2-anf",
+            "typ": "block",
+            "titel": "Avslut insida",
+            "desc": "Placerat lågt i hörnet. Film kommer från Haris.",
+            "position": [
+              "anf"
+            ]
+          },
+          {
+            "id": "e2-back",
+            "typ": "block",
+            "titel": "Försvarsställning",
+            "desc": "Låg tyngdpunkt, rätt avstånd. Film kommer från Haris.",
+            "position": [
+              "back"
+            ]
+          },
+          {
+            "id": "e2-mitt",
+            "typ": "block",
+            "titel": "Vändningar",
+            "desc": "Ta emot och vänd i samma rörelse. Film kommer från Haris.",
+            "position": [
+              "mitt"
+            ]
+          },
+          {
+            "id": "e2-mv",
+            "typ": "block",
+            "titel": "Grepp och fotarbete",
+            "desc": "Händerna i W, fötterna i rörelse. Film kommer från Haris.",
+            "position": [
+              "mv"
+            ]
+          },
+          {
+            "id": "e2-driv",
+            "typ": "tid",
+            "titel": "Driv 20 meter och tillbaka",
+            "desc": "Två koner med 20 meter mellan. Driv dit, vänd med sulan, driv tillbaka. Bollen under kontroll hela vägen.",
+            "mal": 14
+          },
+          {
+            "id": "e2-grind",
+            "typ": "grind",
+            "krav": "video",
+            "titel": "Grind 2: visa Haris",
+            "desc": "Filma tio passningar i rad med insidan, fem med varje fot, och en dribbling genom fyra koner."
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "noder": [
+          {
+            "id": "e3-koord",
+            "typ": "film",
+            "titel": "Koordination",
+            "desc": "Snabba fötter, reaktion och fotarbete med boll.",
+            "session": "koordination"
+          },
+          {
+            "id": "e3-fotter",
+            "typ": "tid",
+            "titel": "30 tåtouch på tid",
+            "desc": "Bollen stilla, växla fot ovanpå bollen. Tiden för 30 touch.",
+            "mal": 20
+          },
+          {
+            "id": "e3-finter",
+            "typ": "block",
+            "titel": "Finter i fart",
+            "desc": "Kroppsfint, överstegsfint och sax. Film kommer från Haris."
+          },
+          {
+            "id": "e3-lag",
+            "typ": "fraga",
+            "titel": "Att vara en bra lagkamrat",
+            "desc": "Det som gör att alla vill spela med dig.",
+            "modul": "n3-lagkamrat"
+          },
+          {
+            "id": "e3-anf",
+            "typ": "block",
+            "titel": "Första touch mot mål",
+            "desc": "Ta emot så att skottet kommer direkt. Film kommer från Haris.",
+            "position": [
+              "anf"
+            ]
+          },
+          {
+            "id": "e3-back",
+            "typ": "block",
+            "titel": "Nickar",
+            "desc": "Pannan, ögonen öppna. Film kommer från Haris.",
+            "position": [
+              "back"
+            ]
+          },
+          {
+            "id": "e3-mitt",
+            "typ": "block",
+            "titel": "Titta över axeln innan bollen",
+            "desc": "Mottagning med motståndare i ryggen. Film kommer från Haris.",
+            "position": [
+              "mitt"
+            ]
+          },
+          {
+            "id": "e3-mv",
+            "typ": "block",
+            "titel": "Fallteknik",
+            "desc": "Falla mjukt åt båda hållen. Film kommer från Haris.",
+            "position": [
+              "mv"
+            ]
+          },
+          {
+            "id": "e3-grind",
+            "typ": "grind",
+            "krav": "video",
+            "titel": "Grind 3: visa Haris",
+            "desc": "Filma 20 jongleringar i rad och tre olika finter i fart mot en passiv motståndare."
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "noder": [
+          {
+            "id": "e4-press",
+            "typ": "block",
+            "titel": "Första touch under press",
+            "desc": "Mottagning med en aktiv motståndare. Film kommer från Haris."
+          },
+          {
+            "id": "e4-langa",
+            "typ": "block",
+            "titel": "Långa tillslag",
+            "desc": "Vristen, lyftet och crossbollen. Film kommer från Haris."
+          },
+          {
+            "id": "e4-ytor",
+            "typ": "fraga",
+            "titel": "Spelförståelse: ytor och tid",
+            "desc": "Var finns platsen, och hur skapar man den?",
+            "text": [
+              "Text kommer från Haris. Här blir det tre korta stycken om ytor, tid och var man ska vara när laget har bollen."
+            ]
+          },
+          {
+            "id": "e4-konrad",
+            "typ": "tid",
+            "titel": "Konraden med boll, två varv",
+            "desc": "Sex koner på rad. Driv slalom fram och tillbaka två gånger.",
+            "mal": 30
+          },
+          {
+            "id": "e4-grind",
+            "typ": "grind",
+            "krav": "video",
+            "titel": "Grind 4: visa Haris",
+            "desc": "Filma fem långa passningar till en kompis på 20 meter och tre mottagningar under press."
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "noder": [
+          {
+            "id": "e5-fart",
+            "typ": "block",
+            "titel": "Avslut i fart",
+            "desc": "Driv, touch, skott. Film kommer från Haris."
+          },
+          {
+            "id": "e5-enmoten",
+            "typ": "block",
+            "titel": "En mot en i matchfart",
+            "desc": "Fint, riktningsbyte och avslut mot en aktiv motståndare. Film kommer från Haris."
+          },
+          {
+            "id": "e5-mental",
+            "typ": "fraga",
+            "titel": "Nerver före match",
+            "desc": "Andning, rutiner och nästa aktion.",
+            "text": [
+              "Text kommer från Haris. Tre andetag, en rutin som är densamma varje gång, och tanken på nästa aktion i stället för den förra."
+            ]
+          },
+          {
+            "id": "e5-grind",
+            "typ": "grind",
+            "krav": "video",
+            "titel": "Diplom: Matchvinnare",
+            "desc": "Haris tittar på en hel match eller ett längre träningsklipp och ger ett personligt omdöme."
+          }
+        ]
+      }
+    ]
   }
 }

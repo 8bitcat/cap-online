@@ -60,6 +60,7 @@ const PROTOS = {
   bibliotek: { n: 1, name: 'Träna mitt barn' },
   spelare: { n: 2, name: 'Spelarkortet' },
   utbildning: { n: 3, name: 'Utbildningsvägen' },
+  stig: { n: 4, name: 'Träningsstigen' },
 };
 const ICON = {
   home: '<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -74,6 +75,7 @@ const TABS = {
   bibliotek: [['/', 'Hem', ICON.home], ['/bibliotek', 'Bibliotek', ICON.book], ['/valj', 'Välj', ICON.compass], ['/foralder', 'Förälder', ICON.heart]],
   spelare: [['/', 'Hem', ICON.home], ['/planera', 'Planera', ICON.brain], ['/spelarkort', 'Spelarkort', ICON.card], ['/bibliotek', 'Bibliotek', ICON.book]],
   utbildning: [['/', 'Hem', ICON.home], ['/utbildning', 'Utbildning', ICON.cap], ['/spelarkort', 'Spelarkort', ICON.card], ['/bibliotek', 'Bibliotek', ICON.book]],
+  stig: [['/', 'Stigen', ICON.compass], ['/spelarkort', 'Spelarkort', ICON.card], ['/bibliotek', 'Bibliotek', ICON.book], ['/foralder', 'Förälder', ICON.heart]],
 };
 
 function fmtLen(sec) {
@@ -127,6 +129,8 @@ const routes = [
   [/^\/foralder\/([\w-]+)$/, guideChapter],
   [/^\/nasta-steg$/, nextStep],
   [/^\/notiser$/, notiserPage],
+  [/^\/stig$/, stigHome],
+  [/^\/stig\/([\w-]+)$/, stigNode],
 ];
 
 function route() {
@@ -164,7 +168,7 @@ function renderTabs() {
 }
 
 function activeTab(path) {
-  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek' };
+  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek', '/stig': '/' };
   for (const k in alias) if (path.startsWith(k)) return alias[k];
   const tabs = TABS[store.proto] || [];
   const hit = tabs.map(t => t[0]).filter(h => h !== '/' && path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
@@ -180,6 +184,8 @@ function afterRender(path) {
   $$('.player:not(.manuell)', view).forEach(wirePlayer);
   $$('.step input[type=checkbox]', view).forEach(cb => cb.addEventListener('change', onStepToggle));
   if ($('.timer', view)) startTimer();
+  if ($('.stopur', view)) startStopur();
+  const sv = $('#stigvideo', view); if (sv) sv.addEventListener('change', () => onStigVideo(sv));
   const fil = $('#fil', view); if (fil) fil.addEventListener('change', () => adminFilVald(fil));
   if (path === '/admin' && store.admin && !adminLaddat()) adminLadda().then(() => { if ((location.hash.replace(/^#/, '') || '/') === '/admin') route(); });
 }
@@ -226,7 +232,7 @@ function xp() {
   let total = 0;
   for (const l of store.logs()) total += X.pass * (l.parts?.length || 1) + X.moment * (l.checked || 0);
   for (const m of MODS) if (moduleDone(m)) total += X[m.kind] || 0;
-  return total;
+  return total + stigXp();
 }
 function level(x = xp()) { return [...C.game.levels].reverse().find(L => x >= L.xp); }
 function nextLevel(x = xp()) { return C.game.levels.find(L => L.xp > x); }
@@ -513,6 +519,8 @@ function prototyper() {
       ['Startguide: namn, ålder, position, fot', 'Planera ett pass på 20 till 60 minuter', 'Spelarkort med betyg, märken och svit']],
     ['utbildning', 'Utbildningsvägen', 'En hel utbildning i fem nivåer: träning, allmän fotbollskunskap och det som är särskilt för positionen. Nivåproven bedöms av Haris.',
       ['Fem nivåer från Bollkompis till Matchvinnare', 'Allmänt plus Målvakt, Back, Mittfältare, Anfallare', 'Kunskapsquiz och förhandsvisning av progression']],
+    ['stig', 'Träningsstigen', 'En stig nedåt som låses upp steg för steg. Barnet väljer vilken spelare det vill bli, och stigen har filmer, frågetecken, tidtagning som låses i appen, filmer till Haris och grindar mellan etapperna.',
+      ['Summering högst upp: etapp, framsteg, bästa tider', 'Klockor: appen tar tiden och låser resultatet', 'Grindar: skicka film till Haris för att komma vidare']],
   ];
   return `
   <section class="hero">
@@ -572,6 +580,10 @@ function start(step) {
         <div class="options rating">${C.feet.map(f => `<label><input type="radio" name="foot" value="${esc(f)}" ${(d.foot || 'Höger') === f ? 'checked' : ''}>${esc(f)}</label>`).join('')}</div></div>
       <div class="field"><span class="label">Erfarenhet</span>
         <div class="options">${C.experiences.map(x => `<label><input type="radio" name="experience" value="${esc(x)}" ${(d.experience || 'Spelat 1–2 år') === x ? 'checked' : ''}>${esc(x)}</label>`).join('')}</div></div>
+      <div class="field"><span class="label">Vilken spelare vill ${esc(d.name || 'barnet')} bli?</span>
+        <div class="options drom">
+          ${C.stig.drommar.map(x => `<label><input type="radio" name="drom" value="${x.id}" ${d.drom === x.id ? 'checked' : ''}><span><b>${x.ikon} ${esc(x.namn)}</b><small>${esc(x.desc)}</small></span></label>`).join('')}
+        </div></div>
       <div class="btn-row two"><a class="btn secondary" href="#/start/1">‹ Tillbaka</a><button class="btn grad" type="submit">Nästa ›</button></div>
     </form>
   </section>`;
@@ -596,6 +608,7 @@ function start(step) {
 function home() {
   if (store.proto === 'bibliotek' || !store.profile) return homeLibrary();
   if (store.proto === 'utbildning') return homeUtbildning();
+  if (store.proto === 'stig') return stigHome();
   return homePlayer();
 }
 
@@ -1331,6 +1344,195 @@ function modulPage(id) {
   ${body}`;
 }
 
+/* ---------- Träningsstigen (prototyp 4) ---------- */
+
+const STIG_IKON = { film: '▶', block: '🎬', fraga: '?', tid: '⏱', video: '🎥', grind: '🚧' };
+const STIG_XP = { fraga: 30, tid: 50, tidMal: 20, video: 60, block: 20, grind: 100 };
+const drom = id => C.stig.drommar.find(d => d.id === id);
+const fmtSek = s => { const m = Math.floor(s / 60), r = s - m * 60; return m ? `${m}:${r.toFixed(1).padStart(4, '0')}` : `${r.toFixed(1)} s`; };
+
+// Stigens steg i ordning, filtrerade på barnets position, med etappnummer.
+function stigNoder(pos = store.profile?.position) {
+  const ut = [];
+  for (const e of C.stig.etapper) for (const n of e.noder) {
+    if (n.position && !n.position.includes(pos)) continue;
+    ut.push({ ...n, etapp: e.n });
+  }
+  return ut;
+}
+function stigBast(id) { const t = store.stig.tider[id] || []; return t.length ? Math.min(...t.map(x => x.sek)) : null; }
+function stigKlar(n) {
+  const s = store.stig;
+  if (s.done[n.id]) return true;
+  if (n.typ === 'film') return sessionTrained(n.session) > 0;
+  if (n.typ === 'fraga' && n.modul) return moduleDone(n.modul);
+  if (n.typ === 'tid') return (s.tider[n.id] || []).length > 0;
+  if (n.typ === 'video' || (n.typ === 'grind' && n.krav === 'video')) return !!s.video[n.id];
+  if (n.typ === 'grind' && n.krav === 'tid') return (s.tider[n.id] || []).length > 0;
+  return false;
+}
+// Varje steg är öppet när alla steg före det är klara.
+function stigLage() {
+  const noder = stigNoder();
+  let oppet = true, nasta = null;
+  const rader = noder.map(n => {
+    const klar = stigKlar(n);
+    const state = klar ? 'done' : oppet ? (nasta ? 'open' : 'next') : 'locked';
+    if (!klar && oppet && !nasta) nasta = n;
+    if (!klar) oppet = false;
+    return { ...n, klar, state };
+  });
+  const klara = rader.filter(r => r.klar).length;
+  const etapp = nasta ? nasta.etapp : C.stig.etapper.length;
+  return { rader, klara, total: rader.length, nasta, etapp };
+}
+function stigXp() {
+  let x = 0;
+  for (const n of stigNoder()) {
+    if (!stigKlar(n)) continue;
+    if (n.typ === 'film') continue; // passet ger redan XP när det loggas
+    if (n.typ === 'fraga' && n.modul) continue; // modulen ger redan XP
+    x += STIG_XP[n.typ] || 0;
+    if (n.typ === 'tid' && n.mal && stigBast(n.id) <= n.mal) x += STIG_XP.tidMal;
+  }
+  return x;
+}
+
+function stigSummering() {
+  const p = store.profile, L = stigLage(), d = drom(p.drom);
+  const tider = Object.values(store.stig.tider).reduce((a, t) => a + t.length, 0);
+  const filmer = Object.keys(store.stig.video).length;
+  const pct = Math.round(L.klara / L.total * 100);
+  return `<section class="panel brand stig-top">
+    <div class="stig-top-row">
+      <div><div class="eyebrow">Etapp ${L.etapp} av ${C.stig.etapper.length} · ${esc(levelDef(L.etapp).name)}</div>
+        <h1 style="margin:0">${esc(p.name)}</h1>
+        <div class="small muted">${d ? `${d.ikon} På väg att bli <b>${esc(d.namn)}</b>` : 'Drömspelare inte vald än'} · ${esc(position(p.position).name)}</div></div>
+      ${d ? `<div class="stig-drom">${d.ikon}</div>` : ''}
+    </div>
+    <div class="progress" style="margin-top:12px"><i style="width:${pct}%"></i></div>
+    <div class="xp-row" style="margin-top:6px"><span><b>${L.klara} av ${L.total} steg</b> · ${xp()} XP</span><span class="small muted">⏱ ${tider} tider låsta · 🎥 ${filmer} ${filmer === 1 ? 'film' : 'filmer'} hos Haris</span></div>
+    ${L.nasta ? `<a class="btn block" href="#/stig/${L.nasta.id}" style="margin-top:12px">Nästa: ${STIG_IKON[L.nasta.typ]} ${esc(L.nasta.titel)}</a>` : '<p class="small" style="margin:10px 0 0">Hela stigen är klar!</p>'}
+  </section>`;
+}
+
+function stigHome() {
+  const p = store.profile;
+  if (!p) return go('/start/1');
+  const L = stigLage();
+  let etapp = 0;
+  const rows = L.rader.map((n, i) => {
+    let head = '';
+    if (n.etapp !== etapp) { etapp = n.etapp; const d = levelDef(etapp); head = `<div class="stig-etapp ${L.rader.filter(r => r.etapp === etapp).every(r => r.klar) ? 'done' : ''}"><span class="lvl-n">${etapp}</span><div><b>Etapp ${etapp} · ${esc(d.name)}</b><div class="small muted">${esc(d.tagline)}</div></div></div>`; }
+    if (n.typ === 'grind') return `${head}<a class="stig-grind ${n.state}" href="#/stig/${n.id}"><span class="stig-grind-ic">${n.klar ? '✓' : n.state === 'locked' ? '🔒' : '🚧'}</span><span><b>${esc(n.titel)}</b><div class="small">${n.klar ? 'Öppen · film skickad till Haris' : n.state === 'locked' ? 'Låst tills stegen ovanför är klara' : esc(n.desc)}</div></span></a>`;
+    const side = i % 2 ? 'r' : 'l';
+    const extra = n.typ === 'tid' && stigBast(n.id) != null ? `<span class="stig-bast">${fmtSek(stigBast(n.id))}${n.mal && stigBast(n.id) <= n.mal ? ' ⭐' : ''}</span>` : '';
+    return `${head}<a class="stig-node ${n.state} ${side} typ-${n.typ}" href="#/stig/${n.id}">
+      <span class="stig-dot">${n.klar ? '✓' : n.state === 'locked' ? '🔒' : STIG_IKON[n.typ]}</span>
+      <span class="stig-label"><b>${esc(n.titel)}</b><small>${n.typ === 'fraga' ? 'Frågetecken' : n.typ === 'tid' ? 'Ta tid' : n.typ === 'block' ? 'Film kommer' : n.typ === 'video' ? 'Film till Haris' : n.etapp === 1 && n.typ === 'film' ? 'Pass med film' : 'Pass med film'}${extra}</small></span>
+    </a>`;
+  }).join('');
+  return `
+  ${stigSummering()}
+  <section class="stig">${rows}</section>
+  <section class="panel"><p class="small muted" style="margin:0">${esc(C.stig.intro)}</p></section>
+  ${footer()}`;
+}
+
+function stigNode(id) {
+  const L = stigLage();
+  const n = L.rader.find(x => x.id === id);
+  if (!n) return go('/stig');
+  const last = n.state === 'locked';
+  const d = levelDef(n.etapp);
+  const head = `
+  <a class="back" href="#/stig">‹ Stigen</a>
+  <section>
+    <div class="eyebrow">${STIG_IKON[n.typ]} Etapp ${n.etapp} · ${esc(d.name)}</div>
+    <h1>${esc(n.titel)}</h1>
+    <p class="muted">${esc(n.desc)}</p>
+    <div class="chips"><span class="chip ${n.klar ? 'brand' : ''}">${n.klar ? '✓ Klar' : last ? '🔒 Låst' : 'Öppen'}</span></div>
+    ${last ? '<div class="note">Steget låses upp när stegen före är klara. Du kan titta, men inte bocka av.</div>' : ''}
+  </section>`;
+  let body = '';
+  if (n.typ === 'film') {
+    const s = session(n.session);
+    body = `<section><div class="cards">${sessionCard(s)}</div>
+      <p class="small muted">Steget blir klart när passet är loggat, själv eller som del av ett planerat pass.</p>
+      ${last ? '' : `<div class="btn-row two"><a class="btn grad" href="#/pass/${s.id}/kor">▶ Starta passet</a><a class="btn secondary" href="#/pass/${s.id}/logga">Logga ett genomfört pass</a></div>`}</section>`;
+  } else if (n.typ === 'fraga') {
+    if (n.modul) {
+      const m = module(n.modul);
+      body = `<section>${(m.body || []).map(t => `<p>${esc(t)}</p>`).join('')}</section>
+      ${m.quiz ? (moduleDone(m) ? '<section class="panel"><h3>✓ Klar</h3></section>' : last ? '' : `<section><h2>Quiz</h2><form data-form="quiz" data-id="${m.id}" data-tillbaka="/stig/${n.id}">
+        ${m.quiz.map((q, qi) => `<div class="field quiz-q"><span class="label">${qi + 1}. ${esc(q.q)}</span><div class="options">${q.a.map((a, ai) => `<label><input type="radio" name="q${qi}" value="${ai}" required>${esc(a)}</label>`).join('')}</div></div>`).join('')}
+        <button class="btn grad block" type="submit">Rätta</button></form></section>`) : ''}`;
+    } else {
+      body = `<section>${(n.text || []).map(t => `<p>${esc(t)}</p>`).join('')}</section>
+      ${n.klar || last ? '' : `<section><button class="btn grad block" data-action="stig-klar" data-id="${n.id}">Jag har läst, nästa steg</button></section>`}`;
+    }
+  } else if (n.typ === 'tid' || (n.typ === 'grind' && n.krav === 'tid')) {
+    body = stopurVy(n, last);
+  } else if (n.typ === 'video' || (n.typ === 'grind' && n.krav === 'video')) {
+    const v = store.stig.video[n.id];
+    body = `<section class="panel brand">
+      <h3>🎥 Film till Haris</h3>
+      ${v ? `<p class="small">Skickad ${fmtDate(v.dag || v.t.slice(0, 10))}${v.namn ? ` · ${esc(v.namn)}` : ''}. Haris tittar och återkommer. ${n.typ === 'grind' ? 'Nästa etapp är öppen under tiden.' : ''}</p>`
+          : `<p class="small muted">Filma med telefonen och välj filmen här. I prototypen registreras att den är skickad, själva uppladdningen kopplas på när fillagringen är igång.</p>`}
+      ${last ? '' : `<label class="btn ${v ? 'secondary' : 'grad'} block" for="stigvideo">${v ? 'Skicka en ny film' : 'Välj eller filma'}</label><input type="file" id="stigvideo" accept="video/*" capture="environment" data-id="${n.id}" hidden>`}
+    </section>`;
+  } else {
+    body = `<section class="panel"><h3>🎬 Filmen kommer från Haris</h3><p class="small muted">Här hamnar instruktionsfilmen när Haris spelat in den och lagt upp den i adminsidan. Rutan visar var steget ligger på stigen.</p>
+      ${n.klar ? '<p class="small">✓ Markerat som klart.</p>' : last ? '' : `<button class="btn secondary block" data-action="stig-klar" data-id="${n.id}">Markera klart (prototyp)</button>`}</section>`;
+  }
+  return head + body;
+}
+
+// Stoppuret: starta, stoppa, lås. En låst tid går inte att ändra, bara att slå med ett nytt försök.
+function stopurVy(n, last) {
+  const tider = (store.stig.tider[n.id] || []).slice().reverse();
+  const bast = stigBast(n.id);
+  return `
+  <section class="panel stopur" data-id="${n.id}">
+    <div class="small muted">Tiden tas i appen och låses när ni trycker Lås. ${n.mal ? `Målet är under <b>${n.mal} s</b>.` : ''}</div>
+    <div class="stopur-klocka" id="stopurKlocka">0.0</div>
+    ${last ? '' : `<div class="btn-row two">
+      <button class="btn grad" data-action="stopur-start" id="stopurKnapp">Starta</button>
+      <button class="btn secondary" data-action="stopur-las" id="stopurLas" disabled>Lås tiden</button>
+    </div>`}
+    ${bast != null ? `<p class="small" style="margin:10px 0 0">Bästa tid: <b>${fmtSek(bast)}</b>${n.mal ? (bast <= n.mal ? ' ⭐ Målet nått' : ` · ${(bast - n.mal).toFixed(1)} s kvar till målet`) : ''}</p>` : ''}
+  </section>
+  ${tider.length ? `<section><h2>Låsta tider</h2><ul class="list">${tider.map(t => `<li class="row"><span class="grow"><b>${fmtSek(t.sek)}</b>${n.mal && t.sek <= n.mal ? ' ⭐' : ''}</span><span class="small muted">${new Date(t.t).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span></li>`).join('')}</ul></section>` : ''}`;
+}
+function startStopur() {
+  const box = $('.stopur', view), klocka = $('#stopurKlocka'), knapp = $('#stopurKnapp'), las = $('#stopurLas');
+  if (!box || !knapp) return;
+  let running = false, start = 0, acc = 0;
+  const draw = () => { const t = (acc + (running ? Date.now() - start : 0)) / 1000; klocka.textContent = t < 60 ? t.toFixed(1) : fmtSek(t); };
+  knapp.onclick = () => {
+    if (running) { acc += Date.now() - start; running = false; knapp.textContent = 'Fortsätt'; las.disabled = acc < 500; }
+    else { start = Date.now(); running = true; knapp.textContent = 'Stoppa'; las.disabled = true; }
+    draw();
+  };
+  las.onclick = () => {
+    if (running || acc < 500) return;
+    const sek = Math.round(acc / 100) / 10;
+    const before = snapshot();
+    store.stigTid(box.dataset.id, sek);
+    celebrate(before, `Tiden ${fmtSek(sek)} är låst`);
+    route();
+  };
+  timerHandle = setInterval(draw, 100);
+}
+function onStigVideo(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const before = snapshot();
+  store.stigVideo(input.dataset.id, { namn: file.name.slice(0, 40), storlek: file.size, status: 'skickad' });
+  celebrate(before, 'Filmen är skickad till Haris');
+  route();
+}
+
 /* ---------- Föräldraguiden och Nästa steg ---------- */
 
 function guide() {
@@ -1429,6 +1631,8 @@ async function onAction(e) {
     el.disabled = true;
     testaPush().then(r => { el.disabled = false; toast(r.ok ? 'Testpushen är skickad från servern.' : `Gick inte: ${r.fel}`); });
   }
+  else if (action === 'stig-klar') { const b = snapshot(); store.stigKlar(id); celebrate(b, 'Steget är klart'); route(); }
+  else if (action === 'stopur-start' || action === 'stopur-las') { /* sköts av startStopur */ }
   else if (action === 'demo') { store.demo = Number(el.dataset.v); toast(store.demo ? 'Förhandsvisning på' : 'Visar verklig progression'); route(); }
   else if (action === 'modul-klar') { const b = snapshot(); store.setModule(id, { done: true }); celebrate(b, 'Modulen är klar'); route(); }
   else if (action === 'quiz-igen') { store.setModule(id, { done: false, score: null }); route(); }
@@ -1468,7 +1672,7 @@ async function onSubmit(e) {
     store.draft = { ...store.draft, name: (fd.get('name') || '').trim(), age: fd.get('age') };
     go('/start/2');
   } else if (kind === 'wiz2') {
-    store.draft = { ...store.draft, position: fd.get('position'), foot: fd.get('foot'), experience: fd.get('experience') };
+    store.draft = { ...store.draft, position: fd.get('position'), foot: fd.get('foot'), experience: fd.get('experience'), drom: fd.get('drom') || '' };
     go('/start/3');
   } else if (kind === 'wiz3') {
     const isNew = !store.profile;
@@ -1495,7 +1699,7 @@ async function onSubmit(e) {
     const need = Math.ceil(m.quiz.length * 2 / 3);
     if (score >= need) { store.setModule(m.id, { done: true, score }); celebrate(before, `${score} av ${m.quiz.length} rätt`); }
     else toast(`${score} av ${m.quiz.length} rätt. Läs texten en gång till och försök igen.`);
-    route();
+    if (f.dataset.tillbaka) go(f.dataset.tillbaka); else route();
   } else if (kind === 'choose') {
     const p = {
       ...(store.profile || {}),
