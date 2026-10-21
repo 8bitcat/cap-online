@@ -86,13 +86,15 @@
       <div class="stat"><span class="dot"></span><div><b>Webben är live</b><span>8bitcat.github.io/cap-online fungerar utan inloggning, filmerna spolar.</span></div></div>
       <div class="stat"><span class="dot"></span><div><b>iOS-appen är byggd i koden</b><span>Mappen app/ (Capacitor 8), ikon, startbild, stående läge, svenska.</span></div></div>
       <div class="stat"><span class="dot"></span><div><b>Codemagic-receptet finns</b><span>codemagic.yaml i repots rot, workflow ios-testflight, samma som Pixelcity.</span></div></div>
-      <div class="stat"><span class="dot todo"></span><div><b>Kvar: Apple och Codemagic</b><span>App ID, profil, appen i App Store Connect, bygget, Haris som testare.</span></div></div>
+      <div class="stat"><span class="dot"></span><div><b>Appen finns i App Store Connect</b><span>CAP Online, Apple ID 6825529179, inskrivet i codemagic.yaml.</span></div></div>
+      <div class="stat"><span class="dot todo"></span><div><b>Kvar</b><span>App ID och profil hos Apple, profilen i Codemagic, första bygget, Haris som testare.</span></div></div>
     </div>
     <h3>Värden du behöver, tryck för att kopiera</h3>
     <div class="kv">
       <div><div><div class="k">Bundle ID / App ID</div><div class="v">se.completeathletic.caponline</div></div><button class="copy" data-copy="se.completeathletic.caponline">Kopiera</button></div>
       <div><div><div class="k">Appens namn</div><div class="v">CAP Online</div></div><button class="copy" data-copy="CAP Online">Kopiera</button></div>
       <div><div><div class="k">SKU i App Store Connect</div><div class="v">caponline</div></div><button class="copy" data-copy="caponline">Kopiera</button></div>
+      <div><div><div class="k">Apple ID för appen (App Store Connect)</div><div class="v">6825529179</div></div><button class="copy" data-copy="6825529179">Kopiera</button></div>
       <div><div><div class="k">Repo på GitHub</div><div class="v">github.com/8bitcat/cap-online</div></div><button class="copy" data-copy="https://github.com/8bitcat/cap-online">Kopiera</button></div>
       <div><div><div class="k">Webben för Haris</div><div class="v">8bitcat.github.io/cap-online/</div></div><button class="copy" data-copy="https://8bitcat.github.io/cap-online/">Kopiera</button></div>
       <div><div><div class="k">Apple-konto / Team</div><div class="v">hello@8bitcat.io · GYTVJ3CTBJ</div></div><button class="copy" data-copy="hello@8bitcat.io">Kopiera</button></div>
@@ -117,7 +119,7 @@
     <ol class="steps">
       <li><input type="checkbox" id="s2a"><label for="s2a"><div class="t">+ → New App</div><div class="d">Platforms: iOS. Name: <code>CAP Online</code>. Primary Language: Swedish. Bundle ID: välj <code>se.completeathletic.caponline</code>. SKU: <code>caponline</code>. User Access: Full Access. Create.</div></label></li>
       <li><input type="checkbox" id="s2b"><label for="s2b"><div class="t">App Information → läs av "Apple ID"</div><div class="d">Ett tiosiffrigt nummer, som Pixelcitys 6818844405. Det styr byggnumreringen i Codemagic.</div></label></li>
-      <li><input type="checkbox" id="s2c"><label for="s2c"><div class="t">Skriv in numret i codemagic.yaml och pusha</div><div class="d">Raden <code>APP_STORE_APPLE_ID: 0</code> i repots rot. Byt 0 mot numret, committa, pusha main. Säg till mig så gör jag det åt dig, numret räcker.</div></label></li>
+      <li><input type="checkbox" id="s2c"><label for="s2c"><div class="t">Skriv in numret i codemagic.yaml och pusha</div><div class="d">Klart 2026-10-21: <code>APP_STORE_APPLE_ID: 6825529179</code> står i codemagic.yaml och är pushat.</div></label></li>
       <li><input type="checkbox" id="s2d"><label for="s2d"><div class="t">TestFlight → Test Information (bara om Haris ska få en extern länk)</div><div class="d">Beta App Description, Feedback Email <code>hello@8bitcat.io</code>, kontaktperson. Intern testning behöver inte detta.</div></label></li>
     </ol>
   </section>
