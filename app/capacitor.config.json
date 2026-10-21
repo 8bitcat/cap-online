@@ -8,7 +8,7 @@
     "errorPath": "error.html"
   },
   "ios": {
-    "contentInset": "automatic",
+    "contentInset": "never",
     "allowsLinkPreview": false,
     "preferredContentMode": "mobile"
   },

@@ -897,7 +897,7 @@ function logForm(kind, id) {
 
 function planera() {
   const p = store.profile;
-  if (!p) return go('/start/1');
+  if (!p) { toast('Fyll i startguiden först, sedan öppnas Planera'); return go('/start/1'); }
   const pos = position(p.position);
   return `
   <section>
@@ -951,7 +951,7 @@ function planPage(id) {
 
 function spelarkort() {
   const p = store.profile;
-  if (!p) return go('/start/1');
+  if (!p) { toast('Fyll i startguiden först, sedan får ' + (store.draft.name || 'barnet') + ' sitt spelarkort'); return go('/start/1'); }
   const r = ratings();
   const badges = earnedBadges();
   const logs = store.logs();
