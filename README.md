@@ -71,8 +71,12 @@ Det Carl gör en gång i Apple/Codemagic innan första bygget:
 3. Codemagic: lägg till repot 8bitcat/cap-online, starta workflow
    `ios-testflight`.
 4. TestFlight: bjud in Haris som intern testare (App Store Connect →
-   Users and Access, roll Developer eller Marketing, kryssa i TestFlight),
-   eller skapa en extern grupp med publik länk (kräver Apples betagranskning).
+   Users and Access, roll Developer, bara appen CAP Online) med hans
+   **Apple-ID Haris.skenderovic@outlook.com** (inte jobbadressen), lägg honom
+   i en intern grupp med automatisk distribution. Alternativt en extern grupp
+   med publik länk (kräver Apples betagranskning).
+
+Hela guiden med bockar: `docs/SLAPPGUIDE.html` (även som artefakt).
 
 ## Artefakt på claude.ai
 

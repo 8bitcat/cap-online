@@ -96,7 +96,8 @@
       <div><div><div class="k">Repo på GitHub</div><div class="v">github.com/8bitcat/cap-online</div></div><button class="copy" data-copy="https://github.com/8bitcat/cap-online">Kopiera</button></div>
       <div><div><div class="k">Webben för Haris</div><div class="v">8bitcat.github.io/cap-online/</div></div><button class="copy" data-copy="https://8bitcat.github.io/cap-online/">Kopiera</button></div>
       <div><div><div class="k">Apple-konto / Team</div><div class="v">hello@8bitcat.io · GYTVJ3CTBJ</div></div><button class="copy" data-copy="hello@8bitcat.io">Kopiera</button></div>
-      <div><div><div class="k">Haris e-post</div><div class="v">haris@completeathletic.se</div></div><button class="copy" data-copy="haris@completeathletic.se">Kopiera</button></div>
+      <div><div><div class="k">Haris Apple-ID (för TestFlight)</div><div class="v">Haris.skenderovic@outlook.com</div></div><button class="copy" data-copy="Haris.skenderovic@outlook.com">Kopiera</button></div>
+      <div><div><div class="k">Haris jobbmejl (inte för inbjudan)</div><div class="v">haris@completeathletic.se</div></div><button class="copy" data-copy="haris@completeathletic.se">Kopiera</button></div>
     </div>
     <div class="note">Appen byggs under ditt Apple-konto (8bitcat) tills Haris har ett eget. En app går att flytta mellan konton i App Store Connect senare.</div>
   </section>
@@ -145,13 +146,13 @@
     <p class="small muted">Två vägar. Den interna är klar på fem minuter och kräver ingen granskning av Apple. Den externa ger en publik länk men första bygget granskas i ett till två dygn.</p>
     <h3>Väg A, rekommenderad: Haris som intern testare</h3>
     <ol class="steps">
-      <li><input type="checkbox" id="s4a"><label for="s4a"><div class="t">Users and Access → + (Users) → bjud in Haris</div><div class="d">Förnamn, efternamn, <code>haris@completeathletic.se</code>. Role: <code>Developer</code>. Apps: bara CAP Online. Invite. Haris får ett mejl från Apple och måste acceptera med ett Apple-konto på samma adress, eller skapa ett.</div></label></li>
+      <li><input type="checkbox" id="s4a"><label for="s4a"><div class="t">Users and Access → + (Users) → bjud in Haris</div><div class="d">First name <code>Haris</code>, last name <code>Skenderovic</code>, e-post <code>Haris.skenderovic@outlook.com</code>, det är hans Apple-ID. Använd inte jobbadressen, då måste han skapa ett nytt Apple-konto. Role: <code>Developer</code>. Apps: bara CAP Online. Invite. Han accepterar i mejlet från Apple. Har jag API-nyckeln kan jag göra det här steget åt dig.</div></label></li>
       <li><input type="checkbox" id="s4b"><label for="s4b"><div class="t">My Apps → CAP Online → TestFlight → Internal Testing → + → grupp "CAP-teamet"</div><div class="d">Kryssa i "Enable automatic distribution" så får gruppen varje nytt bygge utan handpåläggning.</div></label></li>
       <li><input type="checkbox" id="s4c"><label for="s4c"><div class="t">Lägg till testare i gruppen: dig själv och Haris</div><div class="d">Haris dyker upp i listan när han accepterat inbjudan från 4a. Båda får ett TestFlight-mejl med bygget.</div></label></li>
     </ol>
     <h3>Väg B: extern grupp med publik länk</h3>
     <ol class="steps">
-      <li><input type="checkbox" id="s4d"><label for="s4d"><div class="t">TestFlight → External Testing → + → grupp "Haris"</div><div class="d">Lägg till bygget, fyll i Test Information (fas 2d), Submit for Review. Efter godkännandet: Enable Public Link och skicka länken.</div></label></li>
+      <li><input type="checkbox" id="s4d"><label for="s4d"><div class="t">TestFlight → External Testing → + → grupp "Haris"</div><div class="d">Lägg till bygget, fyll i Test Information (fas 2d), Submit for Review. Efter godkännandet: lägg till testaren <code>Haris.skenderovic@outlook.com</code> i gruppen, eller slå på Enable Public Link och skicka länken.</div></label></li>
     </ol>
   </section>
 
@@ -166,7 +167,7 @@
     <div class="msg" id="msgHaris">Hej Haris! Nu finns CAP Online som app att testa.
 
 1. Installera appen TestFlight från App Store (gratis, från Apple).
-2. Du får ett mejl från Apple. Tryck på Accept / View in TestFlight.
+2. Du får ett mejl från Apple till Haris.skenderovic@outlook.com. Tryck på Accept / View in TestFlight och var inloggad med samma Apple-ID på telefonen.
 3. Tryck Install och öppna CAP Online.
 
 Appen börjar på "Välj spår": tre prototyper av samma idé. Testa gärna alla tre och skriv ner vad som känns rätt och fel. Varje moment i passen har en ▶-knapp som hoppar till rätt del av din film, kolla särskilt att tiderna och namnen på momenten stämmer.
