@@ -1,0 +1,252 @@
+<title>CAP Online släppguide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  /* Layout: en kolumn, numrerade faser i ordning, värden att kopiera i en ruta överst. Mörkt CAP-tema. */
+  :root {
+    --bg: #000912; --surface: #111a23; --surface2: #182230; --line: #243040;
+    --text: #fdfdfd; --muted: #9aa5b1; --faint: #67727e;
+    --brand: #00d4cb; --brand-hover: #09bcb4; --brand-deep: #009992; --brand-ink: #00242a;
+    --grad: linear-gradient(90deg, #0a9e9a 0%, #00d4cb 55%, #00f0ff 100%);
+    --ok: #4ade80; --warn: #fbbf24;
+    --font: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --radius: 14px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; line-height: 1.55;
+    padding-block: 0 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 760px; margin: 0 auto; min-width: 0; }
+  a { color: var(--brand); text-decoration: none; } a:hover { color: var(--brand-hover); }
+  h1, h2, h3 { line-height: 1.15; margin: 0 0 .4em; text-wrap: balance; letter-spacing: -.01em; }
+  h1 { font-size: clamp(28px, 6vw, 38px); font-weight: 800; }
+  h2 { font-size: 22px; font-weight: 800; }
+  h3 { font-size: 16px; font-weight: 700; }
+  p { margin: 0 0 .9em; }
+  .muted { color: var(--muted); } .small { font-size: 14px; }
+  .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--brand); margin-bottom: 6px; }
+  header.hero { padding: 36px 0 10px; text-align: center; }
+  header.hero img { height: 50px; margin: 0 auto 16px; display: block; }
+  header.hero .lead { color: var(--muted); max-width: 48ch; margin: 0 auto 18px; }
+  .progress { height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 10px auto 6px; max-width: 420px; }
+  .progress i { display: block; height: 100%; background: var(--grad); border-radius: 4px; transition: width .3s; }
+  .status { display: grid; gap: 8px; grid-template-columns: 1fr; margin: 18px 0; }
+  @media (min-width: 560px) { .status { grid-template-columns: 1fr 1fr; } }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .stat .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 7px; flex: none; background: var(--ok); }
+  .stat .dot.todo { background: var(--warn); }
+  .stat b { display: block; font-size: 14px; } .stat span { font-size: 13px; color: var(--muted); }
+  section.phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 16px; margin: 16px 0; }
+  section.phase.done { border-color: var(--brand-deep); }
+  .phase-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+  .phase-n { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--grad); color: var(--brand-ink); font-weight: 800; }
+  .phase-head div { min-width: 0; flex: 1; } .phase-head .where { font-size: 13px; color: var(--muted); }
+  .phase-head .count { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  ol.steps li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  ol.steps li.checked { opacity: .6; }
+  ol.steps li.checked .t { text-decoration: line-through; text-decoration-color: var(--faint); }
+  ol.steps input { width: 22px; height: 22px; accent-color: var(--brand); margin: 2px 0 0; cursor: pointer; }
+  ol.steps label { cursor: pointer; min-width: 0; } ol.steps .t { font-weight: 600; } ol.steps .d { font-size: 14px; color: var(--muted); margin-top: 2px; }
+  .kv { display: grid; gap: 8px; margin: 10px 0; }
+  .kv > div { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  .kv .k { font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; font-weight: 700; }
+  .kv .v { font-family: var(--mono); font-size: 14px; word-break: break-all; }
+  .copy { font: inherit; font-size: 12px; font-weight: 700; color: var(--brand); background: transparent; border: 1px solid var(--brand-deep); border-radius: 999px; padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+  .copy:hover { background: rgba(0,212,203,.1); } .copy.ok { background: var(--brand); color: var(--brand-ink); }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin: 8px 0; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+  code { font-family: var(--mono); font-size: .92em; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .note { border-left: 3px solid var(--brand); background: rgba(0,212,203,.06); padding: 10px 12px; border-radius: 0 10px 10px 0; margin: 10px 0; font-size: 14px; }
+  .note.warn { border-color: var(--warn); background: rgba(251,191,36,.07); }
+  .msg { background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 12px; font-size: 14px; white-space: pre-wrap; }
+  details { margin: 8px 0; } summary { cursor: pointer; font-weight: 700; color: var(--brand); }
+  footer { text-align: center; color: var(--faint); font-size: 12px; padding: 24px 0 0; }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .progress i { transition: none; } }
+</style>
+
+<main>
+  <header class="hero">
+    <img src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
+    <div class="eyebrow">Släppguide · TestFlight via Codemagic</div>
+    <h1>Så släpper vi CAP Online till Haris</h1>
+    <p class="lead">Sju faser i ordning. Fas 1 till 4 gör du en gång. Fas 6 är rutinen för varje ny version. Bockarna sparas i din webbläsare.</p>
+    <div class="progress"><i id="bar" style="width:0%"></i></div>
+    <div class="small muted" id="barText">0 av 0 steg klara</div>
+  </header>
+
+  <section class="phase" id="lage">
+    <div class="phase-head"><div class="phase-n">0</div><div><h2>Läget just nu</h2><div class="where">Det här är redan gjort. Resten är klick i Apples och Codemagics gränssnitt.</div></div></div>
+    <div class="status">
+      <div class="stat"><span class="dot"></span><div><b>Webben är live</b><span>8bitcat.github.io/cap-online fungerar utan inloggning, filmerna spolar.</span></div></div>
+      <div class="stat"><span class="dot"></span><div><b>iOS-appen är byggd i koden</b><span>Mappen app/ (Capacitor 8), ikon, startbild, stående läge, svenska.</span></div></div>
+      <div class="stat"><span class="dot"></span><div><b>Codemagic-receptet finns</b><span>codemagic.yaml i repots rot, workflow ios-testflight, samma som Pixelcity.</span></div></div>
+      <div class="stat"><span class="dot todo"></span><div><b>Kvar: Apple och Codemagic</b><span>App ID, profil, appen i App Store Connect, bygget, Haris som testare.</span></div></div>
+    </div>
+    <h3>Värden du behöver, tryck för att kopiera</h3>
+    <div class="kv">
+      <div><div><div class="k">Bundle ID / App ID</div><div class="v">se.completeathletic.caponline</div></div><button class="copy" data-copy="se.completeathletic.caponline">Kopiera</button></div>
+      <div><div><div class="k">Appens namn</div><div class="v">CAP Online</div></div><button class="copy" data-copy="CAP Online">Kopiera</button></div>
+      <div><div><div class="k">SKU i App Store Connect</div><div class="v">caponline</div></div><button class="copy" data-copy="caponline">Kopiera</button></div>
+      <div><div><div class="k">Repo på GitHub</div><div class="v">github.com/8bitcat/cap-online</div></div><button class="copy" data-copy="https://github.com/8bitcat/cap-online">Kopiera</button></div>
+      <div><div><div class="k">Webben för Haris</div><div class="v">8bitcat.github.io/cap-online/</div></div><button class="copy" data-copy="https://8bitcat.github.io/cap-online/">Kopiera</button></div>
+      <div><div><div class="k">Apple-konto / Team</div><div class="v">hello@8bitcat.io · GYTVJ3CTBJ</div></div><button class="copy" data-copy="hello@8bitcat.io">Kopiera</button></div>
+      <div><div><div class="k">Haris e-post</div><div class="v">haris@completeathletic.se</div></div><button class="copy" data-copy="haris@completeathletic.se">Kopiera</button></div>
+    </div>
+    <div class="note">Appen byggs under ditt Apple-konto (8bitcat) tills Haris har ett eget. En app går att flytta mellan konton i App Store Connect senare.</div>
+  </section>
+
+  <section class="phase" data-phase="1">
+    <div class="phase-head"><div class="phase-n">1</div><div><h2>Apple Developer: App ID och profil</h2><div class="where">developer.apple.com/account → Certificates, Identifiers &amp; Profiles</div></div><span class="count"></span></div>
+    <ol class="steps">
+      <li><input type="checkbox" id="s1a"><label for="s1a"><div class="t">Identifiers → + → App IDs → App → Continue</div><div class="d">Description: <code>CAP Online</code>. Bundle ID: Explicit, <code>se.completeathletic.caponline</code>. Inga Capabilities behövs. Register.</div></label></li>
+      <li><input type="checkbox" id="s1b"><label for="s1b"><div class="t">Profiles → + → Distribution: App Store Connect → Continue</div><div class="d">App ID: välj CAP Online. Certificate: det distributionscertifikat som redan finns (det Pixelcity använder, i Codemagic heter det pixelcity-dist). Namn: <code>CAP Online App Store</code>. Generate.</div></label></li>
+      <li><input type="checkbox" id="s1c"><label for="s1c"><div class="t">Download → spara .mobileprovision-filen</div><div class="d">Den laddas upp i Codemagic i fas 3. Profilen gäller ett år.</div></label></li>
+    </ol>
+    <div class="note warn">Om du senare lägger till en förmåga i appen (push, köp i appen, iCloud) måste profilen göras om hos Apple och laddas upp igen i Codemagic. Det var det som stoppade Pixelcity-bygge 6 och 7.</div>
+  </section>
+
+  <section class="phase" data-phase="2">
+    <div class="phase-head"><div class="phase-n">2</div><div><h2>App Store Connect: skapa appen</h2><div class="where">appstoreconnect.apple.com → My Apps</div></div><span class="count"></span></div>
+    <ol class="steps">
+      <li><input type="checkbox" id="s2a"><label for="s2a"><div class="t">+ → New App</div><div class="d">Platforms: iOS. Name: <code>CAP Online</code>. Primary Language: Swedish. Bundle ID: välj <code>se.completeathletic.caponline</code>. SKU: <code>caponline</code>. User Access: Full Access. Create.</div></label></li>
+      <li><input type="checkbox" id="s2b"><label for="s2b"><div class="t">App Information → läs av "Apple ID"</div><div class="d">Ett tiosiffrigt nummer, som Pixelcitys 6818844405. Det styr byggnumreringen i Codemagic.</div></label></li>
+      <li><input type="checkbox" id="s2c"><label for="s2c"><div class="t">Skriv in numret i codemagic.yaml och pusha</div><div class="d">Raden <code>APP_STORE_APPLE_ID: 0</code> i repots rot. Byt 0 mot numret, committa, pusha main. Säg till mig så gör jag det åt dig, numret räcker.</div></label></li>
+      <li><input type="checkbox" id="s2d"><label for="s2d"><div class="t">TestFlight → Test Information (bara om Haris ska få en extern länk)</div><div class="d">Beta App Description, Feedback Email <code>hello@8bitcat.io</code>, kontaktperson. Intern testning behöver inte detta.</div></label></li>
+    </ol>
+  </section>
+
+  <section class="phase" data-phase="3">
+    <div class="phase-head"><div class="phase-n">3</div><div><h2>Codemagic: profil, repo, första bygget</h2><div class="where">codemagic.io → Personal account</div></div><span class="count"></span></div>
+    <ol class="steps">
+      <li><input type="checkbox" id="s3a"><label for="s3a"><div class="t">Teams → Personal account → codemagic.yaml settings → Code signing identities → iOS provisioning profiles → Upload</div><div class="d">Välj .mobileprovision-filen från fas 1. Reference name: <code>caponline-appstore</code>. Certifikatet pixelcity-dist återanvänds automatiskt, det är ett distributionscertifikat för hela teamet.</div></label></li>
+      <li><input type="checkbox" id="s3b"><label for="s3b"><div class="t">Applications → Add application → GitHub → 8bitcat/cap-online</div><div class="d">Project type: Other / codemagic.yaml. Codemagic hittar workflow <code>ios-testflight</code> själv. Integrationen "Codemagic" (App Store Connect-nyckeln) finns redan från Pixelcity.</div></label></li>
+      <li><input type="checkbox" id="s3c"><label for="s3c"><div class="t">Start new build → branch main → workflow iOS → TestFlight → Start</div><div class="d">Tar ungefär 15 till 20 minuter. Bygget hämtar filmerna från gh-pages, bygger appen, signerar med profilen och laddar upp till App Store Connect. Första bygget får nummer 1.</div></label></li>
+      <li><input type="checkbox" id="s3d"><label for="s3d"><div class="t">Kontrollera i App Store Connect → TestFlight → iOS Builds</div><div class="d">Bygget står som "Processing" i 5 till 15 minuter och sedan "Ready to Test". Ingen krypteringsfråga: appen deklarerar redan att den inte använder egen kryptering.</div></label></li>
+    </ol>
+    <details><summary>Om bygget går fel</summary>
+      <p class="small muted">Receptet skriver ut Xcodes egna felrader sist i loggen. De vanliga:</p>
+      <ul class="small muted">
+        <li><b>Provisioning profile … doesn't match / not found</b>: profilen i Codemagic är inte för se.completeathletic.caponline eller inte av typen App Store. Gör om fas 1 och 3a.</li>
+        <li><b>get-latest-testflight-build-number misslyckas</b>: APP_STORE_APPLE_ID är fortfarande 0 eller fel. Fas 2c.</li>
+        <li><b>media/small saknas</b>: gh-pages-branchen saknar filmer. Kör <code>python tools\deploy-pages.py</code> lokalt och bygg om.</li>
+        <li>Skicka mig länken till byggloggen så läser jag den.</li>
+      </ul>
+    </details>
+  </section>
+
+  <section class="phase" data-phase="4">
+    <div class="phase-head"><div class="phase-n">4</div><div><h2>TestFlight: ge Haris appen</h2><div class="where">appstoreconnect.apple.com</div></div><span class="count"></span></div>
+    <p class="small muted">Två vägar. Den interna är klar på fem minuter och kräver ingen granskning av Apple. Den externa ger en publik länk men första bygget granskas i ett till två dygn.</p>
+    <h3>Väg A, rekommenderad: Haris som intern testare</h3>
+    <ol class="steps">
+      <li><input type="checkbox" id="s4a"><label for="s4a"><div class="t">Users and Access → + (Users) → bjud in Haris</div><div class="d">Förnamn, efternamn, <code>haris@completeathletic.se</code>. Role: <code>Developer</code>. Apps: bara CAP Online. Invite. Haris får ett mejl från Apple och måste acceptera med ett Apple-konto på samma adress, eller skapa ett.</div></label></li>
+      <li><input type="checkbox" id="s4b"><label for="s4b"><div class="t">My Apps → CAP Online → TestFlight → Internal Testing → + → grupp "CAP-teamet"</div><div class="d">Kryssa i "Enable automatic distribution" så får gruppen varje nytt bygge utan handpåläggning.</div></label></li>
+      <li><input type="checkbox" id="s4c"><label for="s4c"><div class="t">Lägg till testare i gruppen: dig själv och Haris</div><div class="d">Haris dyker upp i listan när han accepterat inbjudan från 4a. Båda får ett TestFlight-mejl med bygget.</div></label></li>
+    </ol>
+    <h3>Väg B: extern grupp med publik länk</h3>
+    <ol class="steps">
+      <li><input type="checkbox" id="s4d"><label for="s4d"><div class="t">TestFlight → External Testing → + → grupp "Haris"</div><div class="d">Lägg till bygget, fyll i Test Information (fas 2d), Submit for Review. Efter godkännandet: Enable Public Link och skicka länken.</div></label></li>
+    </ol>
+  </section>
+
+  <section class="phase" data-phase="5">
+    <div class="phase-head"><div class="phase-n">5</div><div><h2>Hos Haris</h2><div class="where">Skicka det här till honom</div></div><span class="count"></span></div>
+    <ol class="steps">
+      <li><input type="checkbox" id="s5a"><label for="s5a"><div class="t">Han installerar appen TestFlight från App Store</div><div class="d">Gratis, från Apple.</div></label></li>
+      <li><input type="checkbox" id="s5b"><label for="s5b"><div class="t">Han öppnar Apples mejl och trycker på "View in TestFlight" eller "Accept"</div><div class="d">Vid intern testning kommer först inbjudan till App Store Connect, sedan TestFlight-mejlet. Båda behöver accepteras.</div></label></li>
+      <li><input type="checkbox" id="s5c"><label for="s5c"><div class="t">Han trycker Install i TestFlight och öppnar CAP Online</div><div class="d">Appen startar på sidan "Välj spår". Alla tre prototyperna finns i samma app. Nya versioner kommer som uppdateringar i TestFlight.</div></label></li>
+    </ol>
+    <h3>Meddelande att skicka</h3>
+    <div class="msg" id="msgHaris">Hej Haris! Nu finns CAP Online som app att testa.
+
+1. Installera appen TestFlight från App Store (gratis, från Apple).
+2. Du får ett mejl från Apple. Tryck på Accept / View in TestFlight.
+3. Tryck Install och öppna CAP Online.
+
+Appen börjar på "Välj spår": tre prototyper av samma idé. Testa gärna alla tre och skriv ner vad som känns rätt och fel. Varje moment i passen har en ▶-knapp som hoppar till rätt del av din film, kolla särskilt att tiderna och namnen på momenten stämmer.
+
+Vill du titta i webbläsaren i stället: https://8bitcat.github.io/cap-online/
+
+/Carl</div>
+    <p><button class="copy" data-copy-el="msgHaris">Kopiera meddelandet</button></p>
+  </section>
+
+  <section class="phase" data-phase="6">
+    <div class="phase-head"><div class="phase-n">6</div><div><h2>Varje ny version: rutinen</h2><div class="where">Terminalen i D:\CAPOnline, sedan Codemagic</div></div><span class="count"></span></div>
+    <ol class="steps">
+      <li><input type="checkbox" id="s6a"><label for="s6a"><div class="t">Ändra, testa lokalt</div><div class="d"><code>python tools\serve.py</code> och öppna localhost:8808. Använd inte Pythons vanliga server, den kan inte spola i filmerna.</div></label></li>
+      <li><input type="checkbox" id="s6b"><label for="s6b"><div class="t">Släpp webben och förbered appen med ett kommando</div><div class="d">Sätter versionen i appen och i App Store, committar, taggar, pushar och publicerar webben.</div></label></li>
+    </ol>
+    <pre>python tools\release.py 0.3.0</pre>
+    <p><button class="copy" data-copy="python tools\release.py 0.3.0">Kopiera kommandot</button></p>
+    <ol class="steps">
+      <li><input type="checkbox" id="s6c"><label for="s6c"><div class="t">Codemagic → cap-online → Start new build → ios-testflight</div><div class="d">Byggnumret räknas upp automatiskt. Med automatisk distribution i gruppen får Haris uppdateringen i TestFlight när bygget är klart.</div></label></li>
+    </ol>
+    <div class="note">Appversionen blir de två första talen (0.3.0 → 0.3 i TestFlight). Ett TestFlight-bygge slutar fungera efter 90 dagar, så släpp något nytt minst var tredje månad under testperioden. Webben kan du släppa hur ofta som helst utan nytt appbygge.</div>
+  </section>
+
+  <section class="phase" data-phase="7">
+    <div class="phase-head"><div class="phase-n">7</div><div><h2>Senare: riktigt App Store-släpp</h2><div class="where">När prototypen är godkänd av Haris</div></div><span class="count"></span></div>
+    <ol class="steps">
+      <li><input type="checkbox" id="s7a"><label for="s7a"><div class="t">Beslut: vems Apple-konto</div><div class="d">Haris bolag bör stå som säljare i butiken. Antingen flyttar vi appen till hans konto (App Store Connect → Transfer App) eller så skapar han kontot innan första inskicket.</div></label></li>
+      <li><input type="checkbox" id="s7b"><label for="s7b"><div class="t">Innehåll och juridik</div><div class="d">Integritetspolicy och supportsida på webben, App Privacy-svaren, åldersgräns, skärmbilder för iPhone 6,1/6,3 tum, texter. Betalning i appen kräver Paid Apps Agreement och Apples köp i appen, annars 30 procent avgift och granskningsregler, därför webbköp först.</div></label></li>
+      <li><input type="checkbox" id="s7c"><label for="s7c"><div class="t">Konto och backend</div><div class="d">Inloggning, Haris adminvy, riktig videohosting och betalsätt är nästa byggsteg efter prototypen.</div></label></li>
+    </ol>
+  </section>
+
+  <footer>Complete Athletic Performance · CAP Online · guiden skriven 2026-10-21</footer>
+</main>
+
+<script>
+(function () {
+  var KEY = 'cap-slappguide.v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('ol.steps input[type=checkbox]'));
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  boxes.forEach(function (b) { if (saved[b.id]) b.checked = true; });
+  function render() {
+    var done = 0;
+    boxes.forEach(function (b) { b.closest('li').classList.toggle('checked', b.checked); if (b.checked) done++; });
+    document.querySelectorAll('section.phase[data-phase]').forEach(function (s) {
+      var all = s.querySelectorAll('input[type=checkbox]'), n = 0;
+      all.forEach(function (b) { if (b.checked) n++; });
+      s.querySelector('.count').textContent = n + ' / ' + all.length;
+      s.classList.toggle('done', all.length && n === all.length);
+    });
+    document.getElementById('bar').style.width = Math.round(done / boxes.length * 100) + '%';
+    document.getElementById('barText').textContent = done + ' av ' + boxes.length + ' steg klara';
+  }
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      saved[b.id] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch (e) {}
+      render();
+    });
+  });
+  render();
+  function copyText(text, btn) {
+    var done = function () { var old = btn.textContent; btn.textContent = 'Kopierat'; btn.classList.add('ok'); setTimeout(function () { btn.textContent = old; btn.classList.remove('ok'); }, 1500); };
+    var fallback = function () {
+      var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { btn.textContent = 'Markera och kopiera själv'; }
+      document.body.removeChild(ta);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fallback); else fallback();
+  }
+  document.querySelectorAll('.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var text = btn.getAttribute('data-copy');
+      var elId = btn.getAttribute('data-copy-el');
+      if (elId) text = document.getElementById(elId).textContent;
+      copyText(text, btn);
+    });
+  });
+})();
+</script>
