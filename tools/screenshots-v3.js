@@ -17,8 +17,8 @@ const base = 'http://127.0.0.1:8808/';
   const vid = () => page.evaluate(() => { const v = document.querySelector('video'); const el = document.querySelector('.player'); return v ? { t: Math.round(v.currentTime * 10) / 10, paused: v.paused, sid: el.dataset.sid, start: el.dataset.clipStart, end: el.dataset.clipEnd } : null; });
 
   await page.goto(base, { waitUntil: 'networkidle' });
-  await page.evaluate(() => localStorage.clear());
-  await page.goto(base + '#/prototyper', { waitUntil: 'networkidle' });
+  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('caponline.v3', JSON.stringify({ guest: true })); });
+  await page.goto(base + 'index.html#/prototyper', { waitUntil: 'networkidle' });
   await page.click('[data-action=proto][data-proto=bibliotek]');
   await page.waitForTimeout(300);
   await shot('hem-bibliotek');

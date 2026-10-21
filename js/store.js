@@ -65,6 +65,17 @@ export const store = {
   get demo() { return data.demo || 0; },
   set demo(v) { data.demo = v; save(); },
 
+  // Konto: { token, user } från koden, eller gäst utan konto
+  get session() { return data.session || null; },
+  set session(s) { data.session = s; save(); },
+  get guest() { return !!data.guest; },
+  set guest(v) { data.guest = !!v; save(); },
+  get admin() { return data.admin || null; },
+  set admin(t) { data.admin = t; save(); },
+  // Filmer från servern (kopia för offline)
+  get filmer() { return data.filmer || []; },
+  set filmer(f) { data.filmer = f; save(); },
+
   // Notiser i appen: { paminn, push, token }
   get notiser() { return Object.assign({ paminn: false, push: false, token: null }, data.notiser || {}); },
   set notiser(n) { data.notiser = n; save(); },

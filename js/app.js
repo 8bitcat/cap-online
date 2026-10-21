@@ -1,6 +1,9 @@
 import { store, today, weekIndex } from './store.js';
 import { VERSION } from './version.js';
 import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush } from './notiser.js';
+import { loggaInMedKod, loggaUt, hamtaFilmer, filmerNu } from './api.js';
+import { loginPage, loggaInViaLank, efterInloggning, kontoRad } from './konto.js';
+import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminFilVald, taggar } from './admin.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
@@ -16,7 +19,17 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
-const session = id => C.sessions.find(s => s.id === id);
+// Pass ur content.json, eller en film från servern (id "film:<id>") förklädd till pass så att spelaren fungerar
+const session = id => C.sessions.find(s => s.id === id) || filmSomPass(id);
+function filmSomPass(id) {
+  if (!String(id).startsWith('film:')) return null;
+  const f = filmerNu().find(x => 'film:' + x.id === id);
+  if (!f) return null;
+  return { id, title: f.titel, pillar: pelareUrTaggar(f), film: f, trainingMinutes: f.traningMin, videoSeconds: f.video?.sek || 0,
+    equipment: f.tags?.utrustning || [], summary: f.beskrivning, goals: [], steps: (f.moment || []).map((m, i) => ({ id: `${id}#${i}`, name: m.namn, desc: m.desc, minutes: m.minuter, clip: m.slut > m.start ? { start: m.start, end: m.slut } : null })),
+    plan: { weeks: 3, perWeek: 2, note: '' }, video: { local: f.video?.url || '', driveId: '', poster: f.video?.poster || '', portrait: f.video?.portrait !== false } };
+}
+const pelareUrTaggar = f => ({ Bollkontroll: 'bollkontroll', Teknik: 'teknik', Koordination: 'koordination' })[(f.tags?.omrade || [])[0]] || 'teknik';
 const pillar = id => C.pillars.find(p => p.id === id);
 const chapter = id => C.guide.chapters.find(c => c.id === id);
 const position = id => C.positions.find(p => p.id === id) || C.positions[C.positions.length - 1];
@@ -85,6 +98,11 @@ function go(hash) { location.hash = hash; }
 
 const routes = [
   [/^\/?$/, home],
+  [/^\/login$/, () => loginPage()],
+  [/^\/k\/([A-Za-z0-9-]+)$/, kod => { loggaInViaLank(kod, { toast, go }); return `<section class="empty"><p class="muted">Loggar in…</p></section>`; }],
+  [/^\/admin$/, adminPage],
+  [/^\/film\/([a-z0-9]+)$/, id => filmPage(id)],
+  [/^\/filmer$/, filmerPage],
   [/^\/prototyper$/, prototyper],
   [/^\/start\/(\d)$/, start],
   [/^\/profil$/, () => go('/start/1')],
@@ -114,7 +132,9 @@ const routes = [
 function route() {
   clearInterval(timerHandle);
   const path = location.hash.replace(/^#/, '') || '/';
-  if (!store.proto && path !== '/prototyper') return go('/prototyper');
+  const oppen = /^\/(login|k\/|admin)/.test(path);
+  if (!oppen && !store.session && !store.guest) return go('/login');
+  if (!oppen && !store.proto && path !== '/prototyper') return go('/prototyper');
   if (store.proto !== 'bibliotek' && !store.profile && path === '/') return go('/start/1');
   for (const [re, fn] of routes) {
     const m = path.match(re);
@@ -131,7 +151,8 @@ function route() {
 }
 
 function renderTabs() {
-  const tabs = TABS[store.proto];
+  const path = location.hash.replace(/^#/, '') || '/';
+  const tabs = /^\/(login|k\/|admin)/.test(path) ? null : TABS[store.proto];
   document.body.classList.toggle('no-tabs', !tabs);
   if (!tabs) { nav.innerHTML = ''; badge.hidden = true; if (bell) bell.hidden = true; return; }
   nav.innerHTML = tabs.map(([href, label, icon]) =>
@@ -156,9 +177,11 @@ function afterRender(path) {
   $$('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === active));
   $$('[data-action]', view).forEach(el => el.addEventListener('click', onAction));
   $$('form[data-form]', view).forEach(f => f.addEventListener('submit', onSubmit));
-  $$('.player', view).forEach(wirePlayer);
+  $$('.player:not(.manuell)', view).forEach(wirePlayer);
   $$('.step input[type=checkbox]', view).forEach(cb => cb.addEventListener('change', onStepToggle));
   if ($('.timer', view)) startTimer();
+  const fil = $('#fil', view); if (fil) fil.addEventListener('change', () => adminFilVald(fil));
+  if (path === '/admin' && store.admin && !adminLaddat()) adminLadda().then(() => { if ((location.hash.replace(/^#/, '') || '/') === '/admin') route(); });
 }
 
 /* ---------- Spelstatus (härleds ur sparad data) ---------- */
@@ -668,16 +691,84 @@ function homeUtbildning() {
 
 function passSections() {
   const P = program();
+  const nya = filmerForBarnet().slice(0, 4);
   return `
   <section>
     <div class="section-head"><h2>Färdiga pass</h2><span class="small muted">CAP planerar, ni genomför</span></div>
     ${programCard(P)}
   </section>
+  ${nya.length ? `<section>
+    <div class="section-head"><h2>Nya filmer från Haris</h2><a class="small" href="#/filmer">Alla ${filmerNu().length} ›</a></div>
+    <div class="cards">${nya.map(filmCard).join('')}</div>
+  </section>` : ''}
   <section>
     <div class="section-head"><h2>Träna något specifikt</h2><span class="small muted">${C.sessions.length} delar</span></div>
     <p class="muted small">Delarna ur passet var för sig, med film och moment.</p>
     <div class="cards">${C.sessions.map(sessionCard).join('')}</div>
   </section>`;
+}
+
+/* ---------- Filmer från servern (adminsidan) ---------- */
+
+const ALDER_TAG = a => (a <= 8 ? '7–8' : a <= 10 ? '9–10' : a <= 12 ? '11–12' : '13–14');
+const NIVA_TAG = { 'Nybörjare': 'Nybörjare', 'Spelat 1–2 år': 'Spelat 1–2 år', 'Spelat 3 år eller mer': 'Spelat 3+ år' };
+function passarBarnet(f, p) {
+  if (!p) return true;
+  const ok = (dim, v) => { const t = f.tags?.[dim] || []; return !t.length || t.includes('Alla') || t.includes(v); };
+  return ok('alder', ALDER_TAG(Number(p.age))) && ok('position', position(p.position).name) && ok('niva', NIVA_TAG[p.experience] || '');
+}
+function filmerForBarnet(alla = false) {
+  const p = store.profile;
+  return filmerNu().filter(f => alla || passarBarnet(f, p));
+}
+function filmCard(f) {
+  const s = session('film:' + f.id);
+  const n = sessionTrained(s.id);
+  return `<a class="card" href="#/film/${f.id}">
+    <div class="card-media"><img src="${esc(f.video?.poster || '')}" alt="" loading="lazy" onerror="this.style.display='none'"><div class="fallback" style="z-index:-1"><img src="assets/cap-ball-270.png" alt=""></div>
+      <span class="tag">${esc((f.tags?.omrade || ['Film'])[0])}</span>${f.video?.sek ? `<span class="len">▶ ${fmtLen(f.video.sek)}</span>` : ''}</div>
+    <div class="card-body"><h3>${esc(f.titel)}</h3><p class="desc">${esc(f.beskrivning)}</p>
+      <div class="meta">${f.traningMin ? `<span>⏱ <b>ca ${f.traningMin} min</b></span>` : ''}${(f.tags?.alder || []).length ? `<span>👧 ${esc(f.tags.alder.join(', '))}</span>` : ''}${(f.tags?.position || []).length ? `<span>${esc(f.tags.position.join(', '))}</span>` : ''}</div>
+      ${n ? `<div class="status">Tränat ${n} gånger</div>` : ''}</div></a>`;
+}
+function filmerPage() {
+  const p = store.profile;
+  const alla = location.hash.includes('alla') || !p;
+  const list = filmerForBarnet(alla);
+  const T = taggar() || {};
+  return `
+  <a class="back" href="#/">‹ Hem</a>
+  <section>
+    <div class="eyebrow">Från Haris</div>
+    <h1>Filmer</h1>
+    ${p ? `<p class="muted small">${alla ? `Visar alla ${filmerNu().length} filmer.` : `Visar filmer som passar ${esc(p.name)}, ${esc(p.age)} år, ${esc(position(p.position).name.toLowerCase())}.`} <a data-action="filmer-alla" href="#/filmer">${alla ? 'Visa bara de som passar' : 'Visa alla'}</a></p>` : ''}
+    ${list.length ? `<div class="cards">${list.map(filmCard).join('')}</div>` : `<p class="muted">Inga filmer än. Haris lägger upp dem i adminsidan.</p>`}
+  </section>`;
+}
+function filmPage(id) {
+  const s = session('film:' + id);
+  if (!s) return `<a class="back" href="#/">‹ Hem</a><section><p class="muted">Filmen hittades inte, eller så är den inte publicerad.</p></section>`;
+  const f = s.film, T = taggar() || {};
+  const logs = store.logs(s.id);
+  const tagChips = Object.entries(f.tags || {}).filter(([, v]) => v.length).map(([k, v]) => `<span class="chip" title="${esc(T[k]?.namn || k)}">${esc(v.join(', '))}</span>`).join('');
+  return `
+  <a class="back" href="#/filmer">‹ Filmer</a>
+  <section>
+    <div class="eyebrow">${esc((f.tags?.omrade || ['Film']).join(' · '))}${f.traningMin ? ` · ca ${f.traningMin} min` : ''}</div>
+    <h1>${esc(f.titel)}</h1>
+    ${s.video.local ? player(s) : '<p class="muted">Ingen film uppladdad än.</p>'}
+    <p>${esc(f.beskrivning)}</p>
+    <div class="chips">${tagChips}</div>
+  </section>
+  <section class="btn-row two">
+    <a class="btn grad" href="#/pass/${s.id}/kor">▶ Starta passet</a>
+    <a class="btn secondary" href="#/pass/${s.id}/logga">Logga ett genomfört pass</a>
+  </section>
+  ${s.steps.length ? `<section>
+    <div class="section-head"><h2>Moment</h2><span class="small muted">▶ hoppar till rätt del</span></div>
+    <div class="list">${s.steps.map((st, i) => `<div class="step"><span class="num">${i + 1}</span><div><b>${esc(st.name)}</b><div class="small muted">${esc(st.desc || '')}</div>${clipButton(s.id, st.clip, st.name)}</div><span class="min">${st.minutes ? st.minutes + ' min' : ''}</span></div>`).join('')}</div>
+  </section>` : ''}
+  ${logs.length ? `<section><h2>Loggade pass</h2><ul class="list">${logs.slice().reverse().map(l => `<li><b>${fmtDate(l.date)}</b> · ${esc(ratingLabel(l.rating))}${l.note ? `<div class="small muted">${esc(l.note)}</div>` : ''}</li>`).join('')}</ul></section>` : ''}`;
 }
 
 function programCard(P) {
@@ -1071,7 +1162,8 @@ function library() {
       <span><b>${esc(p.name || 'Barnet')}</b></span><span>${esc(p.age)} år</span>${p.position ? `<span>${esc(position(p.position).name)}</span>` : ''}<span>${esc(p.experience)}</span><span>${esc(p.freq)} extrapass/vecka</span>
     </div>
   </section>` : ''}
-  <p class="small muted" style="text-align:center;margin-top:30px">Prototyp: allt sparas bara på den här enheten. <a data-action="reset" href="#/bibliotek">Nollställ</a></p>`;
+  <p class="small muted" style="text-align:center;margin-top:30px">${kontoRad()}</p>
+  <p class="small muted" style="text-align:center">Prototyp: träningen sparas på den här enheten. <a data-action="reset" href="#/bibliotek">Nollställ</a></p>`;
 }
 
 /* ---------- Hjälp mig välja (prototyp 1) ---------- */
@@ -1302,9 +1394,13 @@ function armed(el, label) {
   return false;
 }
 
-function onAction(e) {
+async function onAction(e) {
   const el = e.currentTarget;
   const { action, id } = el.dataset;
+  if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action)) { await adminAction(action, el, e); return; }
+  if (action === 'gast') { e.preventDefault(); store.guest = true; toast('Du provar utan konto'); go('/prototyper'); return; }
+  if (action === 'logga-ut') { e.preventDefault(); await loggaUt(); store.guest = false; toast('Utloggad'); go('/login'); return; }
+  if (action === 'filmer-alla') { e.preventDefault(); location.hash = location.hash.includes('alla') ? '#/filmer' : '#/filmer?alla'; route(); return; }
   if (action === 'proto') { store.proto = el.dataset.proto; go('/'); route(); }
   else if (action === 'add') { const b = snapshot(); store.add(id); celebrate(b, 'Tillagt i ditt bibliotek'); route(); }
   else if (action === 'remove') {
@@ -1340,11 +1436,20 @@ function onAction(e) {
   else if (action === 'prov-godkann') { const b = snapshot(); store.setModule(id, { done: true }); celebrate(b, 'Haris godkände provet'); route(); }
 }
 
-function onSubmit(e) {
+async function onSubmit(e) {
   e.preventDefault();
   const f = e.currentTarget;
   const fd = new FormData(f);
   const kind = f.dataset.form;
+  if (kind.startsWith('admin')) { await adminSubmit(kind, f, fd); return; }
+  if (kind === 'kod') {
+    const btn = f.querySelector('button'); btn.disabled = true; btn.textContent = 'Kontrollerar…';
+    const r = await loggaInMedKod(fd.get('kod'));
+    if (!r.ok) { view.innerHTML = loginPage({ kod: fd.get('kod'), fel: r.fel || 'Koden fungerade inte' }); afterRender('/login'); return; }
+    efterInloggning(r.user, { toast });
+    go('/prototyper');
+    return;
+  }
   const before = snapshot();
   if (kind === 'log') {
     const id = f.dataset.id;
@@ -1422,6 +1527,8 @@ async function boot() {
   ]);
   badge.addEventListener('click', () => go('/prototyper'));
   if (bell) bell.addEventListener('click', () => go('/notiser'));
+  await adminInit({ toast, route, go });
+  hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film')) route(); });
   document.addEventListener('cap:notiser', e => { toast(e.detail?.ok ? 'Telefonen får nyheter från Haris' : 'Kunde inte registrera telefonen'); if (/bibliotek|spelarkort|notiser/.test(location.hash)) route(); });
   document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); });
   window.addEventListener('hashchange', route);

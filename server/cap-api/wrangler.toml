@@ -1,0 +1,22 @@
+# CAP Online API – Cloudflare Worker: konton (koder/inbjudningar), filmer med taggar, uppladdning.
+# Driftsätt: bash tools/api-deploy.sh   (token i .secrets/cloudflare-workers.txt)
+# Hemligheter: ADMIN_LOSEN (adminsidans lösenord), PUSH_HEMLIG (samma som cap-push ADMIN_HEMLIG).
+# R2 (filmlagring): slå på R2 i Cloudflare-dashboarden och ge token "Workers R2 Storage: Edit",
+# ta sedan bort kommentarerna på [[r2_buckets]] nedan och kör bash tools/api-deploy.sh --r2.
+name = "cap-api"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+routes = [{ pattern = "cap-api.8bitcat.io", custom_domain = true }]
+
+[vars]
+APP_BASE = "https://8bitcat.github.io/cap-online/"
+PUSH_BASE = "https://cap-push.8bitcat.io"
+
+[[kv_namespaces]]
+binding = "DB"
+id = "82d710ec9f334606ac2fc8ab2f0aaca5"
+
+# [[r2_buckets]]
+# binding = "MEDIA"
+# bucket_name = "cap-media"

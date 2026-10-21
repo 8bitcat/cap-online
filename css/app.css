@@ -476,6 +476,15 @@ a.chip.on:hover { color: var(--brand-ink); }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+/* Admin */
+.note { border-left: 3px solid var(--brand); background: rgba(0, 212, 203, .06); padding: 10px 12px; border-radius: 0 10px 10px 0; margin: 10px 0; }
+.note.warn { border-color: var(--warn); background: rgba(251, 191, 36, .07); }
+.msg { background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 12px; font-size: 14px; white-space: pre-wrap; margin: 10px 0; }
+.tagval .chip { cursor: pointer; }
+.step input[type=text], .step input[type=number] { min-height: 38px; padding: 6px 10px; font-size: 14px; }
+input[type=file] { color: var(--muted); font-size: 14px; }
+input[type=file]::file-selector-button { font: inherit; font-weight: 700; color: var(--brand-ink); background: var(--brand); border: 0; border-radius: 8px; padding: 8px 12px; margin-right: 10px; }
+
 /* Pekskärm: ingen hover-färg som fastnar på det man tryckte på senast (iOS) */
 @media (hover: none) {
   .tabs a:hover { color: var(--faint); }
