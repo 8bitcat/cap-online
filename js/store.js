@@ -65,6 +65,10 @@ export const store = {
   get demo() { return data.demo || 0; },
   set demo(v) { data.demo = v; save(); },
 
+  // Notiser i appen: { paminn, push, token }
+  get notiser() { return Object.assign({ paminn: false, push: false, token: null }, data.notiser || {}); },
+  set notiser(n) { data.notiser = n; save(); },
+
   // Förfrågningar till Haris (prototyp: sparas bara lokalt)
   get requests() { return data.requests.slice(); },
   addRequest(req) {

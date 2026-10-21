@@ -56,11 +56,24 @@ gratiskontot). De små filmerna följer med sidan.
 
 ## iOS-app via TestFlight (Capacitor + Codemagic)
 
-`app/` är en Capacitor-app med prototypen inbyggd, samma upplägg som
-Pixelcity. `codemagic.yaml` i roten bygger och laddar upp till App Store
-Connect. Lokalt: `cd app && npm install && npm run sync` (bygger `app/www`
-med små filmer och DM Sans lokalt). `python tools\app-ikon.py` gör ikon och
-startbild och patchar Info.plist.
+`app/` är en Capacitor-app, samma upplägg som Pixelcity. Appen **laddar
+prototypen från GitHub Pages** (`server.url` i `app/capacitor.config.json`),
+så `tools\deploy-pages.py` uppdaterar appen utan nytt bygge. `codemagic.yaml`
+i roten bygger och laddar upp till App Store Connect. Lokalt: `cd app && npm
+install && npm run sync`. `python tools\app-ikon.py` gör ikon och startbild
+och patchar Info.plist. Nytt bygge behövs bara när det nativa ändras.
+
+## Notiser
+
+- **I appen:** 🔔 uppe till höger → sidan Notiser. Påminnelser om träning
+  (lokala notiser kl 17 på träningsdagarna, `@capacitor/local-notifications`)
+  och Nyheter från Haris (push, `@capacitor/push-notifications`). Testknappar
+  för båda. Kräver Push Notifications på App ID:t och en profil skapad efter det.
+- **Server:** `server/cap-push/` är en Cloudflare Worker på
+  <https://cap-push.8bitcat.io> (KV + Apples teamnyckel). Driftsätt med
+  `bash tools/push-deploy.sh` (`--secrets` första gången).
+- **Skicka en nyhet till alla:** `python tools\notis.py "Nytt pass ute!"`
+  (lösen i `.secrets/cap-push-admin.txt`). `--antal` visar registrerade telefoner.
 
 Det Carl gör en gång i Apple/Codemagic innan första bygget:
 1. Developer-portalen: App ID `se.completeathletic.caponline`, en App Store-

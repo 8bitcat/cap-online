@@ -1,0 +1,16 @@
+# CAP Online push – Cloudflare Worker. Driftsätt: se tools/push-deploy.sh (token i .secrets/cloudflare-workers.txt).
+# Hemligheter (wrangler secret put): APNS_KEY = Apples .p8 (samma teamnyckel som Pixelcity), ADMIN_HEMLIG = lösen för /skicka.
+name = "cap-push"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+routes = [{ pattern = "cap-push.8bitcat.io", custom_domain = true }]
+
+[vars]
+TEAM_ID = "GYTVJ3CTBJ"                      # Apple Developer Team ID (8bitcat)
+TOPIC = "se.completeathletic.caponline"     # appens bundle-id
+APNS_KEY_ID = "LSUKCX663J"                  # APNs-nyckelns Key ID (teamnyckel, prod + sandbox)
+
+[[kv_namespaces]]
+binding = "CAP"
+id = "6f0d221dc3024171a43404758c26a4f8"

@@ -75,7 +75,7 @@
     <img src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
     <div class="eyebrow">Släppguide · TestFlight via Codemagic</div>
     <h1>Så släpper vi CAP Online till Haris</h1>
-    <p class="lead">Sju faser i ordning. Fas 1 till 4 gör du en gång. Fas 6 är rutinen för varje ny version. Bockarna sparas i din webbläsare.</p>
+    <p class="lead">Åtta faser i ordning. Fas 1 till 4 gör du en gång. Fas 7 är rutinen för varje ny version. Bockarna sparas i din webbläsare.</p>
     <div class="progress"><i id="bar" style="width:0%"></i></div>
     <div class="small muted" id="barText">0 av 0 steg klara</div>
   </header>
@@ -87,7 +87,9 @@
       <div class="stat"><span class="dot"></span><div><b>iOS-appen är byggd i koden</b><span>Mappen app/ (Capacitor 8), ikon, startbild, stående läge, svenska.</span></div></div>
       <div class="stat"><span class="dot"></span><div><b>Codemagic-receptet finns</b><span>codemagic.yaml i repots rot, workflow ios-testflight, samma som Pixelcity.</span></div></div>
       <div class="stat"><span class="dot"></span><div><b>Appen finns i App Store Connect</b><span>CAP Online, Apple ID 6825529179, inskrivet i codemagic.yaml.</span></div></div>
-      <div class="stat"><span class="dot todo"></span><div><b>Kvar</b><span>App ID och profil hos Apple, profilen i Codemagic, första bygget, Haris som testare.</span></div></div>
+      <div class="stat"><span class="dot"></span><div><b>Appen uppdaterar sig själv</b><span>Den laddar prototypen från webben, så varje släpp av webben är ett släpp av appen.</span></div></div>
+      <div class="stat"><span class="dot"></span><div><b>Notiser är byggda</b><span>Push-rättighet i appen, pushservern cap-push.8bitcat.io uppe, 🔔 i appen med testknappar.</span></div></div>
+      <div class="stat"><span class="dot todo"></span><div><b>Kvar</b><span>Push Notifications på App ID:t, profilen (på nytt) i Codemagic, första bygget, Haris som testare.</span></div></div>
     </div>
     <h3>Värden du behöver, tryck för att kopiera</h3>
     <div class="kv">
@@ -107,8 +109,8 @@
   <section class="phase" data-phase="1">
     <div class="phase-head"><div class="phase-n">1</div><div><h2>Apple Developer: App ID och profil</h2><div class="where">developer.apple.com/account → Certificates, Identifiers &amp; Profiles</div></div><span class="count"></span></div>
     <ol class="steps">
-      <li><input type="checkbox" id="s1a"><label for="s1a"><div class="t">Identifiers → + → App IDs → App → Continue</div><div class="d">Description: <code>CAP Online</code>. Bundle ID: Explicit, <code>se.completeathletic.caponline</code>. Inga Capabilities behövs. Register.</div></label></li>
-      <li><input type="checkbox" id="s1b"><label for="s1b"><div class="t">Profiles → + → Distribution: App Store Connect → Continue</div><div class="d">App ID: välj CAP Online. Certificate: det distributionscertifikat som redan finns (det Pixelcity använder, i Codemagic heter det pixelcity-dist). Namn: <code>CAP Online App Store</code>. Generate.</div></label></li>
+      <li><input type="checkbox" id="s1a"><label for="s1a"><div class="t">Identifiers → + → App IDs → App → Continue</div><div class="d">Description: <code>CAP Online</code>. Bundle ID: Explicit, <code>se.completeathletic.caponline</code>. Capabilities: kryssa i <code>Push Notifications</code>, det behövs för notiserna. Register. Finns App ID:t redan: öppna det, kryssa i Push Notifications, Save.</div></label></li>
+      <li><input type="checkbox" id="s1b"><label for="s1b"><div class="t">Profiles → + → Distribution: App Store Connect → Continue</div><div class="d">App ID: välj CAP Online. Certificate: det distributionscertifikat som redan finns (det Pixelcity använder, i Codemagic heter det pixelcity-dist). Namn: <code>CAP Online App Store</code>. Generate. Skapades profilen innan Push Notifications kryssades i: öppna den, Edit, Save, så görs den om med push.</div></label></li>
       <li><input type="checkbox" id="s1c"><label for="s1c"><div class="t">Download → spara .mobileprovision-filen</div><div class="d">Den laddas upp i Codemagic i fas 3. Profilen gäller ett år.</div></label></li>
     </ol>
     <div class="note warn">Om du senare lägger till en förmåga i appen (push, köp i appen, iCloud) måste profilen göras om hos Apple och laddas upp igen i Codemagic. Det var det som stoppade Pixelcity-bygge 6 och 7.</div>
@@ -127,7 +129,7 @@
   <section class="phase" data-phase="3">
     <div class="phase-head"><div class="phase-n">3</div><div><h2>Codemagic: profil, repo, första bygget</h2><div class="where">codemagic.io → Personal account</div></div><span class="count"></span></div>
     <ol class="steps">
-      <li><input type="checkbox" id="s3a"><label for="s3a"><div class="t">Teams → Personal account → codemagic.yaml settings → Code signing identities → iOS provisioning profiles → Upload</div><div class="d">Välj .mobileprovision-filen från fas 1. Reference name: <code>caponline-appstore</code>. Certifikatet pixelcity-dist återanvänds automatiskt, det är ett distributionscertifikat för hela teamet.</div></label></li>
+      <li><input type="checkbox" id="s3a"><label for="s3a"><div class="t">Teams → Personal account → codemagic.yaml settings → Code signing identities → iOS provisioning profiles → Fetch profiles</div><div class="d">Kryssa i <code>CAP Online App Store (se.completeathletic.caponline)</code> och skriv reference name <code>caponline-appstore-push</code>, Download selected. Gör det efter att profilen fått push (fas 1), annars saknar bygget notiser. Ligger en äldre utan push kvar: ta bort den, så att bara en profil matchar. Certifikatet pixelcity-dist återanvänds automatiskt.</div></label></li>
       <li><input type="checkbox" id="s3b"><label for="s3b"><div class="t">Applications → Add application → GitHub → 8bitcat/cap-online</div><div class="d">Project type: Other / codemagic.yaml. Codemagic hittar workflow <code>ios-testflight</code> själv. Integrationen "Codemagic" (App Store Connect-nyckeln) finns redan från Pixelcity.</div></label></li>
       <li><input type="checkbox" id="s3c"><label for="s3c"><div class="t">Start new build → branch main → workflow iOS → TestFlight → Start</div><div class="d">Tar ungefär 15 till 20 minuter. Bygget hämtar filmerna från gh-pages, bygger appen, signerar med profilen och laddar upp till App Store Connect. Första bygget får nummer 1.</div></label></li>
       <li><input type="checkbox" id="s3d"><label for="s3d"><div class="t">Kontrollera i App Store Connect → TestFlight → iOS Builds</div><div class="d">Bygget står som "Processing" i 5 till 15 minuter och sedan "Ready to Test". Ingen krypteringsfråga: appen deklarerar redan att den inte använder egen kryptering.</div></label></li>
@@ -180,22 +182,35 @@ Vill du titta i webbläsaren i stället: https://8bitcat.github.io/cap-online/
     <p><button class="copy" data-copy-el="msgHaris">Kopiera meddelandet</button></p>
   </section>
 
+  <section class="phase" data-phase="6n">
+    <div class="phase-head"><div class="phase-n">6</div><div><h2>Notiser: slå på och testa</h2><div class="where">I appen, 🔔 uppe till höger</div></div><span class="count"></span></div>
+    <ol class="steps">
+      <li><input type="checkbox" id="s6na"><label for="s6na"><div class="t">Öppna appen från TestFlight, tryck 🔔 och slå på båda reglagen</div><div class="d">Första gången frågar iOS om lov. <b>Påminnelser om träning</b> lägger lokala notiser kl 17 på träningsdagarna utifrån profilen. <b>Nyheter från Haris</b> registrerar telefonen hos CAP:s server.</div></label></li>
+      <li><input type="checkbox" id="s6nb"><label for="s6nb"><div class="t">Tryck "Testnotis om 5 sekunder" och lägg appen i bakgrunden</div><div class="d">En lokal notis, utan server. Syns den inte: Inställningar → Notiser → CAP Online → Tillåt notiser.</div></label></li>
+      <li><input type="checkbox" id="s6nc"><label for="s6nc"><div class="t">Tryck "Testpush till den här telefonen"</div><div class="d">Går via cap-push.8bitcat.io och Apple. Kräver att Nyheter från Haris är på och att bygget har push-rättigheten (fas 1 och 3). Felet "DeviceTokenNotForTopic" eller "BadDeviceToken" betyder att profilen saknade push: gör om fas 1b och 3a och bygg igen.</div></label></li>
+      <li><input type="checkbox" id="s6nd"><label for="s6nd"><div class="t">Skicka en riktig nyhet från datorn</div><div class="d">Går till alla telefoner som slagit på Nyheter från Haris. Haris får en egen knapp när hans adminvy byggs.</div></label></li>
+    </ol>
+    <pre>python tools\notis.py "Nytt pass ute: Koordination 2!"</pre>
+    <p><button class="copy" data-copy='python tools\notis.py "Nytt pass ute!"'>Kopiera kommandot</button></p>
+    <div class="note">Servern är samma upplägg som Pixelcitys: Cloudflare Worker med Apples teamnyckel LSUKCX663J. Den sparar bara pushkoder, inga personuppgifter. <code>python tools\notis.py --antal</code> visar hur många telefoner som är med.</div>
+  </section>
+
   <section class="phase" data-phase="6">
-    <div class="phase-head"><div class="phase-n">6</div><div><h2>Varje ny version: rutinen</h2><div class="where">Terminalen i D:\CAPOnline, sedan Codemagic</div></div><span class="count"></span></div>
+    <div class="phase-head"><div class="phase-n">7</div><div><h2>Varje ny version: rutinen</h2><div class="where">Terminalen i D:\CAPOnline. Codemagic bara ibland.</div></div><span class="count"></span></div>
     <ol class="steps">
       <li><input type="checkbox" id="s6a"><label for="s6a"><div class="t">Ändra, testa lokalt</div><div class="d"><code>python tools\serve.py</code> och öppna localhost:8808. Använd inte Pythons vanliga server, den kan inte spola i filmerna.</div></label></li>
-      <li><input type="checkbox" id="s6b"><label for="s6b"><div class="t">Släpp webben och förbered appen med ett kommando</div><div class="d">Sätter versionen i appen och i App Store, committar, taggar, pushar och publicerar webben.</div></label></li>
+      <li><input type="checkbox" id="s6b"><label for="s6b"><div class="t">Släpp med ett kommando, då är både webben och appen uppdaterade</div><div class="d">Sätter versionen, committar, taggar, pushar och publicerar webben. Appen laddar webben, så nästa gång Haris öppnar den har han den nya versionen. Inget nytt bygge behövs.</div></label></li>
     </ol>
     <pre>python tools\release.py 0.3.0</pre>
     <p><button class="copy" data-copy="python tools\release.py 0.3.0">Kopiera kommandot</button></p>
     <ol class="steps">
-      <li><input type="checkbox" id="s6c"><label for="s6c"><div class="t">Codemagic → cap-online → Start new build → ios-testflight</div><div class="d">Byggnumret räknas upp automatiskt. Med automatisk distribution i gruppen får Haris uppdateringen i TestFlight när bygget är klart.</div></label></li>
+      <li><input type="checkbox" id="s6c"><label for="s6c"><div class="t">Nytt TestFlight-bygge bara när det nativa ändras</div><div class="d">Ikon, Capacitor, insticksmoduler, rättigheter, eller när bygget går ut efter 90 dagar. Codemagic → cap-online → Start new build → ios-testflight. Byggnumret räknas upp automatiskt och gruppen får bygget direkt.</div></label></li>
     </ol>
-    <div class="note">Appversionen blir de två första talen (0.3.0 → 0.3 i TestFlight). Ett TestFlight-bygge slutar fungera efter 90 dagar, så släpp något nytt minst var tredje månad under testperioden. Webben kan du släppa hur ofta som helst utan nytt appbygge.</div>
+    <div class="note">Appversionen i TestFlight blir de två första talen (0.3.0 → 0.3). Webben har max-age 10 minuter, så en ny version kan dröja upp till tio minuter innan appen ser den.</div>
   </section>
 
   <section class="phase" data-phase="7">
-    <div class="phase-head"><div class="phase-n">7</div><div><h2>Senare: riktigt App Store-släpp</h2><div class="where">När prototypen är godkänd av Haris</div></div><span class="count"></span></div>
+    <div class="phase-head"><div class="phase-n">8</div><div><h2>Senare: riktigt App Store-släpp</h2><div class="where">När prototypen är godkänd av Haris</div></div><span class="count"></span></div>
     <ol class="steps">
       <li><input type="checkbox" id="s7a"><label for="s7a"><div class="t">Beslut: vems Apple-konto</div><div class="d">Haris bolag bör stå som säljare i butiken. Antingen flyttar vi appen till hans konto (App Store Connect → Transfer App) eller så skapar han kontot innan första inskicket.</div></label></li>
       <li><input type="checkbox" id="s7b"><label for="s7b"><div class="t">Innehåll och juridik</div><div class="d">Integritetspolicy och supportsida på webben, App Privacy-svaren, åldersgräns, skärmbilder för iPhone 6,1/6,3 tum, texter. Betalning i appen kräver Paid Apps Agreement och Apples köp i appen, annars 30 procent avgift och granskningsregler, därför webbköp först.</div></label></li>

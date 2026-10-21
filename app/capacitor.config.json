@@ -3,9 +3,18 @@
   "appName": "CAP Online",
   "webDir": "www",
   "backgroundColor": "#000912",
+  "server": {
+    "url": "https://8bitcat.github.io/cap-online/",
+    "errorPath": "error.html"
+  },
   "ios": {
     "contentInset": "automatic",
     "allowsLinkPreview": false,
     "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
   }
 }

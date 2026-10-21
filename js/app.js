@@ -1,9 +1,11 @@
 import { store, today, weekIndex } from './store.js';
 import { VERSION } from './version.js';
+import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush } from './notiser.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
 const badge = document.getElementById('proto-badge');
+const bell = document.getElementById('notis-knapp');
 let C = null;           // innehållet från data/content.json
 let MODS = [];          // alla utbildningsmoduler, plattade
 let timerHandle = null; // stoppuret i "Kör passet"
@@ -106,6 +108,7 @@ const routes = [
   [/^\/foralder$/, guide],
   [/^\/foralder\/([\w-]+)$/, guideChapter],
   [/^\/nasta-steg$/, nextStep],
+  [/^\/notiser$/, notiserPage],
 ];
 
 function route() {
@@ -130,16 +133,17 @@ function route() {
 function renderTabs() {
   const tabs = TABS[store.proto];
   document.body.classList.toggle('no-tabs', !tabs);
-  if (!tabs) { nav.innerHTML = ''; badge.hidden = true; return; }
+  if (!tabs) { nav.innerHTML = ''; badge.hidden = true; if (bell) bell.hidden = true; return; }
   nav.innerHTML = tabs.map(([href, label, icon]) =>
     `<a href="#${href}" data-tab="${href}"><svg viewBox="0 0 24 24">${icon}</svg><span>${label}</span></a>`).join('');
   badge.hidden = false;
+  if (bell) { bell.hidden = false; bell.classList.toggle('on', store.notiser.paminn || store.notiser.push); }
   badge.textContent = `PROTOTYP ${PROTOS[store.proto].n}`;
   badge.title = `${PROTOS[store.proto].name}. Tryck för att byta prototyp.`;
 }
 
 function activeTab(path) {
-  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/' };
+  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek' };
   for (const k in alias) if (path.startsWith(k)) return alias[k];
   const tabs = TABS[store.proto] || [];
   const hit = tabs.map(t => t[0]).filter(h => h !== '/' && path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
@@ -976,9 +980,53 @@ function spelarkort() {
     <h2>Märken</h2>
     <div class="badges">${badges.map(b => `<div class="badge ${b.earned ? 'earned' : ''}" title="${esc(b.desc)}"><span class="ic">${b.icon}</span><b>${esc(b.name)}</b><span class="small">${esc(b.desc)}</span></div>`).join('')}</div>
   </section>
+  ${notisPanel()}
   <section class="btn-row two">
     <a class="btn grad" href="#/planera">Planera dagens pass</a>
     <a class="btn secondary" href="#/start/1">Ändra profilen</a>
+  </section>`;
+}
+
+// Notiser: påminnelser och nyheter från Haris, bara i appen. Kortversion i Bibliotek och Spelarkort.
+function notisPanel() {
+  const n = store.notiser, stod = notisStod();
+  const lage = !stod ? 'Kräver appen' : n.paminn && n.push ? 'Påminnelser och nyheter på' : n.paminn ? 'Påminnelser på' : n.push ? 'Nyheter på' : 'Av';
+  return `<section class="panel" id="notiser">
+    <div class="section-head"><h3>🔔 Notiser</h3><span class="small muted">${esc(lage)}</span></div>
+    <p class="small muted">Påminnelser på träningsdagarna och nyheter från Haris, även när appen är stängd.</p>
+    <a class="btn secondary block" href="#/notiser">Öppna notisinställningarna</a>
+  </section>`;
+}
+
+function notiserPage() {
+  const n = store.notiser, p = store.profile, stod = notisStod();
+  const webb = !stod && 'Notification' in window;
+  return `
+  <a class="back" href="#/bibliotek">‹ Tillbaka</a>
+  <section>
+    <div class="eyebrow">Inställningar</div>
+    <h1>Notiser</h1>
+    <p class="muted">${stod
+      ? 'Telefonen kan påminna er om träningsdagarna och berätta när Haris lagt upp något nytt, även när appen är stängd.'
+      : 'Du kör prototypen i webbläsaren. Riktiga notiser kommer i iOS-appen. Här kan du ändå prova hur en notis ser ut.'}</p>
+  </section>
+  <section class="panel">
+    <h3>Vad vill ni få?</h3>
+    <label class="toggle"><input type="checkbox" data-action="notis-paminn" ${n.paminn ? 'checked' : ''} ${stod ? '' : 'disabled'}><span><b>Påminnelser om träning</b><small>${esc(paminnDagar(p?.freq).join(', '))} kl 17, utifrån ${esc(p?.freq || '2')} pass i veckan. Ändra frekvensen i profilen.</small></span></label>
+    <label class="toggle"><input type="checkbox" data-action="notis-push" ${n.push ? 'checked' : ''} ${stod ? '' : 'disabled'}><span><b>Nyheter från Haris</b><small>Nya pass och filmer, och svar på Nästa steg.${n.push && n.token ? ` Telefonen är registrerad (…${esc(n.token.slice(-6))}).` : ''}</small></span></label>
+    ${stod ? '' : '<p class="small muted" style="margin:8px 0 0">Reglagen går att slå på i appen.</p>'}
+  </section>
+  <section class="panel">
+    <h3>Testa</h3>
+    <div class="btn-row two">
+      <button class="btn grad" data-action="notis-testa" ${stod || webb ? '' : 'disabled'}>Testnotis om 5 sekunder</button>
+      <button class="btn secondary" data-action="notis-testpush" ${stod && n.token ? '' : 'disabled'}>Testpush till den här telefonen</button>
+    </div>
+    <p class="small muted" style="margin:0">Lägg appen i bakgrunden efter att du tryckt, så ser du notisen som Haris och föräldrarna ser den. Testpushen går via CAP:s server och kräver att Nyheter från Haris är på.</p>
+  </section>
+  <section class="panel">
+    <h3>Så skickar Haris en nyhet</h3>
+    <p class="small muted" style="margin:0">Från datorn: <code>python tools\\notis.py "Nytt pass ute!"</code>. Den går till alla telefoner som slagit på Nyheter från Haris. En knapp för Haris i appen kommer med hans adminvy.</p>
   </section>`;
 }
 
@@ -1015,6 +1063,7 @@ function library() {
     <a class="btn block" href="#/nasta-steg">Be Haris om nästa steg</a>
     ${reqs.length ? `<ul class="list" style="margin-top:12px">${reqs.slice().reverse().map(r => `<li><b>${fmtDate(r.date)}</b> · ${esc(r.kind === 'valj' ? 'Hjälp mig välja' : 'Nästa steg')} · <span class="muted">${esc(r.status)}</span>${r.text ? `<div class="small muted">${esc(r.text)}</div>` : ''}</li>`).join('')}</ul>` : ''}
   </section>
+  ${notisPanel()}
   ${p ? `
   <section class="panel">
     <div class="section-head"><h3>Barnprofil</h3><a class="small" href="#/start/1">Ändra</a></div>
@@ -1267,6 +1316,23 @@ function onAction(e) {
   } else if (action === 'klipp') { e.preventDefault(); playClip(el.dataset.sid, { start: Number(el.dataset.start), end: Number(el.dataset.end) }, el.dataset.label); }
   else if (action === 'hela') { e.preventDefault(); playClip(el.dataset.sid, null, ''); }
   else if (action === 'loop') { e.preventDefault(); loopClip = !loopClip; el.classList.toggle('current', loopClip); toast(loopClip ? 'Upprepar momentet' : 'Spelar vidare efter momentet'); }
+  else if (action === 'notis-paminn') {
+    paminnSatt(el.checked).then(r => {
+      if (!r.ok) { el.checked = false; toast(r.fel === 'nekad' ? 'Tillåt notiser för CAP Online i Inställningar' : `Gick inte: ${r.fel}`); }
+      else toast(el.checked ? `Påminnelser ${r.dagar.join(', ')} kl 17` : 'Påminnelserna är av');
+    });
+  } else if (action === 'notis-push') {
+    pushSatt(el.checked).then(r => {
+      if (!r.ok) { el.checked = false; toast(r.fel === 'nekad' ? 'Tillåt notiser för CAP Online i Inställningar' : `Gick inte: ${r.fel}`); }
+      else toast(el.checked ? 'Registrerar telefonen hos CAP…' : 'Nyheter från Haris är av');
+    });
+  }
+  else if (action === 'notis-testa') {
+    testaLokal().then(r => toast(r.ok ? `Testnotisen kommer om ${r.sekunder} sekunder. Lägg appen i bakgrunden.` : r.fel === 'nekad' ? 'Tillåt notiser för CAP Online i Inställningar' : `Gick inte: ${r.fel}`));
+  } else if (action === 'notis-testpush') {
+    el.disabled = true;
+    testaPush().then(r => { el.disabled = false; toast(r.ok ? 'Testpushen är skickad från servern.' : `Gick inte: ${r.fel}`); });
+  }
   else if (action === 'demo') { store.demo = Number(el.dataset.v); toast(store.demo ? 'Förhandsvisning på' : 'Visar verklig progression'); route(); }
   else if (action === 'modul-klar') { const b = snapshot(); store.setModule(id, { done: true }); celebrate(b, 'Modulen är klar'); route(); }
   else if (action === 'quiz-igen') { store.setModule(id, { done: false, score: null }); route(); }
@@ -1309,6 +1375,7 @@ function onSubmit(e) {
     p.recommended = recommend(p);
     store.profile = p;
     store.draft = {};
+    paminnUppdatera();
     if (isNew) store.addRequest({ kind: 'valj', text: `${p.name}, ${p.age} år, ${position(p.position).name}, ${p.experience}. Svårt: ${p.difficulties.join(', ') || '–'}. Mål: ${p.goal || '–'}` });
     celebrate(before, isNew ? 'Spelarkortet är klart' : 'Profilen är sparad');
     go('/');
@@ -1354,6 +1421,9 @@ async function boot() {
     ...Object.entries(L.positions).flatMap(([pos, ms]) => ms.map((m, i) => ({ ...m, level: L.n, track: pos, index: i }))),
   ]);
   badge.addEventListener('click', () => go('/prototyper'));
+  if (bell) bell.addEventListener('click', () => go('/notiser'));
+  document.addEventListener('cap:notiser', e => { toast(e.detail?.ok ? 'Telefonen får nyheter från Haris' : 'Kunde inte registrera telefonen'); if (/bibliotek|spelarkort|notiser/.test(location.hash)) route(); });
+  document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); });
   window.addEventListener('hashchange', route);
   route();
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.ai$/.test(location.hostname)) {

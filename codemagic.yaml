@@ -1,5 +1,8 @@
 # CAP Online som iOS-app för TestFlight: Codemagic bygger app/ (Capacitor) på en Mac i molnet och
 # laddar upp bygget till App Store Connect. Samma upplägg som Pixelcity (snabbfilen/codemagic.yaml).
+# Appen laddar prototypen från https://8bitcat.github.io/cap-online/ (server.url), så innehållet
+# uppdateras med tools/deploy-pages.py. Nytt bygge här behövs bara när det nativa ändras
+# (Capacitor, ikon, Info.plist, rättigheter) eller när ett TestFlight-bygge går ut (90 dagar).
 #   Starta: Codemagic → cap-online → Start new build → ios-testflight
 #   Före första bygget: APP_STORE_APPLE_ID nedan (App Store Connect → appen → App Information → Apple ID)
 #   och en App Store-profil för se.completeathletic.caponline sparad i Codemagic (Code signing identities).
@@ -23,15 +26,6 @@ workflows:
     scripts:
       - name: Installera
         script: cd app && npm ci
-      - name: Små filmer
-        script: |
-          # media/ ligger utanför git; i molnet hämtas originalen inte, utan de små mp4-filerna
-          # tas från gh-pages-branchen (samma filer som webbplatsen använder)
-          mkdir -p media/small
-          git fetch --depth 1 origin gh-pages
-          git --work-tree=/tmp/pages checkout origin/gh-pages -- media 2>/dev/null || (mkdir -p /tmp/pages && git archive origin/gh-pages media | tar -x -C /tmp/pages)
-          cp /tmp/pages/media/*.mp4 media/small/
-          ls -la media/small
       - name: Prototypen in i appen
         script: cd app && node build.mjs && npx cap sync ios
       - name: Signering

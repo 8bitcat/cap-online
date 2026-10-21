@@ -452,6 +452,20 @@ a.chip.on:hover { color: var(--brand-ink); }
 .node-st { font-size: 12px; font-weight: 700; color: var(--brand); white-space: nowrap; }
 .node.locked .node-st { color: var(--faint); }
 .quiz-q .label { display: block; margin-bottom: 6px; }
+
+/* Notiser */
+.top-right { display: flex; align-items: center; gap: 8px; }
+.top-bell {
+  font: inherit; font-size: 18px; line-height: 1; cursor: pointer; width: 38px; height: 30px; border-radius: 6px;
+  background: transparent; border: 1px solid var(--line); color: var(--text); filter: grayscale(1); opacity: .7;
+}
+.top-bell.on { filter: none; opacity: 1; border-color: var(--brand-deep); }
+.top-bell:hover { background: rgba(0, 212, 203, .1); }
+.toggle { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.toggle:first-of-type { border-top: 0; }
+.toggle input { width: 22px; height: 22px; accent-color: var(--brand); margin: 2px 0 0; flex: none; }
+.toggle b { display: block; font-size: 15px; }
+.toggle small { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .player .missing {
   position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 12px;
   padding: 24px; text-align: center; color: var(--muted); font-size: 14px;

@@ -3,6 +3,26 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-21 – appen uppdaterar sig själv, notiser
+
+- **Appen laddar webben** (Carl: "uppdatera appen härifrån så den alltid hämtar
+  det nyaste"): `server.url = https://8bitcat.github.io/cap-online/` i
+  capacitor.config.json, `error.html` när nätet saknas. Valdes före Capgo-
+  uppdateraren (Pixelcitys lösning) eftersom det är noll extra rörliga delar
+  och prototypen ändå behöver nätet för filmerna. Nackdel: inget offline, och
+  Apple kan ifrågasätta rena webbskal vid App Store-granskning. Omprövas inför
+  riktigt släpp. Paketet innehåller en reservkopia utan filmer (2 MB).
+- **Notiser** (Carl: "gör också så vi kan ha notiser"): två slag. Påminnelser
+  om träningsdagar = lokala notiser kl 17 (dagar ur profilens frekvens: 1 →
+  onsdag, 2 → tisdag/torsdag, 3+ → måndag/onsdag/fredag). Nyheter från Haris =
+  push via `server/cap-push` (Cloudflare Worker, KV, Apples teamnyckel
+  LSUKCX663J, domän cap-push.8bitcat.io). Servern sparar bara pushkoder.
+  Push kräver aps-environment i appen (App.entitlements) och en profil skapad
+  efter att Push Notifications kryssats i på App ID:t. Testknappar i appen
+  (🔔): lokal testnotis om 5 s, testpush till egen telefon (högst en per minut).
+- **Haris Apple-ID** för TestFlight är Haris.skenderovic@outlook.com; appen har
+  Apple ID 6825529179 i App Store Connect.
+
 ## 2026-10-16 – Haris ska kunna köra den hos sig
 
 - **GitHub Pages** på https://8bitcat.github.io/cap-online/ (repo 8bitcat/cap-online,
