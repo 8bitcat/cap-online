@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Appen laddar prototypen från webben (server.url). Töm webbcachen vid varje kallstart så att den
+        // senaste versionen alltid hämtas – localStorage (profil, träning) rörs inte.
+        let typer: Set<String> = [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache, WKWebsiteDataTypeFetchCache]
+        WKWebsiteDataStore.default().removeData(ofTypes: typer, modifiedSince: Date(timeIntervalSince1970: 0)) { }
         return true
     }
 
