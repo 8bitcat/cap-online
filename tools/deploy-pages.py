@@ -34,7 +34,7 @@ def main():
     version = re.search(r"'([\d.]+)'", (ROOT / "js" / "version.js").read_text(encoding="utf-8")).group(1)
     commit = sh("git", "rev-parse", "--short", "HEAD", cwd=ROOT)
     with tempfile.TemporaryDirectory() as tmp:
-        out = build(Path(tmp) / "site", pages=True)
+        out = build(Path(tmp) / "site", pages=True, stamp=commit)
         (out / "version.json").write_text(json.dumps({"version": version, "commit": commit}), encoding="utf-8")
         sh("git", "init", "-q", "-b", "gh-pages", cwd=out)
         sh("git", "-c", "user.name=Carl Palsson", "-c", "user.email=palsson.carl@gmail.com", "add", "-A", cwd=out)

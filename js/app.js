@@ -1844,6 +1844,8 @@ async function boot() {
   ]);
   badge.addEventListener('click', () => go('/prototyper'));
   if (bell) bell.addEventListener('click', () => go('/notiser'));
+  // Kallstart utan adress: alltid första sidan med Förälder och Admin
+  if (!location.hash || location.hash === '#/' || location.hash === '#') location.replace('#/valkommen');
   await adminInit({ toast, route, go, content: C, onAction, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, onAction });
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });

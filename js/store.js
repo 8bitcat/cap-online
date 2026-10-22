@@ -14,6 +14,8 @@ const data = Object.assign(
   { proto: null, library: [], logs: [], profile: null, draft: {}, requests: [], steps: {}, plans: [], modules: {}, demo: 0 },
   load()
 );
+// 2026-10-22: appen fick sitt riktiga flöde – alla börjar i det, de gamla prototyperna nås via Mer
+if ((data.v || 0) < 3) { data.proto = 'app'; data.v = 3; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* ok */ } }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(data)); } catch { /* privat läge m.m. */ }
 }

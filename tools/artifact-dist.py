@@ -13,7 +13,30 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def build(out, pages=False):
+def stampla(out, stamp):
+    """Versionsstämplar js/css-referenser (index.html och alla import-satser) så att en ny version
+    aldrig blandas med cachade filer från förra släppet. GitHub Pages cachar 10 minuter."""
+    import re
+    idx = out / "index.html"
+    t = idx.read_text(encoding="utf-8")
+    t = re.sub(r'(href|src)="(css/app\.css|js/app\.js)"', rf'\1="\2?v={stamp}"', t)
+    idx.write_text(t, encoding="utf-8", newline="\n")
+    for js in (out / "js").glob("*.js"):
+        s = js.read_text(encoding="utf-8")
+        s = re.sub(r"(from\s+['\"])(\./[\w-]+\.js)(['\"])", rf"\1\2?v={stamp}\3", s)
+        s = re.sub(r"(import\(\s*['\"])(\./[\w-]+\.js)(['\"])", rf"\1\2?v={stamp}\3", s)
+        js.write_text(s, encoding="utf-8", newline="\n")
+    data = out / "js" / "app.js"
+    s = data.read_text(encoding="utf-8")
+    s = s.replace("fetch('data/content.json', { cache: 'no-cache' })", f"fetch('data/content.json?v={stamp}', {{ cache: 'no-cache' }})")
+    s = s.replace("fetch('data/taggar.json', { cache: 'no-cache' })", f"fetch('data/taggar.json?v={stamp}', {{ cache: 'no-cache' }})")
+    data.write_text(s, encoding="utf-8", newline="\n")
+    adm = out / "js" / "admin.js"
+    s = adm.read_text(encoding="utf-8").replace("fetch('data/taggar.json', { cache: 'no-cache' })", f"fetch('data/taggar.json?v={stamp}', {{ cache: 'no-cache' }})")
+    adm.write_text(s, encoding="utf-8", newline="\n")
+
+
+def build(out, pages=False, stamp=None):
     out = Path(out)
     if out.exists():
         shutil.rmtree(out)
@@ -36,11 +59,13 @@ def build(out, pages=False):
     for p in (ROOT / "media" / "small").glob("*.mp4"):
         shutil.copy(p, out / "media" / p.name)
 
+    if stamp:
+        stampla(out, stamp)
     files = sorted(x for x in out.rglob("*") if x.is_file())
     total = sum(x.stat().st_size for x in files)
     for x in files:
         print(f"{x.stat().st_size / 1_000_000:6.1f} MB  {x.relative_to(out).as_posix()}")
-    print(f"{total / 1_000_000:.1f} MB totalt, {len(files)} filer")
+    print(f"{total / 1_000_000:.1f} MB totalt, {len(files)} filer" + (f", stämpel {stamp}" if stamp else ""))
     return out
 
 
