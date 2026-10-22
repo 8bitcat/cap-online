@@ -3,6 +3,30 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-22 kväll – appen får sitt riktiga flöde
+
+- **Första sidan: Förälder eller Admin** (Carl). Förälder → kod (eller gäst) →
+  startguiden → startsidan med två val: **Träna själv** (= Träningsstigen,
+  prototyp 4) och **Träna med Haris** (kalender). De fyra prototyperna finns
+  kvar under Mer → Prototyperna. Standardläget heter `app` i store.proto.
+- **Kalendern:** veckovy från denna vecka och framåt, aldrig bakåt. Bara veckor
+  Haris öppnat syns. Bokning som på bio: tryck håller platsen i 60 s (servern
+  sätter `hall.tills`), bekräfta inom tiden, annars släpps den. Passerade
+  dagar är avstängda. Föräldern ser aldrig andras namn, bara "Upptagen".
+- **Admin har egen meny längst ner:** Tider (autosätt timmespass per dag och
+  tidsspann, justera, öppna/stäng vecka, duplicera till nästa vecka, avboka),
+  Pass (ett pass per spelare med block: samtal på film före/efter, filma
+  momentet, tidtagning med låst resultat, övning, anteckning; kör-läge med
+  stora knappar; dela med föräldern; film → utkast i biblioteket), Filmer,
+  Stigen (drömspelare och stegen per etapp, sparas på servern), Mer
+  (inbjudningar, nyhet, logga ut).
+- **Stigen fylls av biblioteket:** ett tomt block med en färdighetstagg blir
+  ett filmsteg när en publicerad film har samma tagg och passar positionen.
+  Det är så Haris filmer "används för träna själv".
+- **Antaganden att stämma av:** 60 s hållning (kan ändras), passlängd 60 min
+  som standard, samtal-före/efter som fasta block i mallen, att filmer från
+  pass sparas som utkast tills Haris taggat dem.
+
 ## 2026-10-22 – admin, taggar, inloggning, prototyp 4
 
 - **Inloggning med kod** (Carl: "en inloggning på första sidan … länk … kod"):

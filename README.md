@@ -19,6 +19,14 @@ Förstasidan väljer ett av tre spår som delar innehåll och sparad data:
 Knappen "PROTOTYP n" uppe till höger byter spår. Skärmdumpstest av hela
 flödet: `tools/screenshots-v2.js`, `tools/screenshots-v3.js`, `tools/admin-test.js`.
 
+## Appens flöde (2026-10-22)
+
+Första sidan: **Förälder** eller **Admin**. Föräldern loggar in med kod,
+registrerar barnet i startguiden och kommer till startsidan med **Träna
+själv** (Träningsstigen) och **Träna med Haris** (bokningskalender). Admin har
+en egen meny: Tider, Pass, Filmer, Stigen, Mer. Flödestest:
+`tools/app-test.js`.
+
 ## Konto, admin och API
 
 - **API:** `server/cap-api/` är en Cloudflare Worker på <https://cap-api.8bitcat.io>
