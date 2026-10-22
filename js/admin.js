@@ -1,6 +1,9 @@
 // Adminsidan för Haris (Carl 2026-10-21): filmer med taggar, inbjudningar med kod, nyhet som push.
 import { store } from './store.js';
 import { api, laddaUppFilm, laddaUppPoster, hamtaFilmer } from './api.js';
+import { tiderInit, tiderView, tiderAction, tiderSubmit } from './admin-tider.js';
+import { passInit, passView, passAction, passSubmit, passStopur, passStoppa, passFilVald } from './admin-pass.js';
+import { stigAdminInit, stigAdminView, stigAdminAction } from './admin-stig.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -8,17 +11,27 @@ const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const fmtT = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
 let TAGS = null;          // data/taggar.json
-let state = { flik: 'filmer', filmer: [], r2: false, redigerar: null, inb: null, laddat: false };
-let ui = null;            // { toast, route, go }
+let state = { flik: 'tider', filmer: [], r2: false, redigerar: null, inb: null, laddat: false };
+let ui = null;            // { toast, route, go, content }
+const FLIKAR = [['tider', 'Tider'], ['pass', 'Pass'], ['filmer', 'Filmer'], ['stigen', 'Stigen'], ['mer', 'Mer']];
 
 export async function adminInit(deps) {
   ui = deps;
+  tiderInit(deps); passInit(deps); stigAdminInit(deps, deps.content);
   if (!TAGS) TAGS = await (await fetch('data/taggar.json', { cache: 'no-cache' })).json();
 }
 export const taggar = () => TAGS;
 export const adminLaddat = () => state.laddat;
 
-export function adminPage() {
+// Kopplar in filval och stoppur efter att adminvyn ritats; stoppar klockor när man lämnar
+export function adminAfterRender(view) {
+  const fil = view.querySelector('#fil'); if (fil) fil.addEventListener('change', () => adminFilVald(fil));
+  const pf = view.querySelector('#passfilm'); if (pf) pf.addEventListener('change', () => passFilVald(pf));
+  if (view.querySelector('.stopur #stopurKnapp')) passStopur();
+}
+export function adminStop() { passStoppa(); }
+
+export function adminPage(flik = 'tider', id, lage) {
   if (!store.admin) return `
   <section class="hero" style="padding-top:30px">
     <img class="hero-logo" src="assets/cap-logo.png" alt="">
@@ -34,16 +47,21 @@ export function adminPage() {
   </section>
   <p class="small muted" style="text-align:center"><a href="#/login">‹ Till appen</a></p>`;
 
-  const flik = state.flik;
-  return `
+  if (!FLIKAR.some(([k]) => k === flik)) flik = 'tider';
+  state.flik = flik;
+  const rubrik = { tider: 'Tider att boka', pass: 'Pass med spelare', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
+  const inre = flik === 'tider' ? tiderView()
+    : flik === 'pass' ? passView(id, lage)
+    : flik === 'filmer' ? filmerFlik()
+    : flik === 'stigen' ? stigAdminView()
+    : `${inbjudningarFlik()}${nyhetFlik()}
+       <section class="panel"><div class="section-head"><h3>Konto</h3><a class="small" data-action="admin-ut" href="#/admin">Logga ut</a></div><p class="small muted" style="margin:0"><a href="#/">Till förälderappen ›</a></p></section>`;
+  const topp = id ? '' : `
   <section>
-    <div class="section-head"><div><div class="eyebrow">Admin</div><h1 style="margin:0">CAP Online</h1></div><a class="small" data-action="admin-ut" href="#/admin">Logga ut</a></div>
-    <div class="chips" style="margin-top:12px">
-      ${[['filmer', 'Filmer'], ['inbjudningar', 'Inbjudningar'], ['nyhet', 'Nyhet']].map(([id, t]) => `<button class="chip ${flik === id ? 'brand on' : ''}" data-action="admin-flik" data-flik="${id}">${t}</button>`).join('')}
-      <a class="chip" href="#/">Till appen ›</a>
-    </div>
-  </section>
-  ${flik === 'filmer' ? filmerFlik() : flik === 'inbjudningar' ? inbjudningarFlik() : nyhetFlik()}`;
+    <div class="section-head"><div><div class="eyebrow">Admin</div><h1 style="margin:0">${rubrik}</h1></div><a class="small" href="#/">Till appen ›</a></div>
+    <div class="chips" style="margin-top:10px">${FLIKAR.map(([k, t]) => `<a class="chip ${flik === k ? 'brand on' : ''}" href="#/admin/${k}">${t}</a>`).join('')}</div>
+  </section>`;
+  return topp + inre;
 }
 
 /* ---------- Filmer ---------- */
@@ -95,7 +113,7 @@ function filmForm(f) {
     </div>`).join('');
   return `
   <section>
-    <a class="back" data-action="admin-avbryt" href="#/admin">‹ Alla filmer</a>
+    <a class="back" data-action="admin-avbryt" href="#/admin/filmer">‹ Alla filmer</a>
     <h1>${f.id ? 'Redigera film' : 'Ny film'}</h1>
     <form data-form="admin-film" id="filmform">
       <div class="field"><label for="titel">Titel</label><input type="text" id="titel" name="titel" value="${esc(f.titel || '')}" required placeholder="T.ex. Första touch mot vägg"></div>
@@ -131,7 +149,7 @@ function filmForm(f) {
       </div>
       <div class="btn-row two" style="margin-top:16px">
         <button class="btn grad" type="submit">Spara</button>
-        ${f.id ? `<button type="button" class="btn secondary" data-action="admin-radera" data-id="${f.id}">Ta bort filmen</button>` : `<a class="btn secondary" data-action="admin-avbryt" href="#/admin">Avbryt</a>`}
+        ${f.id ? `<button type="button" class="btn secondary" data-action="admin-radera" data-id="${f.id}">Ta bort filmen</button>` : `<a class="btn secondary" data-action="admin-avbryt" href="#/admin/filmer">Avbryt</a>`}
       </div>
     </form>
   </section>`;
@@ -218,13 +236,15 @@ export async function adminLadda() {
   const r = await api.admin.get('/admin/filmer');
   if (r.ok) { state.filmer = r.filmer; state.r2 = !!r.r2; }
   state.laddat = true;
-  if (state.flik === 'inbjudningar') { const i = await api.admin.get('/admin/inbjudningar'); if (i.ok) state.inb = i; }
+  const i = await api.admin.get('/admin/inbjudningar'); if (i.ok) state.inb = i;
 }
 
 export async function adminAction(action, el, e) {
   const { toast, route } = ui;
-  if (action === 'admin-ut') { e.preventDefault(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; route(); return true; }
-  if (action === 'admin-flik') { state.flik = el.dataset.flik; state.redigerar = null; route(); await adminLadda(); route(); return true; }
+  if (action.startsWith('tid-')) return tiderAction(action, el, e);
+  if (action.startsWith('pass-')) return passAction(action, el, e);
+  if (action.startsWith('stig-')) return stigAdminAction(action, el, e);
+  if (action === 'admin-ut') { e.preventDefault(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; ui.go('/admin'); return true; }
   if (action === 'admin-ny') { state.redigerar = tomFilm(); route(); return true; }
   if (action === 'admin-redigera') { const f = state.filmer.find(x => x.id === el.dataset.id); state.redigerar = JSON.parse(JSON.stringify(f)); route(); return true; }
   if (action === 'admin-avbryt') { e.preventDefault(); state.redigerar = null; route(); return true; }
@@ -261,10 +281,12 @@ export async function adminAction(action, el, e) {
 
 export async function adminSubmit(kind, f, fd) {
   const { toast, route } = ui;
+  if (kind.startsWith('tid-')) return tiderSubmit(kind, f, fd);
+  if (kind.startsWith('pass-')) return passSubmit(kind, f, fd);
   if (kind === 'admin-login') {
     const r = await api.post('/admin/login', { losen: fd.get('losen') });
     if (!r.ok) { toast(r.fel || 'Fel lösenord'); return true; }
-    store.admin = r.token; state.laddat = false; route(); await adminLadda(); route(); return true;
+    store.admin = r.token; state.laddat = false; ui.go('/admin/tider'); await adminLadda(); route(); return true;
   }
   if (kind === 'admin-film') {
     const film = lasForm();

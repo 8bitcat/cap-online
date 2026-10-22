@@ -476,6 +476,44 @@ a.chip.on:hover { color: var(--brand-ink); }
 @media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
+/* Appens startsida och välkommen */
+.start-cards { display: grid; gap: 12px; margin: 16px 0; }
+@media (min-width: 560px) { .start-cards { grid-template-columns: 1fr 1fr; } }
+.start-card {
+  display: flex; gap: 14px; align-items: center; padding: 18px 16px; border-radius: var(--radius); color: var(--brand-ink);
+  background: var(--grad); min-height: 96px;
+}
+.start-card.alt { background: var(--surface); color: var(--text); border: 1px solid var(--brand-deep); }
+.start-card:hover { color: inherit; filter: brightness(1.05); }
+.start-card .start-ic { font-size: 34px; flex: none; }
+.start-card b { display: block; font-size: 19px; }
+.start-card small { display: block; font-size: 13px; opacity: .85; line-height: 1.35; }
+
+/* Kalender och tider */
+.vecka-nav { display: grid; grid-template-columns: 48px 1fr 48px; gap: 10px; align-items: center; margin: 10px 0; }
+.vecka-nav .btn { padding: 0; min-height: 44px; font-size: 22px; }
+.vecka-titel { text-align: center; }
+.btn.disabled { opacity: .35; pointer-events: none; }
+.dag { margin: 14px 0; }
+.dag-rubrik { margin-bottom: 6px; }
+.tider { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.tid {
+  font: inherit; text-align: left; padding: 10px 12px; border-radius: 12px; cursor: pointer; display: grid; gap: 2px;
+  background: var(--surface); border: 1px solid var(--brand-deep); color: var(--text);
+}
+.tid b { font-size: 15px; } .tid small { color: var(--muted); font-size: 12px; }
+.tid.min { background: linear-gradient(180deg, rgba(0, 212, 203, .18), transparent 70%), var(--surface); border-color: var(--brand); }
+.tid.min small { color: var(--brand); }
+.tid.haller { border-color: var(--warn); }
+.tid.upptagen, .tid[disabled] { opacity: .45; border-color: var(--line); cursor: default; }
+.hall { margin: 14px 0; }
+.auto-form .auto-rad { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 0; font-size: 14px; }
+.auto-form .auto-rad label { display: flex; gap: 6px; align-items: center; }
+.auto-form input[type=time], .auto-form select { min-height: 40px; padding: 6px 8px; width: auto; }
+.auto-form .chips label.chip { cursor: pointer; display: inline-flex; align-items: center; }
+input[type=time] { width: auto; min-height: 38px; padding: 6px 8px; }
+.slotrad input[type=time] { width: 110px; }
+
 /* Träningsstigen */
 .stig-top { margin-top: 14px; }
 .stig-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
