@@ -28,6 +28,7 @@ def stampla(out, stamp):
         js.write_text(s, encoding="utf-8", newline="\n")
     data = out / "js" / "app.js"
     s = data.read_text(encoding="utf-8")
+    s = s.replace("const STAMP = '__STAMP__';", f"const STAMP = '{stamp}';")
     s = s.replace("fetch('data/content.json', { cache: 'no-cache' })", f"fetch('data/content.json?v={stamp}', {{ cache: 'no-cache' }})")
     s = s.replace("fetch('data/taggar.json', { cache: 'no-cache' })", f"fetch('data/taggar.json?v={stamp}', {{ cache: 'no-cache' }})")
     data.write_text(s, encoding="utf-8", newline="\n")

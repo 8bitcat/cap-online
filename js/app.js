@@ -16,6 +16,20 @@ let MODS = [];          // alla utbildningsmoduler, plattade
 let timerHandle = null; // stoppuret i "Kör passet"
 // Artefakten på claude.ai får inte bädda in andra sajter; där länkar vi till Drive i stället.
 const IS_ARTIFACT = document.querySelector('meta[name="cap-env"]')?.content === 'artifact';
+// Versionsstämpel som deploy-pages.py skriver in. Vid start jämförs den med version.json på webben:
+// skiljer de sig har telefonen en cachad version, och då hämtas sidan om och laddas på nytt.
+const STAMP = '__STAMP__';
+function kollaNyVersion() {
+  if (STAMP.startsWith('__') || IS_ARTIFACT) return;
+  fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' }).then(r => r.json()).then(async v => {
+    if (!v.commit || v.commit === STAMP) return;
+    let f = null; try { f = sessionStorage.getItem('cap_omladdad'); } catch { /* ok */ }
+    if (f === v.commit) return;
+    try { sessionStorage.setItem('cap_omladdad', v.commit); } catch { /* ok */ }
+    await Promise.all([fetch('./', { cache: 'reload' }), fetch('index.html', { cache: 'reload' })]).catch(() => {});
+    location.reload();
+  }).catch(() => {});
+}
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -552,7 +566,7 @@ function prototyper() {
     <img class="hero-logo" src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
     <div class="eyebrow">CAP Online · prototyper</div>
     <h1>Välj spår</h1>
-    <p class="lead">Tre sätt att visa konceptet. De delar innehåll och det som sparas på den här enheten, så du kan byta när som helst.</p>
+    <p class="lead">Fyra tidigare spår, kvar för jämförelse. De delar innehåll och det som sparas på den här enheten. Själva appen når du via Hem.</p>
   </section>
   <section class="protos">
     ${cards.map(([id, title, desc, points]) => `
@@ -1846,6 +1860,8 @@ async function boot() {
   if (bell) bell.addEventListener('click', () => go('/notiser'));
   // Kallstart utan adress: alltid första sidan med Förälder och Admin
   if (!location.hash || location.hash === '#/' || location.hash === '#') location.replace('#/valkommen');
+  kollaNyVersion();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) kollaNyVersion(); });
   await adminInit({ toast, route, go, content: C, onAction, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, onAction });
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
