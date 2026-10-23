@@ -82,7 +82,17 @@ export function tiderView() {
     </form>
   </section>
   <section>
-    <div class="section-head"><h2>Tiderna</h2><button class="btn" data-action="tid-ny">+ Lägg till en tid</button></div>
+    <div class="section-head"><h2>Tiderna</h2><button class="btn ${st.nyTid ? 'secondary' : ''}" data-action="tid-ny">${st.nyTid ? 'Stäng' : '+ Lägg till en tid'}</button></div>
+    ${st.nyTid ? `<form data-form="tid-ny" class="panel brand" style="margin-bottom:14px">
+      <h3 style="margin-top:0">Ny tid</h3>
+      <div class="auto-rad">
+        <label>Dag <select name="dag">${[1, 2, 3, 4, 5, 6, 7].map(d => `<option value="${d}" ${d === (st.nyTid.dag || 1) ? 'selected' : ''}>${DAG[d]}dag ${fmtDatum(datumFor(v, d))}</option>`).join('')}</select></label>
+        <label>Från <input type="time" name="start" value="${esc(st.nyTid.start || '17:00')}" required></label>
+        <label>Till <input type="time" name="slut" value="${esc(st.nyTid.slut || '18:00')}" required></label>
+      </div>
+      <div class="field" style="margin:10px 0"><input type="text" name="plats" value="${esc(st.nyTid.plats || '')}" placeholder="Plats, t.ex. Hisings Backa"></div>
+      <div class="btn-row two"><button class="btn grad" type="submit">Lägg till tiden</button><button class="btn secondary" type="button" data-action="tid-ny">Avbryt</button></div>
+    </form>` : ''}
     ${dagar || '<p class="muted">Inga tider än. Använd Autosätt eller lägg till en tid.</p>'}
     <div class="btn-row two" style="margin-top:14px">
       <button class="btn grad" data-action="tid-spara">Spara veckan</button>
@@ -115,15 +125,16 @@ export async function tiderAction(action, el) {
   if (action === 'tid-oppen') { const r = await sparaVecka(lasSlots(), el.checked); toast(r.ok ? (el.checked ? 'Veckan är öppen för bokning' : 'Veckan är stängd') : `Gick inte: ${r.fel}`); route(); return true; }
   if (action === 'tid-spara') { const r = await sparaVecka(lasSlots(), w.oppen); toast(r.ok ? 'Veckan är sparad' : `Gick inte: ${r.fel}`); route(); return true; }
   if (action === 'tid-ny') {
-    // nästa lediga timme efter sista tiden den sista dagen, annars måndag 17
+    // öppnar formuläret med ett förslag: nästa lediga timme efter sista tiden, annars måndag 17
+    if (st.nyTid) { st.nyTid = null; route(); return true; }
     const slots = lasSlots();
     const sista = slots.slice().sort((a, b) => a.dag - b.dag || a.start.localeCompare(b.start)).at(-1);
     const min = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
     const fmt = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
     let dag = 1, start = 17 * 60;
-    if (sista) { dag = sista.dag; start = min(sista.slut); if (start + 60 > 22 * 60) { dag = Math.min(7, dag + 1); start = min(slots.find(x => x.dag === dag)?.start || '17:00'); } }
-    slots.push({ dag, start: fmt(start), slut: fmt(Math.min(23 * 60 + 59, start + 60)), plats: sista?.plats || '' });
-    const r = await sparaVecka(slots, w.oppen); if (!r.ok) toast(`Gick inte: ${r.fel}`); route(); return true;
+    if (sista) { dag = sista.dag; start = min(sista.slut); if (start + 60 > 22 * 60) { dag = Math.min(7, dag + 1); start = 17 * 60; } }
+    st.nyTid = { dag, start: fmt(start), slut: fmt(Math.min(23 * 60 + 59, start + 60)), plats: sista?.plats || '' };
+    route(); return true;
   }
   if (action === 'tid-bort') { const slots = lasSlots().filter(x => x.id !== el.dataset.id); const r = await sparaVecka(slots, w.oppen); toast(r.ok ? 'Tiden är borttagen' : `Gick inte: ${r.fel}`); route(); return true; }
   if (action === 'tid-avboka') {
@@ -143,6 +154,17 @@ export async function tiderAction(action, el) {
 
 export async function tiderSubmit(kind, f, fd) {
   const { toast, route } = ui;
+  if (kind === 'tid-ny') {
+    const w = vecka();
+    const ny = { dag: Number(fd.get('dag')), start: fd.get('start'), slut: fd.get('slut'), plats: fd.get('plats') };
+    const min = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    if (min(ny.slut) <= min(ny.start)) { toast('Sluttiden måste vara efter starttiden'); return true; }
+    const krock = w.slots.find(x => x.dag === ny.dag && min(ny.start) < min(x.slut) && min(ny.slut) > min(x.start));
+    if (krock) { toast(`Krockar med ${krock.start}–${krock.slut} samma dag`); return true; }
+    const r = await sparaVecka([...lasSlots(), ny], w.oppen);
+    if (r.ok) { st.nyTid = null; toast(`Tillagd: ${DAG[ny.dag]}dag ${ny.start}–${ny.slut}`); } else toast(`Gick inte: ${r.fel}`);
+    route(); return true;
+  }
   if (kind !== 'tid-auto') return false;
   const dagar = fd.getAll('dagar').map(Number);
   if (!dagar.length) { toast('Välj minst en dag'); return true; }
