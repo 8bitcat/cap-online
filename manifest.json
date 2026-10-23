@@ -1,0 +1,14 @@
+{
+  "name": "CAP Online",
+  "short_name": "CAP",
+  "description": "Träna ditt barn i fotboll med färdiga pass från Complete Athletic Performance.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000912",
+  "theme_color": "#000912",
+  "lang": "sv",
+  "icons": [
+    { "src": "assets/cap-ball-270.png", "sizes": "270x270", "type": "image/png", "purpose": "any" }
+  ]
+}

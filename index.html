@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CAP Online</title>
+  <meta name="description" content="Träna ditt barn i fotboll med färdiga pass från Complete Athletic Performance.">
+  <meta name="theme-color" content="#000912">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CAP Online">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/cap-ball-270.png">
+  <link rel="apple-touch-icon" href="assets/cap-ball-270.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&display=swap">
+  <link rel="stylesheet" href="css/app.css?v=baa7cf7">
+</head>
+<body>
+  <header class="top">
+    <a href="#/" class="top-logo" aria-label="CAP Online – hem">
+      <img src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
+    </a>
+    <span class="top-right">
+      <button id="notis-knapp" class="top-bell" type="button" hidden aria-label="Notiser" title="Notiser">🔔</button>
+      <button id="proto-badge" class="top-badge" type="button" hidden>PROTOTYP</button>
+    </span>
+  </header>
+
+  <main id="view" class="view" aria-live="polite">
+    <noscript><p class="pad">CAP Online behöver JavaScript för att fungera.</p></noscript>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <nav class="tabs" aria-label="Huvudmeny"></nav>
+
+  <script type="module" src="js/app.js?v=baa7cf7"></script>
+</body>
+</html>
