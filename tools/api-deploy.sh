@@ -3,6 +3,7 @@
 #   bash tools/api-deploy.sh              # driftsätt
 #   bash tools/api-deploy.sh --secrets    # första gången: ADMIN_LOSEN (nytt, sparas i .secrets) + PUSH_HEMLIG
 #   bash tools/api-deploy.sh --r2         # skapar R2-bucketen cap-media (kräver R2 påslaget + R2-rättighet på token)
+#   bash tools/api-deploy.sh --sms        # sätter SMS_USER/SMS_PASS (46elks) ur .secrets/cap-sms.txt (rad 1 = användare, rad 2 = lösenord)
 set -euo pipefail
 cd "$(dirname "$0")/../server/cap-api"
 export CLOUDFLARE_API_TOKEN="$(tr -d '\r\n ' < /c/Users/palss/.secrets/cloudflare-workers.txt)"
@@ -25,5 +26,13 @@ if [ "${1:-}" = "--secrets" ]; then
   [ -s "$F" ] || python -c "import secrets; a='bdfghjklmnprstvz'; v='aeiouy'; import random; r=secrets.SystemRandom(); print(''.join(r.choice(a)+r.choice(v) for _ in range(3)) + '-' + str(r.randint(100,999)))" > "$F"
   tr -d '\r\n' < "$F" | npx wrangler secret put ADMIN_LOSEN > /dev/null && echo "ADMIN_LOSEN satt (står i $F)"
   tr -d '\r\n' < /c/Users/palss/.secrets/cap-push-admin.txt | npx wrangler secret put PUSH_HEMLIG > /dev/null && echo "PUSH_HEMLIG satt"
+fi
+if [ "${1:-}" = "--sms" ]; then
+  F=/c/Users/palss/.secrets/cap-sms.txt
+  [ -s "$F" ] || { echo "saknar $F (rad 1 = 46elks-användare, rad 2 = lösenord)"; exit 1; }
+  sed -n 1p "$F" | tr -d '
+' | npx wrangler secret put SMS_USER > /dev/null && echo "SMS_USER satt"
+  sed -n 2p "$F" | tr -d '
+' | npx wrangler secret put SMS_PASS > /dev/null && echo "SMS_PASS satt"
 fi
 echo "---"; curl -s https://cap-api.8bitcat.io/ || true; echo

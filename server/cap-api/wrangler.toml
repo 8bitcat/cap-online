@@ -1,6 +1,7 @@
 # CAP Online API – Cloudflare Worker: konton (koder/inbjudningar), filmer med taggar, uppladdning.
 # Driftsätt: bash tools/api-deploy.sh   (token i .secrets/cloudflare-workers.txt)
-# Hemligheter: ADMIN_LOSEN (adminsidans lösenord), PUSH_HEMLIG (samma som cap-push ADMIN_HEMLIG).
+# Hemligheter: ADMIN_LOSEN (adminsidans lösenord), PUSH_HEMLIG (samma som cap-push ADMIN_HEMLIG),
+# SMS_USER + SMS_PASS (46elks, valfritt: utan dem skickar Haris länken själv från telefonen), SMS_FROM (avsändare, standard CAP).
 # R2 (filmlagring): slå på R2 i Cloudflare-dashboarden och ge token "Workers R2 Storage: Edit",
 # ta sedan bort kommentarerna på [[r2_buckets]] nedan och kör bash tools/api-deploy.sh --r2.
 name = "cap-api"

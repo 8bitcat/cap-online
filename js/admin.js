@@ -1,9 +1,11 @@
-// Adminsidan för Haris (Carl 2026-10-21): filmer med taggar, inbjudningar med kod, nyhet som push.
+// Adminsidan för Haris (Carl 2026-10-21/23): klientregister, tider, pass, filmer med taggar, stigen, nyhet som push.
 import { store } from './store.js';
 import { api, laddaUppFilm, laddaUppPoster, hamtaFilmer } from './api.js';
 import { tiderInit, tiderView, tiderAction, tiderSubmit } from './admin-tider.js';
-import { passInit, passView, passAction, passSubmit, passStopur, passStoppa, passFilVald } from './admin-pass.js';
+import { passInit, passView, passAction, passSubmit, passStopur, passStoppa, passFilVald, passGlom } from './admin-pass.js';
 import { stigAdminInit, stigAdminView, stigAdminAction } from './admin-stig.js';
+import { klienterInit, klienterView, klienterAction, klienterSubmit, klienterAfterRender, klienterLadda, klientGlom } from './admin-klienter.js';
+import { sattR2 } from './media.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -11,33 +13,35 @@ const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const fmtT = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
 let TAGS = null;          // data/taggar.json
-let state = { flik: 'tider', filmer: [], r2: false, redigerar: null, inb: null, laddat: false };
+let state = { flik: 'klienter', filmer: [], r2: false, sms: false, redigerar: null, laddat: false };
 let ui = null;            // { toast, route, go, content }
-const FLIKAR = [['tider', 'Tider'], ['pass', 'Pass'], ['filmer', 'Filmer'], ['stigen', 'Stigen'], ['mer', 'Mer']];
+const FLIKAR = [['klienter', 'Klienter'], ['tider', 'Tider'], ['filmer', 'Filmer'], ['stigen', 'Stigen'], ['mer', 'Mer']];
 
 export async function adminInit(deps) {
-  ui = deps;
-  tiderInit(deps); passInit(deps); stigAdminInit(deps, deps.content);
+  // när ett pass sparas/tas bort ska klientsidan hämtas om nästa gång
+  ui = { ...deps, klientAndrad: () => { klientGlom(); }, passAndrad: () => { passGlom(); } };
+  tiderInit(ui); passInit(ui); stigAdminInit(ui, deps.content); klienterInit(ui);
   if (!TAGS) TAGS = await (await fetch('data/taggar.json', { cache: 'no-cache' })).json();
 }
 export const taggar = () => TAGS;
 export const adminLaddat = () => state.laddat;
 
-// Kopplar in filval och stoppur efter att adminvyn ritats; stoppar klockor när man lämnar
+// Kopplar in filval, sök och stoppur efter att adminvyn ritats; stoppar klockor när man lämnar
 export function adminAfterRender(view) {
   const fil = view.querySelector('#fil'); if (fil) fil.addEventListener('change', () => adminFilVald(fil));
   const pf = view.querySelector('#passfilm'); if (pf) pf.addEventListener('change', () => passFilVald(pf));
-  if (view.querySelector('.stopur #stopurKnapp')) passStopur();
+  if (view.querySelector('.stopur #stopurKnapp') || view.querySelector('#recTid')) passStopur();
+  klienterAfterRender(view);
 }
 export function adminStop() { passStoppa(); }
 
-export function adminPage(flik = 'tider', id, lage) {
+export function adminPage(flik = 'klienter', id, lage) {
   if (!store.admin) return `
   <section class="hero" style="padding-top:30px">
     <img class="hero-logo" src="assets/cap-logo.png" alt="">
     <div class="eyebrow">Admin</div>
     <h1>Logga in</h1>
-    <p class="lead">För Haris och Carl. Här lägger ni upp filmer, taggar dem och bjuder in föräldrar.</p>
+    <p class="lead">För Haris och Carl. Klienter, tider, pass, filmer och stigen.</p>
   </section>
   <section class="panel">
     <form data-form="admin-login">
@@ -47,21 +51,38 @@ export function adminPage(flik = 'tider', id, lage) {
   </section>
   <p class="small muted" style="text-align:center"><a href="#/login">‹ Till appen</a></p>`;
 
-  if (!FLIKAR.some(([k]) => k === flik)) flik = 'tider';
+  if (flik === 'klient') flik = 'klienter';
+  if (!FLIKAR.some(([k]) => k === flik) && flik !== 'pass') flik = 'klienter';
   state.flik = flik;
-  const rubrik = { tider: 'Tider att boka', pass: 'Pass med spelare', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
-  const inre = flik === 'tider' ? tiderView()
+  const rubrik = { klienter: 'Klienter', tider: 'Tider att boka', pass: 'Alla pass', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
+  const inre = flik === 'klienter' ? klienterView(id, lage)
+    : flik === 'tider' ? tiderView()
     : flik === 'pass' ? passView(id, lage)
     : flik === 'filmer' ? filmerFlik()
     : flik === 'stigen' ? stigAdminView()
-    : `${inbjudningarFlik()}${nyhetFlik()}
-       <section class="panel"><div class="section-head"><h3>Konto</h3><a class="small" data-action="admin-ut" href="#/admin">Logga ut</a></div><p class="small muted" style="margin:0"><a href="#/">Till förälderappen ›</a></p></section>`;
+    : merFlik();
   const topp = id ? '' : `
   <section>
     <div class="section-head"><div><div class="eyebrow">Admin</div><h1 style="margin:0">${rubrik}</h1></div><a class="small" href="#/">Till appen ›</a></div>
-    <div class="chips" style="margin-top:10px">${FLIKAR.map(([k, t]) => `<a class="chip ${flik === k ? 'brand on' : ''}" href="#/admin/${k}">${t}</a>`).join('')}</div>
+    <div class="chips" style="margin-top:10px">${FLIKAR.map(([k, t]) => `<a class="chip ${flik === k || (flik === 'pass' && k === 'klienter') ? 'brand on' : ''}" href="#/admin/${k}">${t}</a>`).join('')}</div>
   </section>`;
   return topp + inre;
+}
+
+function merFlik() {
+  return `
+  <section class="cards">
+    <a class="card" href="#/admin/pass"><div class="card-body"><div class="eyebrow">Pass</div><h3>Alla pass</h3><p class="desc">Passen för alla klienter i en lista. Nya pass planeras från klientens sida.</p></div></a>
+  </section>
+  ${nyhetFlik()}
+  <section class="panel">
+    <h3>Tjänster</h3>
+    <ul class="checks small">
+      <li>Sms med länken: ${state.sms ? 'skickas från servern (46elks).' : 'skickas från Haris telefon (appen öppnar Meddelanden med texten ifylld). Carl kan koppla på 46elks så servern skickar.'}</li>
+      <li>Fillagring för filmer och ljud (R2): ${state.r2 ? 'på. Inspelningar laddas upp till spelaren.' : 'inte påslagen än. Inspelningar sparas på telefonen tills dess och kan laddas upp från klientens sida sedan.'}</li>
+    </ul>
+  </section>
+  <section class="panel"><div class="section-head"><h3>Konto</h3><a class="small" data-action="admin-ut" href="#/admin">Logga ut</a></div><p class="small muted" style="margin:0"><a href="#/">Till förälderappen ›</a></p></section>`;
 }
 
 /* ---------- Filmer ---------- */
@@ -176,44 +197,6 @@ function lasForm() {
   };
 }
 
-/* ---------- Inbjudningar ---------- */
-
-function inbjudningarFlik() {
-  const d = state.inb;
-  return `
-  <section>
-    <h2>Bjud in en förälder</h2>
-    <p class="small muted">Föräldern får en kod och en länk. Koden skriver man in på första sidan i appen, länken loggar in direkt i webbläsaren. Kontot skapas på mejladressen när koden används.</p>
-    <form data-form="admin-inbjudan" class="panel">
-      <div class="field"><label for="iemail">Förälderns e-post</label><input type="email" id="iemail" name="email" required placeholder="namn@exempel.se"></div>
-      <div class="field"><label for="inamn">Förälderns namn</label><input type="text" id="inamn" name="namn" placeholder="T.ex. Anna"></div>
-      <div class="field"><label for="ibarn">Barnets namn</label><input type="text" id="ibarn" name="barn" placeholder="T.ex. Elsa"></div>
-      <button class="btn grad block" type="submit">Skapa kod</button>
-    </form>
-    ${state.nyKod ? `<section class="panel brand">
-      <div class="eyebrow">Ny inbjudan</div>
-      <div style="font-size:34px;font-weight:800;letter-spacing:.18em;font-variant-numeric:tabular-nums">${esc(state.nyKod.kod.slice(0, 3))}-${esc(state.nyKod.kod.slice(3))}</div>
-      <p class="small muted">${esc(state.nyKod.inbjudan.email)}${state.nyKod.inbjudan.barn ? ` · ${esc(state.nyKod.inbjudan.barn)}` : ''}</p>
-      <div class="msg" id="inbmsg">Hej${state.nyKod.inbjudan.namn ? ' ' + esc(state.nyKod.inbjudan.namn) : ''}! Här är din inbjudan till CAP Online${state.nyKod.inbjudan.barn ? ', träningsappen för ' + esc(state.nyKod.inbjudan.barn) : ''}.
-
-Öppna länken så är du inne: ${esc(state.nyKod.lank)}
-
-I appen: skriv koden ${esc(state.nyKod.kod.slice(0, 3))}-${esc(state.nyKod.kod.slice(3))} på första sidan.
-
-/Haris, Complete Athletic Performance</div>
-      <div class="btn-row two"><button class="btn" data-action="kopiera" data-el="inbmsg">Kopiera meddelandet</button><button class="btn secondary" data-action="kopiera" data-text="${esc(state.nyKod.lank)}">Kopiera länken</button></div>
-    </section>` : ''}
-  </section>
-  <section>
-    <h2>Skickade koder</h2>
-    ${d ? (d.inbjudningar.length ? `<ul class="list">${d.inbjudningar.map(i => `<li class="row"><span class="grow"><b>${esc(i.kod.slice(0, 3))}-${esc(i.kod.slice(3))}</b> · ${esc(i.email)}${i.barn ? ` · ${esc(i.barn)}` : ''}<div class="small muted">${i.skapad.slice(0, 10)} · ${i.anvand ? '✓ använd ' + i.anvand.slice(0, 10) : 'ej använd än'}</div></span></li>`).join('')}</ul>` : '<p class="muted">Inga koder skapade än.</p>') : '<p class="muted">Hämtar…</p>'}
-  </section>
-  <section>
-    <h2>Konton</h2>
-    ${d ? (d.anvandare.length ? `<ul class="list">${d.anvandare.map(u => `<li><b>${esc(u.email)}</b>${u.barn ? ` · ${esc(u.barn)}` : ''}<div class="small muted">senast ${(u.senast || '').slice(0, 10)}</div></li>`).join('')}</ul>` : '<p class="muted">Inga konton än.</p>') : ''}
-  </section>`;
-}
-
 /* ---------- Nyhet ---------- */
 
 function nyhetFlik() {
@@ -234,9 +217,8 @@ function nyhetFlik() {
 export async function adminLadda() {
   if (!store.admin) return;
   const r = await api.admin.get('/admin/filmer');
-  if (r.ok) { state.filmer = r.filmer; state.r2 = !!r.r2; }
+  if (r.ok) { state.filmer = r.filmer; state.r2 = !!r.r2; state.sms = !!r.sms; sattR2(!!r.r2); }
   state.laddat = true;
-  const i = await api.admin.get('/admin/inbjudningar'); if (i.ok) state.inb = i;
 }
 
 export async function adminAction(action, el, e) {
@@ -244,7 +226,8 @@ export async function adminAction(action, el, e) {
   if (action.startsWith('tid-')) return tiderAction(action, el, e);
   if (action.startsWith('pass-')) return passAction(action, el, e);
   if (action.startsWith('stig-')) return stigAdminAction(action, el, e);
-  if (action === 'admin-ut') { e.preventDefault(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; ui.go('/admin'); return true; }
+  if (action.startsWith('klient-')) return klienterAction(action, el, e);
+  if (action === 'admin-ut') { e.preventDefault(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.go('/admin'); return true; }
   if (action === 'admin-ny') { state.redigerar = tomFilm(); route(); return true; }
   if (action === 'admin-redigera') { const f = state.filmer.find(x => x.id === el.dataset.id); state.redigerar = JSON.parse(JSON.stringify(f)); route(); return true; }
   if (action === 'admin-avbryt') { e.preventDefault(); state.redigerar = null; route(); return true; }
@@ -283,10 +266,11 @@ export async function adminSubmit(kind, f, fd) {
   const { toast, route } = ui;
   if (kind.startsWith('tid-')) return tiderSubmit(kind, f, fd);
   if (kind.startsWith('pass-')) return passSubmit(kind, f, fd);
+  if (kind.startsWith('klient-')) return klienterSubmit(kind, f, fd);
   if (kind === 'admin-login') {
     const r = await api.post('/admin/login', { losen: fd.get('losen') });
     if (!r.ok) { toast(r.fel || 'Fel lösenord'); return true; }
-    store.admin = r.token; state.laddat = false; ui.go('/admin/tider'); await adminLadda(); route(); return true;
+    store.admin = r.token; state.laddat = false; klientGlom(); passGlom(); ui.go('/admin/klienter'); await adminLadda(); klienterLadda(true).then(() => route()); route(); return true;
   }
   if (kind === 'admin-film') {
     const film = lasForm();
@@ -295,16 +279,6 @@ export async function adminSubmit(kind, f, fd) {
     if (!r.ok) { toast(`Gick inte att spara: ${r.fel}`); return true; }
     toast(film.status === 'publicerad' ? 'Sparad och publicerad' : 'Sparad som utkast');
     state.redigerar = null; await adminLadda(); hamtaFilmer({ tvinga: true }); route(); return true;
-  }
-  if (kind === 'admin-inbjudan') {
-    const r = await api.admin.post('/admin/inbjudan', { email: fd.get('email'), namn: fd.get('namn'), barn: fd.get('barn') });
-    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
-    state.nyKod = r;
-    const i = await api.admin.get('/admin/inbjudningar');
-    if (i.ok) state.inb = i;
-    // KV-listningen släpar efter några sekunder; visa den nya koden direkt ändå
-    if (state.inb && !state.inb.inbjudningar.some(x => x.kod === r.kod)) state.inb.inbjudningar.unshift(r.inbjudan);
-    f.reset(); route(); return true;
   }
   if (kind === 'admin-notis') {
     const r = await api.admin.post('/admin/notis', { text: fd.get('text'), title: fd.get('title') });

@@ -26,12 +26,24 @@ export const api = {
   },
 };
 
-// Logga in med kod (från Haris inbjudan eller länken #/k/KOD)
+// Logga in med kod (länken #/k/KOD ur sms:et, eller en gammal e-postkod)
 export async function loggaInMedKod(kod) {
   const r = await api.post('/auth/kod', { kod });
   if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now() };
   return r;
 }
+// Logga in med mobilnummer och den kod föräldern valt
+export async function loggaInMedTelefon(telefon, pin) {
+  const r = await api.post('/auth/login', { telefon, pin });
+  if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now() };
+  return r;
+}
+export async function sattPin(pin) {
+  const r = await api.post('/auth/pin', { pin }, store.session?.token);
+  if (r.ok) store.session = { ...store.session, user: r.user };
+  return r;
+}
+export const glomtKod = telefon => api.post('/auth/glomt', { telefon });
 export async function loggaUt() {
   const s = store.session;
   if (s?.token) api.post('/auth/ut', {}, s.token);
@@ -49,8 +61,10 @@ export async function hamtaFilmer({ tvinga = false } = {}) {
 export const filmerNu = () => filmCache || store.filmer || [];
 
 // Ladda upp en fil i delar till R2 via API:t (admin). onProgress(0..1).
-export async function laddaUppFilm(filmId, file, onProgress = () => {}) {
-  const start = await api.admin.post('/admin/upload/start', { filmId, filnamn: file.name, typ: file.type });
+export const laddaUppFilm = (filmId, file, onProgress) => laddaUppFil({ filmId, filnamn: file.name, typ: file.type }, file, onProgress);
+// meta: { filmId } (biblioteksfilm) eller { klientId } (inspelning från ett pass), plus filnamn och typ
+export async function laddaUppFil(meta, file, onProgress = () => {}) {
+  const start = await api.admin.post('/admin/upload/start', meta);
   if (!start.ok) return start;
   const DEL = 8 * 1024 * 1024;
   const parts = [];

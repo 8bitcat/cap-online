@@ -1,5 +1,7 @@
-// Admin → Tider: veckor med bokningsbara tider. Autosätt timmespass, justera, öppna veckan, duplicera.
+// Admin → Tider: veckor med bokningsbara tider. Autosätt timmespass, justera, öppna veckan, duplicera,
+// boka en tid åt en befintlig kund (tiden blir röd i kalendern).
 import { api } from './api.js';
+import { klienterNu, klienterLadda, klienterLaddade, klientGlom, visaTel } from './admin-klienter.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -7,7 +9,7 @@ const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const DAG = ['', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
 const MAN = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
-let st = { nu: null, veckor: [], mandag: {}, vald: null, laddat: false };
+let st = { nu: null, veckor: [], mandag: {}, vald: null, laddat: false, nyTid: null, bokaFor: null };
 let ui = null;
 export function tiderInit(deps) { ui = deps; }
 
@@ -36,6 +38,7 @@ const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen:
 
 export function tiderView() {
   if (!st.laddat) { tiderLadda().then(() => ui.route()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar veckor…</p></section>`; }
+  if (!klienterLaddade()) klienterLadda().then(() => ui.route());
   const w = vecka();
   const v = st.vald;
   const m = mandag(v), s = datumFor(v, 7);
@@ -45,14 +48,17 @@ export function tiderView() {
     const slots = w.slots.filter(x => x.dag === d);
     if (!slots.length) continue;
     dagar += `<div class="dag"><div class="dag-rubrik"><b>${DAG[d]}dag</b> <span class="muted small">${fmtDatum(datumFor(v, d))}</span></div>
-      <div class="list">${slots.map(x => `<div class="step slotrad" data-id="${x.id}" data-dag="${x.dag}">
+      <div class="list">${slots.map(x => `<div class="step slotrad ${x.bokad ? 'bokad' : ''}" data-id="${x.id}" data-dag="${x.dag}">
         <span class="num">${x.bokad ? '●' : '○'}</span>
         <div style="display:grid;gap:6px">
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
             <input type="time" data-f="start" value="${esc(x.start)}" ${x.bokad ? 'disabled' : ''}> – <input type="time" data-f="slut" value="${esc(x.slut)}" ${x.bokad ? 'disabled' : ''}>
             <input type="text" data-f="plats" value="${esc(x.plats || '')}" placeholder="Plats" style="flex:1;min-width:120px">
           </div>
-          ${x.bokad ? `<div class="small"><b>Bokad:</b> ${esc(x.bokad.barn || '')}${x.bokad.namn ? ` (${esc(x.bokad.namn)})` : ''} · ${esc(x.bokad.email || '')} <button class="film" data-action="tid-avboka" data-id="${x.id}">Avboka</button></div>` : x.hall ? '<div class="small muted">Någon håller platsen just nu.</div>' : ''}
+          ${x.bokad ? `<div class="small"><b style="color:var(--danger)">Bokad:</b> ${x.bokad.uid && klienterNu().some(k => k.id === x.bokad.uid) ? `<a href="#/admin/klient/${x.bokad.uid}">${esc(x.bokad.barn || '')}</a>` : esc(x.bokad.barn || '')}${x.bokad.namn ? ` (${esc(x.bokad.namn)})` : ''}${x.bokad.telefon ? ` · <a href="tel:${esc(x.bokad.telefon)}">${esc(visaTel(x.bokad.telefon))}</a>` : x.bokad.email ? ` · ${esc(x.bokad.email)}` : ''}${x.bokad.av === 'haris' ? ' · av Haris' : ''} <button class="film" data-action="tid-avboka" data-id="${x.id}">Avboka</button></div>`
+          : x.hall ? '<div class="small muted">Någon håller platsen just nu.</div>'
+          : st.bokaFor === x.id ? `<div class="boka-rad"><select data-boka-klient>${klienterNu().map(k => `<option value="${k.id}">${esc(k.barn)} · ${esc(k.foralder || visaTel(k.telefon))}</option>`).join('') || '<option value="">Inga klienter än</option>'}</select><button type="button" class="btn" data-action="tid-boka-klient" data-id="${x.id}">Boka</button><button type="button" class="btn secondary" data-action="tid-boka" data-id="">Avbryt</button></div>`
+          : `<div class="small"><button type="button" class="film" data-action="tid-boka" data-id="${x.id}">Boka åt en kund</button></div>`}
         </div>
         <button type="button" class="film" data-action="tid-bort" data-id="${x.id}" ${x.bokad ? 'disabled title="Avboka först"' : ''}>✕</button>
       </div>`).join('')}</div></div>`;
@@ -137,11 +143,20 @@ export async function tiderAction(action, el) {
     route(); return true;
   }
   if (action === 'tid-bort') { const slots = lasSlots().filter(x => x.id !== el.dataset.id); const r = await sparaVecka(slots, w.oppen); toast(r.ok ? 'Tiden är borttagen' : `Gick inte: ${r.fel}`); route(); return true; }
+  if (action === 'tid-boka') { st.bokaFor = el.dataset.id || null; route(); return true; }
+  if (action === 'tid-boka-klient') {
+    const sel = document.querySelector('[data-boka-klient]'); const kid = sel?.value;
+    if (!kid) { toast('Lägg in klienten under Klienter först'); return true; }
+    const r = await api.admin.post(`/admin/klient/${kid}/boka`, { v: st.vald, slot: el.dataset.id });
+    if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); st.bokaFor = null; klientGlom(); toast(`Bokad åt ${klienterNu().find(k => k.id === kid)?.barn || 'klienten'}`); }
+    else toast(`Gick inte: ${r.fel}`);
+    route(); return true;
+  }
   if (action === 'tid-avboka') {
     const slots = lasSlots(); const s = w.slots.find(x => x.id === el.dataset.id); if (s) s.bokad = null;
     // bokningen ligger i serverns kopia; nollställ via en ny slot med samma tid
     const nya = slots.map(x => x.id === el.dataset.id ? { ...x, id: undefined } : x);
-    const r = await sparaVecka(nya, w.oppen); toast(r.ok ? 'Avbokad' : `Gick inte: ${r.fel}`); route(); return true;
+    const r = await sparaVecka(nya, w.oppen); klientGlom(); toast(r.ok ? 'Avbokad' : `Gick inte: ${r.fel}`); route(); return true;
   }
   if (action === 'tid-duplicera') {
     const r = await api.admin.post(`/admin/vecka/${st.vald}/duplicera`, {});

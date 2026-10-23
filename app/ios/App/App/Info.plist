@@ -30,6 +30,12 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Haris filmar moment och bedömningar under passet, så att filmen kan sparas på spelaren och delas med föräldern.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Haris spelar in ljud under passet, till exempel samtalet före och efter träningen.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Välj en film från bildbiblioteket att lägga in i appen.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

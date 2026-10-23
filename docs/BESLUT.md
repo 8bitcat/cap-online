@@ -3,6 +3,37 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-23 – kundregister, mobilnummer, bedömningar över tid
+
+- **Inloggning med mobilnummer** (Carl: "vi börjar med att man loggar in med
+  telefonnummer … sms med länken … glömt lösenord skickar man bara till
+  telefonnumret"). Ny kund läggs in av Haris med mobilnummer; länken `#/k/KOD`
+  loggar in och leder till "välj en kod" (4–6 siffror, PBKDF2 i KV). Sedan
+  nummer + kod. Glömt → ny länk. Svenska nummer normaliseras till +46.
+- **Sms via 46elks är förberett men inte påslaget (antagande, ny kostnad):**
+  utan hemligheterna SMS_USER/SMS_PASS öppnar appen Meddelanden på Haris
+  telefon med texten ifylld (`sms:`-länk), och "Glömt koden" blir en ⚠-flagga
+  i registret i stället för ett automatiskt sms. 46elks valdes för att det är
+  svenskt, enkelt (basic auth, ett anrop) och tillåter avsändaren "CAP".
+- **Klientregistret** ersätter e-postinbjudningarna som admins startflik:
+  barn, född år, position, lag, nivå 1–5 (namnen lånas från appens XP-nivåer:
+  Bollkompis … Matchvinnare), förälder, nummer, e-post, anteckning, status.
+  Haris bokar åt befintliga kunder både från klientsidan och från Tider-fliken;
+  bokade tider är röda i kalendern för alla. Raderad klient släpper sina tider.
+- **Bedömningar** = blocktypen "Bedömning med tid" i passet: flera försök med
+  stoppuret, medeltiden sparas på spelaren (`bed:<klientId>`) med datum, och
+  jämförs direkt med förra gången av samma typ ("4,4 s bättre 🎉"). Typen
+  slug:as av namnet så "Konbana" hamnar i samma kurva varje gång. Diagrammet
+  är ren SVG utan bibliotek. Går också att lägga in manuellt på klientsidan.
+- **Kamera och mikrofon i kör-läget** på varje block. Filer sparas först i
+  telefonens IndexedDB, laddas upp till R2 (`klient/<id>/…`) när det är på och
+  registreras på klienten (`med:<klientId>`), annars väntar de och laddas upp
+  från klientsidan senare. Föräldern ser dem under Utveckling och i passet.
+  iOS-appen behöver NSCamera/NSMicrophoneUsageDescription (Info.plist, bygge 3).
+- **Antaganden att stämma av med Haris:** nivåskalan 1–5 och dess namn, tre
+  försök per bedömning som standard, att filmer från pass delas med föräldern
+  så fort passet är delat, att gamla e-postkonton får leva kvar.
+
 ## 2026-10-22 kväll – appen får sitt riktiga flöde
 
 - **Första sidan: Förälder eller Admin** (Carl). Förälder → kod (eller gäst) →

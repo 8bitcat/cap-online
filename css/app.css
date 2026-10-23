@@ -505,7 +505,16 @@ a.chip.on:hover { color: var(--brand-ink); }
 .tid.min { background: linear-gradient(180deg, rgba(0, 212, 203, .18), transparent 70%), var(--surface); border-color: var(--brand); }
 .tid.min small { color: var(--brand); }
 .tid.haller { border-color: var(--warn); }
-.tid.upptagen, .tid[disabled] { opacity: .45; border-color: var(--line); cursor: default; }
+.tid[disabled] { opacity: .45; border-color: var(--line); cursor: default; }
+/* bokade tider är röda (Carl 2026-10-23) */
+.tid.upptagen, .tid.upptagen[disabled] { opacity: .9; border-color: var(--danger); background: linear-gradient(180deg, rgba(248, 113, 113, .16), transparent 70%), var(--surface); }
+.tid.upptagen small { color: var(--danger); }
+.tid.min[disabled] { opacity: 1; }
+.slotrad.bokad { border-color: var(--danger); background: linear-gradient(90deg, rgba(248, 113, 113, .1), transparent 60%), var(--surface); }
+.slotrad.bokad .num { color: var(--danger); }
+.boka-rad { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.boka-rad select { flex: 1; min-width: 160px; min-height: 40px; padding: 6px 8px; width: auto; }
+.boka-rad .btn { min-height: 40px; padding: 6px 12px; }
 .hall { margin: 14px 0; }
 .auto-form .auto-rad { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 0; font-size: 14px; }
 .auto-form .auto-rad label { display: flex; gap: 6px; align-items: center; }
@@ -585,3 +594,55 @@ input[type=file]::file-selector-button { font: inherit; font-weight: 700; color:
 .tabs a { -webkit-tap-highlight-color: transparent; }
 .footer img { height: 18px; margin: 0 auto 8px; opacity: .7; }
 .kbd { font-size: 12px; color: var(--muted); }
+
+/* Klientregistret (admin), på datorn bredare och i två spalter */
+body.admin .view { max-width: 1080px; }
+.admin-grid { display: grid; gap: 0 28px; }
+@media (min-width: 900px) { .admin-grid { grid-template-columns: 1fr 1fr; align-items: start; } .admin-grid > div > section:first-child { margin-top: 0; } }
+.klient-lista { display: grid; gap: 10px; margin-top: 12px; }
+@media (min-width: 900px) { .klient-lista { grid-template-columns: 1fr 1fr; } }
+.klient-card {
+  display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; color: var(--text);
+}
+.klient-card:hover { border-color: var(--brand-deep); color: var(--text); }
+.klient-card.flagg { border-color: var(--warn); }
+.kc-niva { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--grad); color: var(--brand-ink); font-weight: 800; font-size: 20px; }
+.kc-body { min-width: 0; display: grid; gap: 2px; }
+.kc-body b { font-size: 17px; }
+.kc-rad { color: var(--text); }
+.kc-flagg { font-size: 12px; font-weight: 700; color: var(--warn); white-space: nowrap; text-align: right; }
+.niva-stepper { display: grid; grid-template-columns: 56px 1fr 56px; gap: 12px; align-items: center; }
+.niva-stepper .btn { padding: 0; font-size: 26px; min-height: 52px; }
+.niva-tal { text-align: center; display: grid; }
+.niva-tal b { font-size: 40px; line-height: 1; font-weight: 800; }
+.niva-tal span { font-size: 13px; color: var(--muted); }
+.niva-skala { display: flex; gap: 6px; margin-top: 12px; }
+.niva-skala i { flex: 1; height: 8px; border-radius: 4px; background: var(--surface2); }
+.niva-skala i.on { background: var(--grad); }
+.bed-typ { margin: 12px 0; }
+.bed-typ .list li { padding: 8px 12px; }
+.bed-resultat { display: grid; }
+.bed-resultat b { font-size: 44px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.bed-resultat span { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.varv-lista { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; min-height: 28px; align-items: center; }
+.varv-lista .chip { font-variant-numeric: tabular-nums; }
+.diagram { width: 100%; height: auto; display: block; margin: 6px 0; }
+.diagram .grid { stroke: var(--line); stroke-width: 1; }
+.diagram .ax { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+.diagram .linje { fill: none; stroke: var(--brand); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.diagram .punkt { fill: var(--surface); stroke: var(--brand); stroke-width: 2.5; }
+.diagram .punkt.bast { fill: var(--brand); }
+.diagram .varde { fill: var(--text); font-size: 12px; font-weight: 700; font-family: var(--font); }
+.diagram .battre { fill: var(--ok); }
+.diagram .samre { fill: var(--danger); }
+.media-lista { display: grid; gap: 10px; }
+.media-item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px 12px; }
+.media-item.lokal { border-style: dashed; }
+.media-item audio { width: 100%; margin-top: 8px; }
+.rec-panel .btn { min-height: 52px; }
+.btn.rec.on { background: var(--danger); color: #fff; border-color: var(--danger); }
+.rec-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .rec-dot { animation: none; } }
+@media (hover: none) { .klient-card:hover { border-color: var(--line); } .klient-card.flagg:hover { border-color: var(--warn); } .btn.rec.on:hover { background: var(--danger); } }

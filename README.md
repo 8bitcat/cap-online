@@ -19,32 +19,49 @@ Förstasidan väljer ett av tre spår som delar innehåll och sparad data:
 Knappen "PROTOTYP n" uppe till höger byter spår. Skärmdumpstest av hela
 flödet: `tools/screenshots-v2.js`, `tools/screenshots-v3.js`, `tools/admin-test.js`.
 
-## Appens flöde (2026-10-22)
+## Appens flöde (2026-10-23)
 
-Första sidan: **Förälder** eller **Admin**. Föräldern loggar in med kod,
-registrerar barnet i startguiden och kommer till startsidan med **Träna
-själv** (Träningsstigen) och **Träna med Haris** (bokningskalender). Admin har
-en egen meny: Tider, Pass, Filmer, Stigen, Mer. Flödestest:
-`tools/app-test.js`.
+Första sidan: **Förälder** eller **Admin**. Föräldern loggar in med
+mobilnummer och en kod hen själv valt, registrerar barnet i startguiden
+(förifylld från registret) och kommer till startsidan med **Träna själv**
+(Träningsstigen), **Träna med Haris** (bokningskalender, bokade tider är röda)
+och **Utveckling** (nivån Haris satt, bedömningar som diagram, filmer och
+ljud från passen). Admin har en egen meny: Klienter, Tider, Filmer, Stigen,
+Mer. Flödestester: `tools/app-test.js`, `tools/klient-test.js` (hela
+kundflödet från ny kund till diagram, kräver Chrome och den lokala servern).
 
 ## Konto, admin och API
 
 - **API:** `server/cap-api/` är en Cloudflare Worker på <https://cap-api.8bitcat.io>
   (KV). Driftsätt med `bash tools/api-deploy.sh` (`--secrets` första gången,
-  `--r2` när R2 är påslaget). Adminlösenordet ligger i `.secrets/cap-admin-losen.txt`.
-- **Inloggning:** första sidan kräver en kod. Haris skapar den i admin
-  (e-post + barnets namn) och skickar koden eller länken `#/k/KOD`. Koden
-  skapar kontot på mejladressen och ger en session på enheten i 180 dagar.
-  Telefonens egen låsning skyddar appen, ingen extra PIN. "Prova utan konto"
-  finns för demo och kan tas bort.
-- **Admin:** `#/admin`. Filmer med titel, beskrivning, träningstid, länk eller
-  uppladdning (R2), omslag ur filmen, taggar i tolv dimensioner
-  (`data/taggar.json`, flera per dimension, "Alla" där det är rimligt), moment
-  med start/slut som ger ▶-knappar, utkast/publicerad. Inbjudningar med kod,
-  lista över koder och konton. Nyhet som push till alla.
-- **R2 (fillagring) är inte påslaget** på Cloudflare-kontot än. Tills dess läggs
-  filmer in som länk. Slå på R2 i dashboarden, ge API-token rättigheten
-  "Workers R2 Storage: Edit" och kör `bash tools/api-deploy.sh --r2`.
+  `--r2` när R2 är påslaget, `--sms` när 46elks-kontot finns).
+  Adminlösenordet ligger i `.secrets/cap-admin-losen.txt`.
+- **Ny kund:** Haris lägger in spelaren i admin → Klienter → Ny kund (barn,
+  född år, position, lag, nivå, förälder, mobilnummer). Appen visar en
+  sms-text med länken `#/k/KOD`; knappen "Skicka sms från telefonen" öppnar
+  Meddelanden med texten ifylld. Med 46elks påslaget skickar servern sms:et.
+- **Inloggning:** länken loggar in och leder till "välj en kod" (4–6 siffror).
+  Sedan mobilnummer + kod (`/auth/login`, tio försök per kvart). "Glömt
+  koden?" skickar en ny länk till numret, eller flaggar klienten i registret
+  (⚠ Ny länk) så Haris skickar den själv. Gamla e-postkoder fungerar under
+  `#/login/kod`. "Prova utan konto" finns för demo.
+- **Klientsidan (admin):** nivå 1–5 med historik (höj/sänk), tider (boka åt
+  kunden, även i stängda veckor), pass (Planera nytt pass förifyllt med
+  spelaren), bedömningar per typ med diagram, filmer och ljud, anteckning.
+  Samma sida på datorn (två spalter) och i appen.
+- **Pass:** blocktyper samtal, bedömning med tid (flera försök med stoppur,
+  medeltiden sparas på spelaren och jämförs med förra gången), filma
+  momentet, tidtagning, övning, anteckning. I kör-läget kan varje block filmas
+  (kameran) eller spelas in som ljud (mikrofonen). Inspelningar laddas upp
+  till R2 när det är på, annars ligger de i telefonens IndexedDB tills "Ladda
+  upp väntande" körs från klientsidan. Delat pass syns hos föräldern.
+- **Filmer:** titel, beskrivning, träningstid, länk eller uppladdning (R2),
+  omslag ur filmen, taggar i tolv dimensioner (`data/taggar.json`), moment
+  med start/slut som ger ▶-knappar, utkast/publicerad. Nyhet som push.
+- **R2 (fillagring) är inte påslaget** på Cloudflare-kontot än. Slå på R2 i
+  dashboarden, ge API-token rättigheten "Workers R2 Storage: Edit" och kör
+  `bash tools/api-deploy.sh --r2`. Kameran och mikrofonen i iOS-appen kräver
+  texterna i `app/ios/App/App/Info.plist` (med sedan bygge 3).
 
 ## Köra lokalt
 
