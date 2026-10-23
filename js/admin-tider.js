@@ -101,7 +101,10 @@ function lasSlots() {
 }
 async function sparaVecka(slots, oppen) {
   const r = await api.admin.put(`/admin/vecka/${st.vald}`, { oppen, slots });
-  if (r.ok) { const i = st.veckor.findIndex(w => w.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); }
+  if (r.ok) {
+    const i = st.veckor.findIndex(w => w.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka);
+    if (r.kastade) ui.toast(`${r.kastade} ${r.kastade === 1 ? 'dubblett togs' : 'dubbletter togs'} bort: tider som krockade på samma dag`);
+  }
   return r;
 }
 
@@ -112,7 +115,14 @@ export async function tiderAction(action, el) {
   if (action === 'tid-oppen') { const r = await sparaVecka(lasSlots(), el.checked); toast(r.ok ? (el.checked ? 'Veckan är öppen för bokning' : 'Veckan är stängd') : `Gick inte: ${r.fel}`); route(); return true; }
   if (action === 'tid-spara') { const r = await sparaVecka(lasSlots(), w.oppen); toast(r.ok ? 'Veckan är sparad' : `Gick inte: ${r.fel}`); route(); return true; }
   if (action === 'tid-ny') {
-    const slots = lasSlots(); slots.push({ dag: 1, start: '17:00', slut: '18:00', plats: slots[0]?.plats || '' });
+    // nästa lediga timme efter sista tiden den sista dagen, annars måndag 17
+    const slots = lasSlots();
+    const sista = slots.slice().sort((a, b) => a.dag - b.dag || a.start.localeCompare(b.start)).at(-1);
+    const min = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    const fmt = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    let dag = 1, start = 17 * 60;
+    if (sista) { dag = sista.dag; start = min(sista.slut); if (start + 60 > 22 * 60) { dag = Math.min(7, dag + 1); start = min(slots.find(x => x.dag === dag)?.start || '17:00'); } }
+    slots.push({ dag, start: fmt(start), slut: fmt(Math.min(23 * 60 + 59, start + 60)), plats: sista?.plats || '' });
     const r = await sparaVecka(slots, w.oppen); if (!r.ok) toast(`Gick inte: ${r.fel}`); route(); return true;
   }
   if (action === 'tid-bort') { const slots = lasSlots().filter(x => x.id !== el.dataset.id); const r = await sparaVecka(slots, w.oppen); toast(r.ok ? 'Tiden är borttagen' : `Gick inte: ${r.fel}`); route(); return true; }

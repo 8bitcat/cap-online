@@ -116,6 +116,25 @@ function renSlot(s, gammal = null) {
 async function hamtaVecka(env, v) {
   return (await env.DB.get(`vecka:${v}`, 'json')) || { v, oppen: false, slots: [] };
 }
+// Sorterar tiderna, kastar dubbletter och överlapp på samma dag (bokade tider vinner), och
+// rättar tider där slutet ligger före starten. Returnerar hur många som kastades.
+const minuter = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+function stadaSlots(slots) {
+  const sorterade = slots.map(s => (minuter(s.slut) <= minuter(s.start) ? { ...s, slut: `${String(Math.min(23, Math.floor((minuter(s.start) + 60) / 60))).padStart(2, '0')}:${String((minuter(s.start) + 60) % 60).padStart(2, '0')}` } : s))
+    .sort((a, b) => a.dag - b.dag || minuter(a.start) - minuter(b.start) || (b.bokad ? 1 : 0) - (a.bokad ? 1 : 0));
+  const ut = [];
+  let kastade = 0;
+  for (const s of sorterade) {
+    const f = ut[ut.length - 1];
+    if (f && f.dag === s.dag && minuter(s.start) < minuter(f.slut)) {
+      if (s.bokad && !f.bokad) ut[ut.length - 1] = s; // den bokade vinner
+      kastade++;
+      continue;
+    }
+    ut.push(s);
+  }
+  return { slots: ut, kastade };
+}
 function stadaHall(vecka) {
   const nu = Date.now();
   for (const s of vecka.slots) if (s.hall && s.hall.tills < nu) s.hall = null;
@@ -346,9 +365,10 @@ export default {
         if (!mv[2] && req.method === 'PUT') {
           const gamla = Object.fromEntries(vecka.slots.map(s => [s.id, s]));
           vecka.oppen = !!d.oppen;
-          vecka.slots = (Array.isArray(d.slots) ? d.slots : []).slice(0, 60).map(s => renSlot(s, gamla[s.id])).sort((a, b) => a.dag - b.dag || a.start.localeCompare(b.start));
+          const st = stadaSlots((Array.isArray(d.slots) ? d.slots : []).slice(0, 80).map(s => renSlot(s, gamla[s.id])));
+          vecka.slots = st.slots;
           await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
-          return svar({ ok: true, vecka });
+          return svar({ ok: true, vecka, kastade: st.kastade });
         }
         if (mv[2] === '/auto' && req.method === 'POST') {
           const dagar = (Array.isArray(d.dagar) ? d.dagar : [1, 2, 3, 4, 5]).map(Number).filter(x => x >= 1 && x <= 7);
@@ -356,19 +376,22 @@ export default {
           const langd = Math.max(15, Math.min(240, Math.round(+d.langd || 60)));
           const [sh, sm] = start.split(':').map(Number), [eh, em] = slut.split(':').map(Number);
           const fmt = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+          let nya = 0;
           for (const dag of dagar) for (let m = sh * 60 + sm; m + langd <= eh * 60 + em; m += langd) {
-            if (vecka.slots.some(s => s.dag === dag && s.start === fmt(m))) continue;
+            // hoppa över tider som krockar med något som redan finns den dagen
+            if (vecka.slots.some(s => s.dag === dag && m < minuter(s.slut) && m + langd > minuter(s.start))) continue;
             vecka.slots.push(renSlot({ dag, start: fmt(m), slut: fmt(m + langd), plats: d.plats }));
+            nya++;
           }
-          vecka.slots.sort((a, b) => a.dag - b.dag || a.start.localeCompare(b.start));
+          vecka.slots = stadaSlots(vecka.slots).slots;
           await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
-          return svar({ ok: true, vecka });
+          return svar({ ok: true, vecka, nya });
         }
         if (mv[2] === '/duplicera' && req.method === 'POST') {
           const till = VECKA_RE.test(String(d.till || '')) ? d.till : veckaPlus(v, 1);
           const ny = stadaHall(await hamtaVecka(env, till));
-          for (const s of vecka.slots) if (!ny.slots.some(x => x.dag === s.dag && x.start === s.start)) ny.slots.push(renSlot({ dag: s.dag, start: s.start, slut: s.slut, plats: s.plats }));
-          ny.slots.sort((a, b) => a.dag - b.dag || a.start.localeCompare(b.start));
+          for (const s of vecka.slots) if (!ny.slots.some(x => x.dag === s.dag && minuter(s.start) < minuter(x.slut) && minuter(s.slut) > minuter(x.start))) ny.slots.push(renSlot({ dag: s.dag, start: s.start, slut: s.slut, plats: s.plats }));
+          ny.slots = stadaSlots(ny.slots).slots;
           await env.DB.put(`vecka:${till}`, JSON.stringify(ny));
           return svar({ ok: true, vecka: ny });
         }
