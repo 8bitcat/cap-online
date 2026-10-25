@@ -2,7 +2,8 @@ import { store, today, weekIndex } from './store.js';
 import { VERSION } from './version.js';
 import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush } from './notiser.js';
 import { loggaUt, hamtaFilmer, filmerNu } from './api.js';
-import { loginPage, pinPage, loggaInViaLank, kontoSubmit, kontoRad } from './konto.js';
+import { loginPage, pinPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
+import { serverStatus, statusNu, sparaBarn } from './api.js';
 import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar } from './admin.js';
 import { bokaInit, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu } from './boka.js';
 import { utvecklingInit, utvecklingPage } from './utveckling.js';
@@ -125,7 +126,8 @@ const routes = [
   [/^\/?$/, home],
   [/^\/valkommen$/, valkommenPage],
   [/^\/login$/, () => loginPage()],
-  [/^\/login\/(glomt|kod)$/, lage => loginPage({ lage })],
+  [/^\/login\/(glomt|kod|pin)$/, lage => loginPage({ lage })],
+  [/^\/app$/, appPage],
   [/^\/pin$/, () => pinPage() || go('/login')],
   [/^\/k\/([A-Za-z0-9-]+)$/, kod => { loggaInViaLank(kod, { toast, go }); return `<section class="empty"><p class="muted">Loggar in…</p></section>`; }],
   [/^\/admin$/, () => store.admin ? go('/admin/klienter') : adminPage()],
@@ -171,7 +173,7 @@ const routes = [
 
 function route() {
   clearInterval(timerHandle);
-  stoppaHallTimer(); adminStop();
+  stoppaHallTimer(); adminStop(); kontoStop();
   const path = location.hash.replace(/^#/, '') || '/';
   const oppen = /^\/(valkommen|login|k\/|admin)/.test(path);
   if (!oppen && !store.session && !store.guest) return go('/valkommen');
@@ -210,7 +212,7 @@ function renderTabs() {
 function activeTab(path) {
   if (path.startsWith('/admin')) { if (/^\/admin\/(klient|pass)/.test(path)) return '/admin/klienter'; const t = TABS.admin.map(x => x[0]).filter(h => path.startsWith(h))[0]; return t || '/admin/klienter'; }
   const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek', '/med-haris': '/boka', '/utveckling': '/' };
-  if (store.proto === 'app') Object.assign(alias, { '/spelarkort': '/mer', '/bibliotek': '/mer', '/foralder': '/mer', '/notiser': '/mer', '/prototyper': '/mer', '/pin': '/mer', '/pass': '/stig', '/passet': '/stig', '/film': '/stig', '/planera': '/stig', '/plan': '/stig' });
+  if (store.proto === 'app') Object.assign(alias, { '/spelarkort': '/mer', '/bibliotek': '/mer', '/foralder': '/mer', '/notiser': '/mer', '/prototyper': '/mer', '/pin': '/mer', '/app': '/mer', '/pass': '/stig', '/passet': '/stig', '/film': '/stig', '/planera': '/stig', '/plan': '/stig' });
   else alias['/stig'] = '/';
   for (const k in alias) if (path.startsWith(k)) return alias[k];
   const tabs = TABS[store.proto] || [];
@@ -235,6 +237,7 @@ function afterRender(path) {
   }
   if ($('.hall', view)) startHallTimer();
   const mina = $('#mina', view); if (mina) fyllMina(mina);
+  if (/^\/(login|valkommen)/.test(path)) kontoAfterRender(view);
 }
 
 /* ---------- Spelstatus (härleds ur sparad data) ---------- */
@@ -597,7 +600,9 @@ function prototyper() {
 function start(step) {
   step = Number(step) || 1;
   const d = Object.assign({}, store.profile || {}, store.draft);
-  const ages = Array.from({ length: 8 }, (_, i) => 7 + i);
+  const ar = new Date().getFullYear();
+  const fodda = Array.from({ length: 11 }, (_, i) => ar - 5 - i); // 5–15 år
+  const foddVald = d.fodd || (d.age ? String(ar - Number(d.age)) : '');
   const head = (n, title, lead) => `
     <div class="eyebrow">Steg ${n} av 3</div>
     <h1>${title}</h1>
@@ -606,14 +611,15 @@ function start(step) {
   if (step === 1) return `
   <section class="wiz">
     <img class="hero-logo" src="assets/cap-logo.png" alt="">
-    ${head(1, 'Vem ska vi träna?', 'Passen, planeringen och utbildningsvägen anpassas efter ditt barn.')}
+    ${head(1, 'Ditt barn', 'Börja med barnets namn och vilket år hen är född. Passen och filmerna anpassas efter åldern.')}
     <form data-form="wiz1">
-      <div class="field"><label for="name">Barnets förnamn eller smeknamn</label><input type="text" id="name" name="name" value="${esc(d.name || '')}" placeholder="T.ex. Elsa" autocomplete="off" required></div>
-      <div class="field"><label for="age">Ålder</label>
-        <select id="age" name="age">${ages.map(a => `<option value="${a}" ${String(d.age) === String(a) ? 'selected' : ''}>${a} år</option>`).join('')}</select></div>
+      <div class="field"><label for="name">Förnamn</label><input type="text" id="name" name="name" value="${esc(d.name || '')}" placeholder="T.ex. Elsa" autocomplete="off" autocapitalize="words" required></div>
+      <div class="field"><label for="efternamn">Efternamn</label><input type="text" id="efternamn" name="efternamn" value="${esc(d.efternamn || '')}" placeholder="T.ex. Andersson" autocomplete="off" autocapitalize="words" required></div>
+      <div class="field"><label for="fodd">Födelseår</label>
+        <select id="fodd" name="fodd" required><option value="" ${foddVald ? '' : 'selected'} disabled>Välj år</option>${fodda.map(y => `<option value="${y}" ${String(foddVald) === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
       <button class="btn grad block" type="submit">Nästa ›</button>
     </form>
-    <p class="small" style="margin-top:14px"><a href="#/prototyper">‹ Byt prototyp</a></p>
+    ${store.session ? '' : '<p class="small" style="margin-top:14px"><a href="#/prototyper">‹ Byt prototyp</a></p>'}
   </section>`;
   if (step === 2) return `
   <section class="wiz">
@@ -729,7 +735,8 @@ function merPage() {
     ${rad('/foralder', '💛', 'Föräldraguiden', 'Kommunikation, feedback, motivation')}
     ${rad('/notiser', '🔔', 'Notiser', 'Påminnelser och nyheter från Haris')}
     ${rad('/start/1', '✏️', 'Ändra barnets uppgifter', 'Namn, ålder, position, drömspelare')}
-    ${store.session?.user?.klientId ? rad('/pin', '🔑', 'Byt inloggningskod', 'Koden du loggar in med tillsammans med mobilnumret') : ''}
+    ${store.session?.user?.klientId && !statusNu().sms ? rad('/pin', '🔑', 'Byt inloggningskod', 'Koden du loggar in med tillsammans med mobilnumret') : ''}
+    ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP Online på telefonens hemskärm')}
     ${rad('/prototyper', '🧪', 'Prototyperna', 'De fyra tidigare spåren, för jämförelse')}
   </section>
   <p class="small muted" style="text-align:center;margin-top:24px">${kontoRad()}</p>
@@ -1741,6 +1748,8 @@ async function onAction(e) {
   if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient)-/.test(action))) { await adminAction(action, el, e); return; }
   if (action.startsWith('boka-')) { await bokaAction(action, el); return; }
   if (action === 'gast') { e.preventDefault(); store.guest = true; store.proto = 'app'; toast('Du provar utan konto'); go('/'); return; }
+  if (action === 'sms-ny' || action === 'sms-andra') { const path = location.hash.replace(/^#/, '') || '/'; await kontoAction(action, el, { toast, render: html => { view.innerHTML = html; afterRender(path); } }); return; }
+  if (action === 'app-installera') { const ev = window.__capInstall; if (ev) { ev.prompt(); const r = await ev.userChoice.catch(() => ({})); window.__capInstall = null; toast(r.outcome === 'accepted' ? 'CAP Online installeras' : 'Du kan installera senare under Mer'); route(); } return; }
   if (action === 'logga-ut') { e.preventDefault(); await loggaUt(); store.guest = false; toast('Utloggad'); go('/login'); return; }
   if (action === 'filmer-alla') { e.preventDefault(); location.hash = location.hash.includes('alla') ? '#/filmer' : '#/filmer?alla'; route(); return; }
   if (action === 'proto') { store.proto = el.dataset.proto; go('/'); route(); }
@@ -1786,7 +1795,7 @@ async function onSubmit(e) {
   const fd = new FormData(f);
   const kind = f.dataset.form;
   if (kind.startsWith('admin') || kind.startsWith('tid-') || kind.startsWith('pass-') || kind.startsWith('klient-')) { await adminSubmit(kind, f, fd); return; }
-  if (['kod', 'login-tel', 'glomt', 'pin'].includes(kind)) {
+  if (['kod', 'login-tel', 'glomt', 'pin', 'sms-skicka', 'sms-kod'].includes(kind)) {
     const path = location.hash.replace(/^#/, '') || '/';
     await kontoSubmit(kind, f, fd, { toast, go, render: html => { view.innerHTML = html; afterRender(path); } });
     return;
@@ -1806,10 +1815,20 @@ async function onSubmit(e) {
     celebrate(before, 'Passet är loggat 💪');
     go(kindOf === 'plan' ? `/plan/${id}` : kindOf === 'program' ? '/passet' : `/pass/${id}`);
   } else if (kind === 'wiz1') {
-    store.draft = { ...store.draft, name: (fd.get('name') || '').trim(), age: fd.get('age') };
+    // förnamn, efternamn och födelseår (Carl 2026-10-25: det första man gör efter inloggningen); åldern räknas ut
+    const fodd = String(fd.get('fodd') || '');
+    const name = (fd.get('name') || '').trim(), efternamn = (fd.get('efternamn') || '').trim();
+    if (!/^\d{4}$/.test(fodd)) { toast('Välj vilket år barnet är fött'); return; }
+    store.draft = { ...store.draft, name, efternamn, fodd, age: String(new Date().getFullYear() - Number(fodd)) };
+    if (store.profile) store.profile = { ...store.profile, name, efternamn, fodd, age: store.draft.age };
+    if (store.session?.user?.klientId) {
+      const r = await sparaBarn({ barn: name, efternamn, fodd });
+      if (!r.ok && !r.offline) toast(`Kunde inte spara hos Haris: ${r.fel || 'okänt fel'}`);
+    }
     go('/start/2');
   } else if (kind === 'wiz2') {
     store.draft = { ...store.draft, position: fd.get('position'), foot: fd.get('foot'), experience: fd.get('experience'), drom: fd.get('drom') || '' };
+    if (store.session?.user?.klientId) sparaBarn({ barn: store.draft.name || store.profile?.name, efternamn: store.draft.efternamn ?? store.profile?.efternamn, fodd: store.draft.fodd || store.profile?.fodd, position: fd.get('position') });
     go('/start/3');
   } else if (kind === 'wiz3') {
     const isNew = !store.profile;
@@ -1868,9 +1887,18 @@ async function boot() {
   ]);
   badge.addEventListener('click', () => go('/prototyper'));
   if (bell) bell.addEventListener('click', () => go('/notiser'));
-  // Kallstart utan adress: alltid första sidan med Förälder och Admin
-  if (!location.hash || location.hash === '#/' || location.hash === '#') location.replace('#/valkommen');
+  // Kallstart utan adress: inloggad förälder hamnar direkt på startsidan (man förblir inloggad, Carl 2026-10-25),
+  // annars första sidan med Förälder och Admin
+  if (!location.hash || location.hash === '#/' || location.hash === '#') location.replace(store.session ? '#/' : '#/valkommen');
   kollaNyVersion();
+  // sms på/av och länken till appen styr inloggningssidan
+  serverStatus().then(() => { if (/^#\/(login|app|valkommen|mer)/.test(location.hash)) route(); });
+  // håll sessionen vid liv (servern förlänger den), och släpp den bara om servern säger att den inte finns
+  if (store.session?.token) api.get('/auth/me', store.session.token).then(r => {
+    if (r.ok) store.session = { ...store.session, user: r.user };
+    else if (!r.offline && /inte inloggad/.test(r.fel || '')) { store.session = null; route(); }
+  });
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.__capInstall = e; if (location.hash === '#/app') route(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) kollaNyVersion(); });
   await adminInit({ toast, route, go, content: C, onAction, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, onAction });

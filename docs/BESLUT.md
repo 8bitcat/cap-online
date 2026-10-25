@@ -3,6 +3,40 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-25 – sms-inloggning, CapSwe, barnets namn först
+
+- **Inloggning med mobilnummer och sms-kod** (Carl: "sms-inloggning via
+  telefonnummer … skriver man sitt mobilnummer för att logga in och får en
+  kod"). Sex siffror, gäller 10 minuter, fem försök, ny kod tidigast efter
+  45 s och högst fem i timmen per nummer, 20 per timme per IP. Kod skickas
+  bara till nummer som finns i Haris register. När sms-tjänsten är av gäller
+  den egna koden (4–6 siffror) som förut, så inget slutar fungera.
+- **Haris skickar länken från admin** (Carl: "viktigt är att haris kan skicka
+  länken via admin"): Ny kund → "Skicka länken som sms direkt" (ikryssad),
+  och på klientsidan "Skicka länken igen". Länken används en gång när sms är
+  på; sedan loggar man in med nummer + sms-kod. "Från min telefon" finns kvar
+  som gratis reserv. Leveransstatus från 46elks visas per kund.
+- **Avsändare CapSwe, tak 25 sms per dygn** (Carl). Taket räknas i svensk tid
+  och gäller alla sms (länkar, koder, test). När det är nått får föräldern
+  beskedet att försöka i morgon eller be Haris skicka en länk från sin
+  telefon.
+- **Ingen gratis sms-tjänst kan skicka som "CapSwe"** till svenska nummer
+  (sökt 2026-10-25). Gratisalternativen (Textbelt, textbee/Android-gateway)
+  skickar från ett vanligt nummer eller bara till USA. **46elks** valdes:
+  svenskt, 52 öre per sms-del, ingen månadsavgift, egen avsändartext.
+  Välkomst-sms:et hålls till två delar. Ny kostnad → Carl öppnar kontot.
+- **Länken leder till "Hämta appen"**: instruktion för hemskärmen i Safari
+  och Chrome tills det finns en publik TestFlight-länk eller App Store-länk.
+  Den läggs i `APP_LANK_IOS` (wrangler.toml) och kommer då med i sms:et.
+- **Man förblir inloggad:** sessionen gäller 400 dagar och förlängs vid varje
+  användning. Kallstart med en sparad session går direkt till startsidan i
+  stället för "Vem är du?". iOS-appen rensar bara cachen vid start, aldrig
+  inloggningen.
+- **Det första föräldern gör** (Carl): barnets förnamn, efternamn och
+  födelseår (steg 1 i startguiden). Åldern räknas ut ur året. Uppgifterna
+  sparas på klienten hos Haris (`PUT /mina/barn`), så Haris kan lägga in en
+  kund med bara förälder och nummer.
+
 ## 2026-10-23 – kundregister, mobilnummer, bedömningar över tid
 
 - **Inloggning med mobilnummer** (Carl: "vi börjar med att man loggar in med

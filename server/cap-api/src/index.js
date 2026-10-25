@@ -1,8 +1,11 @@
 // CAP Online API. Cloudflare Worker med KV (DB) och, när det är påslaget, R2 (MEDIA) för filmer och ljud.
 //
-// Konton och inloggning (Carl 2026-10-23: "logga in med telefonnummer … sms med länken … glömt lösenord")
+// Konton och inloggning (Carl 2026-10-23: "logga in med telefonnummer … sms med länken … glömt lösenord";
+// 2026-10-25: "sms-inloggning via telefonnummer … länken till det numret för att ladda ner appen")
+//   POST /auth/sms        {telefon}                 → {ok}            engångskod (6 siffror, 10 min) som sms till registrerat nummer
+//   POST /auth/sms/verifiera {telefon, kod}         → {token, user}
 //   POST /auth/kod        {kod}                     → {token, user}   länken #/k/KOD ur sms:et (eller en gammal e-postkod)
-//   POST /auth/login      {telefon, pin}            → {token, user}   mobilnummer + den kod föräldern valt
+//   POST /auth/login      {telefon, pin}            → {token, user}   mobilnummer + den kod föräldern valt (när sms är av)
 //   POST /auth/pin        {pin}  Bearer             → {ok}            välj (ny) kod; länkens engångskod förbrukas
 //   POST /auth/glomt      {telefon}                 → {ok, skickat}   ny länk via sms, annars får Haris en flagga i registret
 //   GET  /auth/me         Bearer <token>            → {user}
@@ -32,8 +35,11 @@
 // KV: adm:<token> · klient:<id> · klienter (index) · tel:<telefon>=id · kod:<KOD>={klientId} · sess:<token>={uid}
 //     bed:<klientId> (bedömningar) · med:<klientId> (filmer/ljud) · lim:<telefon> (inloggningsförsök)
 //     film:<id> · vecka:<YYYY-Www> · config:stig · plan:<id> · inv:<KOD>, user:<uid>, email:<email> (gamla konton)
-// SMS: 46elks när hemligheterna SMS_USER och SMS_PASS finns (SMS_FROM = avsändare, standard "CAP"). Annars skickar
-//      Haris länken själv från sin telefon (appen öppnar Meddelanden med texten ifylld).
+// SMS: 46elks när hemligheterna SMS_USER och SMS_PASS finns (SMS_FROM = avsändare, standard "CAP", eller ett eget
+//      nummer hos 46elks om föräldrarna ska kunna svara). Annars skickar Haris länken själv från sin telefon (appen
+//      öppnar Meddelanden med texten ifylld) och föräldrarna loggar in med en egen kod. SMS_TEST=1 (bara lokalt i
+//      wrangler dev) lägger sms:en i en utkorg i KV i stället: GET /admin/smsut. Leveransstatus kommer tillbaka från
+//      46elks till POST /sms/status och syns på klienten (smsLogg). APP_LANK_IOS = länken till appen (TestFlight/App Store).
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' };
 const svar = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...CORS } });
@@ -77,23 +83,56 @@ async function pinHash(pin, salt) {
   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: 3000 }, key, 256);
   return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
-const smsPa = env => !!(env.SMS_USER && env.SMS_PASS);
-async function skickaSms(env, till, text) {
+const smsPa = env => !!(env.SMS_TEST || (env.SMS_USER && env.SMS_PASS));
+const SESS_TTL = 60 * 60 * 24 * 400;
+// Tak för antal sms per dygn (svensk tid), Carl 2026-10-25: högst 25 om dagen
+const dagNu = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Stockholm' });
+const smsTak = env => Math.max(0, Math.round(+(env.SMS_MAX_DAG ?? 25)));
+async function smsDag(env) { return { smsIdag: +(await env.DB.get(`smsdag:${dagNu()}`)) || 0, smsTak: smsTak(env), smsFran: env.SMS_FROM || 'CapSwe' }; }
+async function skickaSms(env, till, text, { hook } = {}) {
+  const dagKey = `smsdag:${dagNu()}`;
+  const idag = +(await env.DB.get(dagKey)) || 0;
+  if (smsPa(env) && idag >= smsTak(env)) return { ok: false, skickat: false, tak: true, fel: `dagens tak på ${smsTak(env)} sms är nått` };
+  const r = await skickaSmsNu(env, till, text, { hook });
+  if (r.skickat) await env.DB.put(dagKey, String(idag + 1), { expirationTtl: 60 * 60 * 48 });
+  return r;
+}
+async function skickaSmsNu(env, till, text, { hook } = {}) {
+  if (env.SMS_TEST) {
+    const ut = (await env.DB.get('smsut', 'json')) || [];
+    const id = 'test' + slump(8, SMA);
+    ut.push({ id, till, text, t: nu() });
+    await env.DB.put('smsut', JSON.stringify(ut.slice(-50)));
+    return { ok: true, skickat: true, id, test: true };
+  }
   if (!smsPa(env)) return { ok: false, skickat: false, fel: 'sms är inte påslaget', av: true };
   try {
     const r = await fetch('https://api.46elks.com/a1/sms', {
       method: 'POST',
       headers: { authorization: 'Basic ' + btoa(`${env.SMS_USER}:${env.SMS_PASS}`), 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ from: env.SMS_FROM || 'CAP', to: till, message: text }),
+      body: new URLSearchParams({ from: env.SMS_FROM || 'CapSwe', to: till, message: text, ...(hook ? { whendelivered: hook } : {}) }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return { ok: false, skickat: false, fel: j.message || j.error || `${r.status}` };
     return { ok: true, skickat: true, id: j.id };
   } catch (e) { return { ok: false, skickat: false, fel: String(e?.message || e) }; }
 }
+// Sms till en klient, med en rad i klientens smsLogg som 46elks uppdaterar med leveransstatus. Spara klienten efteråt.
+async function skickaTillKlient(env, k, typ, text, base) {
+  const e = { id: slump(8, SMA), t: nu(), typ, status: 'skickas', tok: slump(16, SMA) };
+  const r = await skickaSms(env, k.telefon, text, { hook: `${base}/sms/status?k=${k.id}&e=${e.id}&t=${e.tok}` });
+  e.status = r.skickat ? (r.test ? 'levererat' : 'skickat') : 'misslyckat';
+  if (!r.skickat) e.fel = ren(r.fel, 120);
+  k.smsLogg = [...(k.smsLogg || []), e].slice(-12);
+  return r;
+}
 const lank = (env, kod) => `${env.APP_BASE}#/k/${kod}`;
-function smsText(k, l) {
-  return `Hej${k.foralder ? ' ' + k.foralder : ''}! Här är din länk till CAP Online, träningsappen för ${k.barn || 'ditt barn'}: ${l}\n\nÖppna länken och välj en kod med fyra siffror. Sedan loggar du in med ditt mobilnummer och koden.\n\n/Haris, Complete Athletic Performance`;
+// Välkomst-sms:et: länken till appen (när den finns), webblänken som loggar in direkt, och hur man loggar in sedan
+function smsText(env, k, l) {
+  const hej = `Hej${k.foralder ? ' ' + k.foralder : ''}! Haris har lagt in ${k.barn || 'ditt barn'} i CAP Online.`;
+  const app = env.APP_LANK_IOS ? `\nHämta appen: ${env.APP_LANK_IOS}\nEller öppna i webbläsaren: ${l}` : `\nÖppna appen: ${l}`;
+  const login = smsPa(env) ? 'Logga in med ditt mobilnummer, du får en kod som sms.' : 'Välj en kod med fyra siffror, sedan loggar du in med mobilnummer och kod.';
+  return `${hej}${app}\n${login}\n/Haris`;
 }
 
 // ---------- klienter ----------
@@ -105,16 +144,16 @@ function renKlient(d, gammal = {}) {
     id: gammal.id, skapad: gammal.skapad || nu(), uppdaterad: nu(), senast: gammal.senast || null,
     telefon: telefonNorm(d.telefon) || gammal.telefon || null,
     foralder: ren(d.foralder, 60), email: email(d.email) || '',
-    barn: ren(d.barn, 40), fodd: /^\d{4}$/.test(String(d.fodd || '')) ? +d.fodd : (gammal.fodd || null),
+    barn: ren(d.barn, 40), efternamn: ren(d.efternamn, 40), fodd: /^\d{4}$/.test(String(d.fodd || '')) ? +d.fodd : (gammal.fodd || null),
     position: POSITIONER.includes(d.position) ? d.position : (gammal.position || 'okand'), lag: ren(d.lag, 60),
     niva, nivaHistorik: hist, anteckning: ren(d.anteckning, 2000),
     status: ['ny', 'aktiv', 'paus'].includes(d.status) ? d.status : (gammal.status || 'ny'),
-    pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null,
+    pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [],
   };
 }
-// Det föräldern och adminlistan får se (aldrig pin-hashen)
-const publikKlient = k => { const { pin, ...rest } = k; return { ...rest, harPin: !!pin }; };
-const userAvKlient = k => ({ uid: k.id, klientId: k.id, typ: 'klient', namn: k.foralder, barn: k.barn, telefon: k.telefon, email: k.email, fodd: k.fodd, position: k.position, niva: k.niva, harPin: !!k.pin });
+// Det föräldern och adminlistan får se (aldrig pin-hashen eller sms-loggens nycklar)
+const publikKlient = k => { const { pin, ...rest } = k; return { ...rest, harPin: !!pin, smsLogg: (k.smsLogg || []).map(({ tok, ...e }) => e) }; };
+const userAvKlient = k => ({ uid: k.id, klientId: k.id, typ: 'klient', namn: k.foralder, barn: k.barn, efternamn: k.efternamn || '', telefon: k.telefon, email: k.email, fodd: k.fodd, position: k.position, niva: k.niva, harPin: !!k.pin });
 async function klientIndex(env) { return (await env.DB.get('klienter', 'json')) || []; }
 async function hamtaKlient(env, id) { return /^[a-z0-9]{4,20}$/.test(String(id || '')) ? env.DB.get(`klient:${id}`, 'json') : null; }
 async function sparaKlient(env, k) { await env.DB.put(`klient:${k.id}`, JSON.stringify(k)); }
@@ -132,7 +171,7 @@ async function nyKod(env, k) {
 }
 async function nySession(env, uid) {
   const token = tokenNy();
-  await env.DB.put(`sess:${token}`, JSON.stringify({ uid, skapad: nu() }), { expirationTtl: 60 * 60 * 24 * 180 });
+  await env.DB.put(`sess:${token}`, JSON.stringify({ uid, skapad: nu(), forlangd: Date.now() }), { expirationTtl: SESS_TTL });
   return token;
 }
 const renBedomning = (d, gammal = {}) => {
@@ -245,8 +284,11 @@ function bokningarFor(veckor, uid) {
   return ut.sort((a, b) => (a.datum + a.start).localeCompare(b.datum + b.start));
 }
 async function sessionUser(env, req) {
-  const s = await env.DB.get(`sess:${bearer(req)}`, 'json');
+  const t = bearer(req);
+  const s = t && await env.DB.get(`sess:${t}`, 'json');
   if (!s) return null;
+  // glidande: varje användning (högst en skrivning i veckan) förlänger sessionen, så man förblir inloggad
+  if (!s.forlangd || Date.now() - s.forlangd > 7 * 864e5) { s.forlangd = Date.now(); await env.DB.put(`sess:${t}`, JSON.stringify(s), { expirationTtl: SESS_TTL }); }
   const k = await env.DB.get(`klient:${s.uid}`, 'json');
   if (k) return userAvKlient(k);
   return env.DB.get(`user:${s.uid}`, 'json');
@@ -345,12 +387,70 @@ export default {
     const p = url.pathname;
     const base = (env.PUBLIC_BASE || url.origin).replace(/\/$/, '');
 
-    if (req.method === 'GET' && p === '/') return svar({ ok: true, app: 'CAP Online API', r2: !!env.MEDIA, sms: smsPa(env) });
+    if (req.method === 'GET' && p === '/') return svar({ ok: true, app: 'CAP Online API', r2: !!env.MEDIA, sms: smsPa(env), appLank: env.APP_LANK_IOS || '' });
     if (req.method === 'GET' && p.startsWith('/media/')) return media(req, env, decodeURIComponent(p.slice(7)));
 
     const json = async () => { try { return await req.json(); } catch { return null; } };
 
+    // ---------- leveransstatus från 46elks ----------
+    if (p === '/sms/status' && req.method === 'POST') {
+      const k = await hamtaKlient(env, url.searchParams.get('k'));
+      const e = k?.smsLogg?.find(x => x.id === url.searchParams.get('e'));
+      if (e && e.tok === url.searchParams.get('t')) {
+        const f = await req.formData().catch(() => null);
+        const s = String(f?.get('status') || '');
+        if (s === 'delivered') { e.status = 'levererat'; e.levererat = nu(); } else if (s === 'failed') e.status = 'misslyckat'; else if (s === 'sent') e.status = 'skickat';
+        await sparaKlient(env, k);
+      }
+      return new Response('ok', { headers: CORS }); // 46elks vill ha 2xx, även när adressen inte stämmer
+    }
+
     // ---------- inloggning ----------
+    if (p === '/auth/sms' && req.method === 'POST') {
+      if (!smsPa(env)) return fel('sms-inloggningen är inte påslagen än, logga in med din egen kod', 503);
+      const d = await json(); if (!d) return fel('trasig JSON');
+      const tel = telefonNorm(d.telefon);
+      if (!tel) return fel('skriv mobilnumret, t.ex. 070-123 45 67');
+      const ip = req.headers.get('cf-connecting-ip') || 'okand';
+      const ipN = +(await env.DB.get(`smsip:${ip}`)) || 0;
+      if (ipN >= 20) return fel('för många försök härifrån, vänta en stund', 429);
+      const lim = (await env.DB.get(`smsl:${tel}`, 'json')) || { n: 0, senast: 0 };
+      const vanta = Math.ceil((lim.senast + 45000 - Date.now()) / 1000);
+      if (vanta > 0) return fel(`vänta ${vanta} sekunder innan du ber om en ny kod`, 429);
+      if (lim.n >= 5) return fel('för många koder den senaste timmen, vänta en stund eller hör av dig till Haris', 429);
+      await env.DB.put(`smsip:${ip}`, String(ipN + 1), { expirationTtl: 3600 });
+      const id = await env.DB.get(`tel:${tel}`);
+      const k = id ? await hamtaKlient(env, id) : null;
+      if (!k) return fel('numret finns inte hos Haris än. Be honom lägga in er.', 404);
+      const kod = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1000000).padStart(6, '0');
+      const salt = slump(16, SMA);
+      await env.DB.put(`otp:${tel}`, JSON.stringify({ salt, hash: await pinHash(kod, salt), forsok: 0, t: Date.now() }), { expirationTtl: 600 });
+      await env.DB.put(`smsl:${tel}`, JSON.stringify({ n: lim.n + 1, senast: Date.now() }), { expirationTtl: 3600 });
+      const r = await skickaTillKlient(env, k, 'kod', `${kod} är din kod till CAP Online. Den gäller i 10 minuter.`, base);
+      await sparaKlient(env, k);
+      if (!r.skickat) return fel(r.tak ? 'Dagens sms är slut. Försök i morgon, eller be Haris skicka en ny länk.' : `sms:et gick inte iväg (${r.fel}). Prova igen om en stund eller hör av dig till Haris.`, r.tak ? 503 : 502);
+      return svar({ ok: true, giltigSek: 600, vantaSek: 45 });
+    }
+    if (p === '/auth/sms/verifiera' && req.method === 'POST') {
+      const d = await json(); if (!d) return fel('trasig JSON');
+      const tel = telefonNorm(d.telefon);
+      const kod = String(d.kod || '').replace(/\D/g, '');
+      if (!tel || kod.length !== 6) return fel('skriv de sex siffrorna från sms:et');
+      const o = await env.DB.get(`otp:${tel}`, 'json');
+      if (!o) return fel('koden har gått ut, tryck Skicka ny kod', 410);
+      if (o.forsok >= 5) { await env.DB.delete(`otp:${tel}`); return fel('för många fel, tryck Skicka ny kod', 429); }
+      if ((await pinHash(kod, o.salt)) !== o.hash) {
+        o.forsok++;
+        await env.DB.put(`otp:${tel}`, JSON.stringify(o), { expirationTtl: Math.max(60, 600 - Math.floor((Date.now() - o.t) / 1000)) });
+        return fel(`fel kod${o.forsok >= 3 ? `, ${5 - o.forsok} försök kvar` : ''}`, 403);
+      }
+      await env.DB.delete(`otp:${tel}`);
+      const k = await hamtaKlient(env, await env.DB.get(`tel:${tel}`));
+      if (!k) return fel('numret finns inte hos Haris längre', 404);
+      k.senast = nu(); if (k.status === 'ny') k.status = 'aktiv'; k.vilLank = null;
+      await sparaKlient(env, k);
+      return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k) });
+    }
     if (p === '/auth/kod' && req.method === 'POST') {
       const d = await json(); if (!d) return fel('trasig JSON');
       const kod = String(d.kod || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -361,8 +461,11 @@ export default {
         const k = await hamtaKlient(env, kl.klientId);
         if (!k) return fel('kontot finns inte längre', 404);
         k.senast = nu(); if (k.kod?.kod === kod && !k.kod.anvand) k.kod.anvand = nu(); if (k.status === 'ny') k.status = 'aktiv'; k.vilLank = null;
+        // med sms-inloggning behövs ingen egen kod: länken används en gång, sedan loggar man in med nummer + sms-kod
+        const valjPin = !smsPa(env) && !k.pin;
+        if (smsPa(env) && k.kod?.kod === kod) { await env.DB.delete(`kod:${kod}`); k.kod = { ...k.kod, forbrukad: nu() }; }
         await sparaKlient(env, k);
-        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k), valjPin: true });
+        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k), valjPin });
       }
       // gammal e-postkod
       const inv = await env.DB.get(`inv:${kod}`, 'json');
@@ -420,7 +523,7 @@ export default {
       const k = id ? await hamtaKlient(env, id) : null;
       if (!k) return fel('numret finns inte hos Haris än', 404);
       const kod = await nyKod(env, k);
-      const sms = await skickaSms(env, k.telefon, smsText(k, lank(env, kod)));
+      const sms = await skickaTillKlient(env, k, 'lank', smsText(env, k, lank(env, kod)), base);
       if (!sms.skickat) k.vilLank = nu();
       await sparaKlient(env, k);
       return svar({ ok: true, skickat: sms.skickat, meddelande: sms.skickat ? 'En ny länk är skickad som sms till ditt nummer.' : 'Haris får ett meddelande och skickar en ny länk till dig.' });
@@ -486,6 +589,21 @@ export default {
       return svar({ ok: true, bokningar, planer, klient, bedomningar, media });
     }
 
+    // barnets namn och födelseår, det första föräldern fyller i (Carl 2026-10-25)
+    if (p === '/mina/barn' && req.method === 'PUT') {
+      const se = await env.DB.get(`sess:${bearer(req)}`, 'json');
+      const k = se && await hamtaKlient(env, se.uid);
+      if (!k) return fel('inte inloggad', 401);
+      const d = await json(); if (!d) return fel('trasig JSON');
+      const barn = ren(d.barn, 40); if (!barn) return fel('förnamnet saknas');
+      k.barn = barn; k.efternamn = ren(d.efternamn, 40);
+      if (/^\d{4}$/.test(String(d.fodd || ''))) k.fodd = +d.fodd;
+      if (POSITIONER.includes(d.position)) k.position = d.position;
+      k.uppdaterad = nu();
+      await sparaKlient(env, k);
+      return svar({ ok: true, user: userAvKlient(k) });
+    }
+
     // ---------- publika filmer ----------
     if (p === '/filmer' && req.method === 'GET') {
       const alla = await hamtaAlla(env, 'film:');
@@ -514,22 +632,21 @@ export default {
           const bed = (beds[i] || []).slice().sort((x, y) => (y.datum + y.t).localeCompare(x.datum + x.t));
           return { ...publikKlient(k), nastaTid: b[0] || null, antalPass: planer.filter(x => x.uid === k.id).length, antalBed: bed.length, senasteBed: bed[0] ? { namn: bed[0].namn, medel: bed[0].medel, datum: bed[0].datum } : null, lank: k.kod?.kod && !k.kod.forbrukad ? lank(env, k.kod.kod) : null };
         }).sort((a, b) => (a.barn || a.foralder || '').localeCompare(b.barn || b.foralder || '', 'sv'));
-        return svar({ ok: true, klienter: ut, sms: smsPa(env), r2: !!env.MEDIA });
+        return svar({ ok: true, klienter: ut, sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
       }
       if (p === '/admin/klient' && req.method === 'POST') {
         const d = await json(); if (!d) return fel('trasig JSON');
         const tel = telefonNorm(d.telefon);
         if (!tel) return fel('mobilnumret ser fel ut, skriv t.ex. 070-123 45 67');
         if (await env.DB.get(`tel:${tel}`)) return fel('det numret finns redan i registret', 409);
-        if (!ren(d.barn, 40)) return fel('barnets namn saknas');
         const k = renKlient(d, { id: nyttId('k') });
         const kod = await nyKod(env, k);
         const l = lank(env, kod);
-        const sms = d.skicka ? await skickaSms(env, tel, smsText(k, l)) : { ok: false, skickat: false, av: !smsPa(env) };
+        const sms = d.skicka ? await skickaTillKlient(env, k, 'lank', smsText(env, k, l), base) : { ok: false, skickat: false, av: !smsPa(env) };
         await sparaKlient(env, k);
         await env.DB.put(`tel:${tel}`, k.id);
         const ids = await klientIndex(env); if (!ids.includes(k.id)) { ids.push(k.id); await env.DB.put('klienter', JSON.stringify(ids)); }
-        return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, smsText: smsText(k, l) });
+        return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, smsText: smsText(env, k, l), ...(await smsDag(env)) });
       }
       const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka)(?:\/([a-z0-9]+))?)?$/.exec(p);
       if (mk) {
@@ -540,7 +657,7 @@ export default {
           const [veckor, planer, bedomningar, media] = await Promise.all([hamtaAlla(env, 'vecka:'), hamtaAlla(env, 'plan:'), env.DB.get(`bed:${k.id}`, 'json'), env.DB.get(`med:${k.id}`, 'json')]);
           const l = k.kod?.kod && !k.kod.forbrukad ? lank(env, k.kod.kod) : null;
           return svar({ ok: true, klient: publikKlient(k), bokningar: bokningarFor(veckor, k.id), planer: planer.filter(x => x.uid === k.id).sort((a, b) => (b.datum + b.uppdaterad).localeCompare(a.datum + a.uppdaterad)),
-            bedomningar: bedomningar || [], media: media || [], lank: l, smsText: l ? smsText(k, l) : '', sms: smsPa(env), r2: !!env.MEDIA });
+            bedomningar: bedomningar || [], media: media || [], lank: l, smsText: l ? smsText(env, k, l) : '', sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
         }
         if (!del && req.method === 'PUT') {
           const d = await json(); if (!d) return fel('trasig JSON');
@@ -568,10 +685,10 @@ export default {
         if (del === 'lank' && req.method === 'POST') {
           const kod = await nyKod(env, k);
           const l = lank(env, kod);
-          const sms = d.skicka ? await skickaSms(env, k.telefon, smsText(k, l)) : { ok: false, skickat: false, av: !smsPa(env) };
+          const sms = d.skicka ? await skickaTillKlient(env, k, 'lank', smsText(env, k, l), base) : { ok: false, skickat: false, av: !smsPa(env) };
           if (sms.skickat) k.vilLank = null;
           await sparaKlient(env, k);
-          return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, smsText: smsText(k, l) });
+          return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, smsText: smsText(env, k, l), ...(await smsDag(env)) });
         }
         if (del === 'niva' && req.method === 'POST') {
           const niva = Math.min(5, Math.max(1, Math.round(+d.niva || k.niva)));
@@ -624,9 +741,19 @@ export default {
         return fel('okänd klientadress', 404);
       }
 
+      if (p === '/admin/smstest' && req.method === 'POST') {
+        const d = await json(); if (!d) return fel('trasig JSON');
+        const tel = telefonNorm(d.telefon); if (!tel) return fel('mobilnumret ser fel ut');
+        const r = await skickaSms(env, tel, 'Test från CAP Online. Sms-utskicken fungerar. /CapSwe');
+        return svar({ ok: r.skickat, fel: r.fel, sms: r, ...(await smsDag(env)) }, r.skickat ? 200 : 502);
+      }
+      if (p === '/admin/smsut' && req.method === 'GET') {
+        if (!env.SMS_TEST) return fel('bara i testläge', 404);
+        return svar({ ok: true, ut: (await env.DB.get('smsut', 'json')) || [] });
+      }
       if (p === '/admin/filmer' && req.method === 'GET') {
         const filmer = (await hamtaAlla(env, 'film:')).sort((a, b) => (b.uppdaterad || '').localeCompare(a.uppdaterad || ''));
-        return svar({ ok: true, filmer, r2: !!env.MEDIA, sms: smsPa(env) });
+        return svar({ ok: true, filmer, r2: !!env.MEDIA, sms: smsPa(env), ...(await smsDag(env)) });
       }
       if (p === '/admin/film' && req.method === 'POST') {
         const d = await json(); if (!d) return fel('trasig JSON');

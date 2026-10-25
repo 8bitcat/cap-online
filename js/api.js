@@ -1,7 +1,11 @@
 // Klient mot CAP Online API (server/cap-api): konton med kod, filmer med taggar, admin.
 import { store } from './store.js';
 
-export const API = 'https://cap-api.8bitcat.io';
+// Lokalt (localhost) kan API:t pekas om till wrangler dev med localStorage cap_api, för tester utan riktiga sms
+export const API = (() => {
+  try { if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && localStorage.getItem('cap_api')) return localStorage.getItem('cap_api'); } catch { /* ok */ }
+  return 'https://cap-api.8bitcat.io';
+})();
 
 async function call(method, path, body, token) {
   const headers = { 'content-type': 'application/json' };
@@ -44,6 +48,29 @@ export async function sattPin(pin) {
   return r;
 }
 export const glomtKod = telefon => api.post('/auth/glomt', { telefon });
+// Sms-inloggning: kod till numret, sedan verifiera
+export const smsBeKod = telefon => api.post('/auth/sms', { telefon });
+export async function smsVerifiera(telefon, kod) {
+  const r = await api.post('/auth/sms/verifiera', { telefon, kod });
+  if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now() };
+  return r;
+}
+// Barnets namn och födelseår till registret
+export async function sparaBarn(d) {
+  if (!store.session?.token) return { ok: false };
+  const r = await api.put('/mina/barn', d, store.session.token);
+  if (r.ok) store.session = { ...store.session, user: r.user };
+  return r;
+}
+// Serverns läge: sms på/av, länken till appen
+let status = null;
+export async function serverStatus(tvinga = false) {
+  if (status && !tvinga) return status;
+  const r = await api.get('/');
+  if (r.ok) status = { sms: !!r.sms, appLank: r.appLank || '', r2: !!r.r2 };
+  return status || { sms: false, appLank: '', r2: false };
+}
+export const statusNu = () => status || { sms: false, appLank: '', r2: false, okant: true };
 export async function loggaUt() {
   const s = store.session;
   if (s?.token) api.post('/auth/ut', {}, s.token);

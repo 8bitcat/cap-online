@@ -70,6 +70,8 @@ export function adminPage(flik = 'klienter', id, lage) {
 }
 
 function merFlik() {
+  // dagens sms-räknare ändras hela tiden; hämta om när fliken visas
+  if (Date.now() - (state.hamtat || 0) > 4000 && !state.hamtar) { state.hamtar = true; adminLadda().finally(() => { state.hamtar = false; if (location.hash === '#/admin/mer') ui.route(); }); }
   return `
   <section class="cards">
     <a class="card" href="#/admin/pass"><div class="card-body"><div class="eyebrow">Pass</div><h3>Alla pass</h3><p class="desc">Passen för alla klienter i en lista. Nya pass planeras från klientens sida.</p></div></a>
@@ -78,9 +80,13 @@ function merFlik() {
   <section class="panel">
     <h3>Tjänster</h3>
     <ul class="checks small">
-      <li>Sms med länken: ${state.sms ? 'skickas från servern (46elks).' : 'skickas från Haris telefon (appen öppnar Meddelanden med texten ifylld). Carl kan koppla på 46elks så servern skickar.'}</li>
+      <li>Sms: ${state.sms ? `på. Länkar och inloggningskoder skickas från <b>${esc(state.smsFran || 'CapSwe')}</b>. I dag <b>${state.smsIdag || 0}</b> av ${state.smsTak || 25} sms.` : 'inte påslaget än. Länken skickas från Haris telefon (appen öppnar Meddelanden med texten ifylld) och föräldrarna loggar in med en egen kod. När sms-tjänsten är på loggar de in med mobilnummer och sms-kod.'}</li>
       <li>Fillagring för filmer och ljud (R2): ${state.r2 ? 'på. Inspelningar laddas upp till spelaren.' : 'inte påslagen än. Inspelningar sparas på telefonen tills dess och kan laddas upp från klientens sida sedan.'}</li>
     </ul>
+    ${state.sms ? `<form data-form="admin-smstest" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <input type="tel" name="telefon" placeholder="Ditt mobilnummer" required style="flex:1;min-width:160px">
+      <button class="btn secondary" type="submit">Skicka testsms</button>
+    </form>` : ''}
   </section>
   <section class="panel"><div class="section-head"><h3>Konto</h3><a class="small" data-action="admin-ut" href="#/admin">Logga ut</a></div><p class="small muted" style="margin:0"><a href="#/">Till förälderappen ›</a></p></section>`;
 }
@@ -217,7 +223,7 @@ function nyhetFlik() {
 export async function adminLadda() {
   if (!store.admin) return;
   const r = await api.admin.get('/admin/filmer');
-  if (r.ok) { state.filmer = r.filmer; state.r2 = !!r.r2; state.sms = !!r.sms; sattR2(!!r.r2); }
+  if (r.ok) { state.filmer = r.filmer; state.r2 = !!r.r2; state.sms = !!r.sms; state.smsIdag = r.smsIdag; state.smsTak = r.smsTak; state.smsFran = r.smsFran; state.hamtat = Date.now(); sattR2(!!r.r2); }
   state.laddat = true;
 }
 
@@ -279,6 +285,12 @@ export async function adminSubmit(kind, f, fd) {
     if (!r.ok) { toast(`Gick inte att spara: ${r.fel}`); return true; }
     toast(film.status === 'publicerad' ? 'Sparad och publicerad' : 'Sparad som utkast');
     state.redigerar = null; await adminLadda(); hamtaFilmer({ tvinga: true }); route(); return true;
+  }
+  if (kind === 'admin-smstest') {
+    const r = await api.admin.post('/admin/smstest', { telefon: fd.get('telefon') });
+    if (r.smsTak !== undefined) { state.smsIdag = r.smsIdag; state.smsTak = r.smsTak; }
+    toast(r.ok ? 'Testsms:et är skickat' : `Gick inte: ${r.fel}`);
+    route(); return true;
   }
   if (kind === 'admin-notis') {
     const r = await api.admin.post('/admin/notis', { text: fd.get('text'), title: fd.get('title') });

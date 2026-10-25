@@ -19,11 +19,11 @@ Förstasidan väljer ett av tre spår som delar innehåll och sparad data:
 Knappen "PROTOTYP n" uppe till höger byter spår. Skärmdumpstest av hela
 flödet: `tools/screenshots-v2.js`, `tools/screenshots-v3.js`, `tools/admin-test.js`.
 
-## Appens flöde (2026-10-23)
+## Appens flöde (2026-10-25)
 
 Första sidan: **Förälder** eller **Admin**. Föräldern loggar in med
-mobilnummer och en kod hen själv valt, registrerar barnet i startguiden
-(förifylld från registret) och kommer till startsidan med **Träna själv**
+mobilnummer och en sms-kod (eller en egen kod när sms är av), fyller först i
+barnets förnamn, efternamn och födelseår, och kommer till startsidan med **Träna själv**
 (Träningsstigen), **Träna med Haris** (bokningskalender, bokade tider är röda)
 och **Utveckling** (nivån Haris satt, bedömningar som diagram, filmer och
 ljud från passen). Admin har en egen meny: Klienter, Tider, Filmer, Stigen,
@@ -36,15 +36,24 @@ kundflödet från ny kund till diagram, kräver Chrome och den lokala servern).
   (KV). Driftsätt med `bash tools/api-deploy.sh` (`--secrets` första gången,
   `--r2` när R2 är påslaget, `--sms` när 46elks-kontot finns).
   Adminlösenordet ligger i `.secrets/cap-admin-losen.txt`.
-- **Ny kund:** Haris lägger in spelaren i admin → Klienter → Ny kund (barn,
-  född år, position, lag, nivå, förälder, mobilnummer). Appen visar en
-  sms-text med länken `#/k/KOD`; knappen "Skicka sms från telefonen" öppnar
-  Meddelanden med texten ifylld. Med 46elks påslaget skickar servern sms:et.
-- **Inloggning:** länken loggar in och leder till "välj en kod" (4–6 siffror).
-  Sedan mobilnummer + kod (`/auth/login`, tio försök per kvart). "Glömt
-  koden?" skickar en ny länk till numret, eller flaggar klienten i registret
-  (⚠ Ny länk) så Haris skickar den själv. Gamla e-postkoder fungerar under
-  `#/login/kod`. "Prova utan konto" finns för demo.
+- **Ny kund:** Haris lägger in förälder och mobilnummer i admin → Klienter →
+  Ny kund (barnets uppgifter är valfria, föräldern fyller i dem). Med sms på
+  skickar servern länken direkt från **CapSwe**; annars öppnar "Skicka sms
+  från telefonen" Meddelanden med texten ifylld. Klientsidan har "Skicka
+  länken igen" och visar leveransstatus för varje sms.
+- **Sms (46elks):** avsändare `SMS_FROM`, tak `SMS_MAX_DAG` (25 per dygn) och
+  `APP_LANK_IOS` står i `server/cap-api/wrangler.toml`. Slå på med användare
+  och lösenord från 46elks i `.secrets/cap-sms.txt` (två rader) och kör
+  `bash tools/api-deploy.sh --sms`. Testsms finns under admin → Mer.
+- **Inloggning:** med sms på skriver föräldern sitt mobilnummer och får en
+  kod med sex siffror (`/auth/sms`, `/auth/sms/verifiera`). Länken i
+  välkomst-sms:et loggar in en gång och visar "Hämta appen". Med sms av:
+  länken leder till "välj en kod" (4–6 siffror), sedan nummer + kod
+  (`/auth/login`), och "Glömt koden?" flaggar klienten (⚠ Ny länk). Sessionen
+  gäller 400 dagar och förlängs vid användning. Gamla e-postkoder fungerar
+  under `#/login/kod`. "Prova utan konto" finns för demo.
+- **Test av sms-flödet utan riktiga sms:** `tools/sms-test.js` mot
+  `wrangler dev` med `SMS_TEST=1` (instruktion överst i filen).
 - **Klientsidan (admin):** nivå 1–5 med historik (höj/sänk), tider (boka åt
   kunden, även i stängda veckor), pass (Planera nytt pass förifyllt med
   spelaren), bedömningar per typ med diagram, filmer och ljud, anteckning.

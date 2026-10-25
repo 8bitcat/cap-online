@@ -32,17 +32,29 @@ export const klienterNu = () => st.klienter;
 export const klienterLaddade = () => st.laddat;
 const nivaNamn = n => C?.game?.levels?.find(l => l.n === n)?.name || `Nivå ${n}`;
 const alder = fodd => fodd ? `${new Date().getFullYear() - fodd} år` : '';
+const helt = k => [k.barn, k.efternamn].filter(Boolean).join(' ');
+const traff = (k, q) => !q || [k.barn, k.efternamn, helt(k), k.foralder, k.telefon, visaTel(k.telefon), k.lag, k.email].some(x => (x || '').toLowerCase().includes(q));
+const fmtTid = iso => { const [d, t] = String(iso || '').split('T'); return d ? `${fmtIso(d)} ${(t || '').slice(0, 5)}` : ''; };
+const SMS_TYP = { lank: 'Länk', kod: 'Inloggningskod', test: 'Test' };
+const SMS_ST = { levererat: '<span style="color:var(--ok)">levererat ✓</span>', skickat: 'skickat', skickas: 'skickas…', misslyckat: '<span style="color:var(--danger)">gick inte fram</span>' };
 
 export async function klienterLadda(tvinga = false) {
   if (st.laddat && !tvinga) return;
   const r = await api.admin.get('/admin/klienter');
-  if (r.ok) { st.klienter = r.klienter; st.sms = !!r.sms; sattR2(!!r.r2); st.laddat = true; st.hamtat = Date.now(); }
+  if (r.ok) { st.klienter = r.klienter; st.sms = !!r.sms; sattR2(!!r.r2); st.laddat = true; st.hamtat = Date.now(); smsRakna(r); }
 }
 async function klientLadda(id) {
   const r = await api.admin.get(`/admin/klient/${id}`);
-  if (r.ok) { st.vald = { id, ...r }; st.sms = !!r.sms; sattR2(!!r.r2); st.lokala = await vantande(id); }
+  if (r.ok) { st.vald = { id, ...r, hamtat: Date.now() }; st.sms = !!r.sms; sattR2(!!r.r2); st.lokala = await vantande(id); smsRakna(r); }
   else st.vald = { id, saknas: true };
 }
+// klientsidan hämtas om i bakgrunden när kopian är gammal: föräldern kan ha fyllt i barnets namn, sms kan ha levererats
+function friska(id) {
+  if (st.vald?.id !== id || st.vald.saknas || Date.now() - (st.vald.hamtat || 0) < 8000 || st.friskar) return;
+  st.friskar = true;
+  klientLadda(id).finally(() => { st.friskar = false; if (location.hash.replace(/^#/, '') === `/admin/klient/${id}`) ui.route(); });
+}
+function smsRakna(r) { if (r && r.smsTak !== undefined) { st.smsIdag = r.smsIdag; st.smsTak = r.smsTak; st.smsFran = r.smsFran; } }
 export function klientGlom() { st.vald = null; st.laddat = false; }
 
 export function klienterView(id, lage) {
@@ -53,6 +65,7 @@ export function klienterView(id, lage) {
     if (st.vald.saknas) return `<section><a class="back" href="#/admin/klienter">‹ Klienter</a><p class="muted">Klienten hittades inte.</p></section>`;
     if (lage === 'redigera') return kundForm(st.vald.klient);
     if (lage === 'boka') return bokaVy();
+    friska(id);
     return klientSida();
   }
   // listan hämtas om i bakgrunden om den är gammal (flaggor, nästa tid, senaste bedömning ändras från annat håll)
@@ -64,7 +77,7 @@ export function klienterView(id, lage) {
 
 function lista() {
   const q = st.sok.trim().toLowerCase();
-  const tr = st.klienter.filter(k => !q || [k.barn, k.foralder, k.telefon, visaTel(k.telefon), k.lag, k.email].some(x => (x || '').toLowerCase().includes(q)));
+  const tr = st.klienter.filter(k => traff(k, q));
   const flagg = st.klienter.filter(k => k.vilLank).length;
   return `
   <section>
@@ -72,6 +85,7 @@ function lista() {
     <p class="small muted">Varje spelare med förälder och mobilnummer. Tryck på en klient för att boka, planera pass, sätta nivå och se bedömningarna.</p>
     ${flagg ? `<div class="note warn small">${flagg === 1 ? 'En förälder' : flagg + ' föräldrar'} har tryckt "Glömt koden" och väntar på en ny länk. Markerat med ⚠ nedan.</div>` : ''}
     <input type="search" id="klientsok" placeholder="Sök barn, förälder, lag eller nummer" value="${esc(st.sok)}" autocomplete="off">
+    ${st.sms ? `<p class="small muted" style="margin:8px 0 0">📤 Sms i dag: <b>${st.smsIdag || 0}</b> av ${st.smsTak || 25} · avsändare ${esc(st.smsFran || 'CapSwe')}</p>` : ''}
     ${tr.length ? `<div class="klient-lista">${tr.map(kort).join('')}</div>` : `<p class="muted" style="margin-top:14px">${st.klienter.length ? 'Ingen träff.' : 'Inga klienter än. Lägg in den första med Ny kund.'}</p>`}
   </section>`;
 }
@@ -80,11 +94,11 @@ function kort(k) {
   return `<a class="klient-card ${k.vilLank ? 'flagg' : ''}" href="#/admin/klient/${k.id}">
     <span class="kc-niva" title="Nivå ${k.niva}">${k.niva}</span>
     <span class="kc-body">
-      <b>${esc(k.barn || '(namn saknas)')}${k.fodd ? ` <span class="muted small">${esc(alder(k.fodd))}</span>` : ''}</b>
+      <b>${esc(helt(k) || '(namn saknas)')}${k.fodd ? ` <span class="muted small">${esc(alder(k.fodd))}</span>` : ''}</b>
       <span class="small muted">${esc(k.foralder || '')}${k.foralder ? ' · ' : ''}${esc(visaTel(k.telefon))} · ${esc(POS[k.position] || '')}${k.lag ? ` · ${esc(k.lag)}` : ''}</span>
       <span class="small kc-rad">${n ? `📅 ${DAG[n.dag]} ${fmtIso(n.datum)} ${esc(n.start)}` : '📅 Ingen tid bokad'}${k.senasteBed ? ` · 📊 ${esc(k.senasteBed.namn)} ${fmtSek(k.senasteBed.medel)}` : ''}${k.antalPass ? ` · ${k.antalPass} pass` : ''}</span>
     </span>
-    <span class="kc-flagg">${k.vilLank ? '⚠ Ny länk' : !k.harPin ? '<span class="muted">Ej inloggad än</span>' : ''}</span>
+    <span class="kc-flagg">${k.vilLank ? '⚠ Ny länk' : !k.senast ? '<span class="muted">Ej inloggad än</span>' : ''}</span>
   </a>`;
 }
 
@@ -92,16 +106,19 @@ function kort(k) {
 
 function kundForm(k) {
   const ny = !k;
-  k = k || { barn: '', fodd: '', position: 'okand', lag: '', foralder: '', telefon: '', email: '', niva: 1, anteckning: '', status: 'ny' };
+  k = k || { barn: '', efternamn: '', fodd: '', position: 'okand', lag: '', foralder: '', telefon: '', email: '', niva: 1, anteckning: '', status: 'ny' };
   const ar = new Date().getFullYear();
   return `
   <section>
     <a class="back" href="#${ny ? '/admin/klienter' : '/admin/klient/' + k.id}">‹ ${ny ? 'Klienter' : esc(k.barn)}</a>
     <h1>${ny ? 'Ny kund' : 'Ändra uppgifter'}</h1>
-    ${ny ? '<p class="small muted">Föräldern får en länk via sms. Där väljer hen en kod med fyra siffror och loggar sedan in med mobilnumret och koden.</p>' : ''}
+    ${ny ? `<p class="small muted">${st.sms ? 'Föräldern får en länk som sms från CapSwe. Sedan loggar hen in med mobilnumret och en kod som kommer på sms.' : 'Föräldern får en länk via sms. Där väljer hen en kod med fyra siffror och loggar sedan in med mobilnumret och koden.'} Barnets namn och födelseår kan föräldern också fylla i själv första gången.</p>` : ''}
     <form data-form="${ny ? 'klient-ny' : 'klient-spara'}" class="panel">
       <h3>Spelaren</h3>
-      <div class="field"><label for="kbarn">Barnets förnamn</label><input type="text" id="kbarn" name="barn" value="${esc(k.barn)}" required placeholder="T.ex. Elsa"></div>
+      <div class="auto-rad" style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:140px"><label for="kbarn">Barnets förnamn</label><input type="text" id="kbarn" name="barn" value="${esc(k.barn)}" placeholder="Föräldern kan fylla i"></div>
+        <div class="field" style="flex:1;min-width:140px"><label for="kefter">Efternamn</label><input type="text" id="kefter" name="efternamn" value="${esc(k.efternamn || '')}" placeholder="T.ex. Andersson"></div>
+      </div>
       <div class="auto-rad" style="display:flex;gap:12px;flex-wrap:wrap">
         <label class="field" style="flex:1;min-width:120px">Född år <select name="fodd"><option value="">–</option>${Array.from({ length: 12 }, (_, i) => ar - 5 - i).map(y => `<option value="${y}" ${String(k.fodd) === String(y) ? 'selected' : ''}>${y} (${ar - y} år)</option>`).join('')}</select></label>
         <label class="field" style="flex:1;min-width:140px">Position <select name="position">${Object.entries(POS).map(([v, t]) => `<option value="${v}" ${k.position === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
@@ -114,7 +131,7 @@ function kundForm(k) {
       <div class="field"><label for="kemail">E-post (valfritt)</label><input type="email" id="kemail" name="email" value="${esc(k.email || '')}" placeholder="namn@exempel.se"></div>
       <div class="field"><label for="kant">Anteckning</label><textarea id="kant" name="anteckning" placeholder="Styrkor, vad ni jobbar på, annat att komma ihåg…">${esc(k.anteckning || '')}</textarea></div>
       ${ny ? '' : `<div class="field"><label for="kstatus">Status</label><select id="kstatus" name="status">${[['ny', 'Ny'], ['aktiv', 'Aktiv'], ['paus', 'Paus']].map(([v, t]) => `<option value="${v}" ${k.status === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`}
-      ${ny && st.sms ? '<label class="toggle"><input type="checkbox" name="skicka" checked><span><b>Skicka länken som sms direkt</b><small>Från servern, till numret ovan.</small></span></label>' : ''}
+      ${ny && st.sms ? `<label class="toggle"><input type="checkbox" name="skicka" checked><span><b>Skicka länken som sms direkt</b><small>Från ${esc(st.smsFran || 'CapSwe')} till numret ovan. ${st.smsIdag || 0} av ${st.smsTak || 25} sms använda i dag.</small></span></label>` : ''}
       <div class="btn-row two" style="margin-top:12px"><button class="btn grad" type="submit">${ny ? 'Lägg till kunden' : 'Spara'}</button><a class="btn secondary" href="#${ny ? '/admin/klienter' : '/admin/klient/' + k.id}">Avbryt</a></div>
     </form>
   </section>`;
@@ -130,7 +147,7 @@ function klientSida() {
   <section>
     <a class="back" href="#/admin/klienter">‹ Klienter</a>
     <div class="eyebrow">Klient · nivå ${k.niva} ${esc(nivaNamn(k.niva))}${k.status === 'paus' ? ' · paus' : ''}</div>
-    <h1 style="margin-bottom:4px">${esc(k.barn)}</h1>
+    <h1 style="margin-bottom:4px">${esc(helt(k) || 'Barnets namn saknas')}</h1>${k.barn ? '' : `<p class="small muted" style="margin:0 0 6px">Föräldern fyller i barnets namn och födelseår första gången hen loggar in.</p>`}
     <p class="muted small" style="margin:0">${esc(POS[k.position] || '')}${k.fodd ? ` · ${alder(k.fodd)} (${k.fodd})` : ''}${k.lag ? ` · ${esc(k.lag)}` : ''}<br>
       ${esc(k.foralder || 'Förälder')} · <a href="tel:${esc(k.telefon)}">${esc(visaTel(k.telefon))}</a>${k.email ? ` · <a href="mailto:${esc(k.email)}">${esc(k.email)}</a>` : ''}</p>
     <div class="btn-row two" style="margin-top:14px">
@@ -180,21 +197,33 @@ function lankPanel(d) {
   const ny = st.nyLank?.klientId === k.id ? st.nyLank : null;
   const lank = ny?.lank || d.lank;
   const text = ny?.smsText || d.smsText;
-  const status = k.harPin ? `Har valt kod · inloggad senast ${k.senast ? esc(k.senast.slice(0, 10)) : '–'}` : k.kod?.anvand ? 'Har öppnat länken men inte valt kod än' : 'Har inte öppnat länken än';
+  const status = k.senast ? `Inloggad · senast ${esc(fmtTid(k.senast))}` : k.kod?.anvand ? (st.sms ? 'Har öppnat länken' : 'Har öppnat länken men inte valt kod än') : 'Har inte loggat in än';
+  const logg = (k.smsLogg || []).slice(-4).reverse();
+  const kvar = Math.max(0, (st.smsTak || 25) - (st.smsIdag || 0));
+  const serverKnapp = (txt, klass = 'grad') => `<button class="btn ${klass}" data-action="klient-lank" data-skicka="1" ${kvar ? '' : 'disabled title="Dagens sms är slut"'}>📤 ${txt}</button>`;
   return `
   <section class="panel ${k.vilLank || ny ? 'brand' : ''}">
     <div class="section-head"><h3>Inloggning</h3><span class="small muted">${esc(visaTel(k.telefon))}</span></div>
-    <p class="small ${k.vilLank ? '' : 'muted'}" style="margin:0 0 10px">${k.vilLank ? `⚠ Föräldern tryckte "Glömt koden" ${esc(k.vilLank.slice(0, 16).replace('T', ' '))}. Skicka en ny länk.` : status}</p>
-    ${ny?.sms?.skickat ? '<div class="note small">Sms:et är skickat från servern.</div>' : ny?.sms?.fel && !ny.sms.av ? `<div class="note warn small">Servern kunde inte skicka sms: ${esc(ny.sms.fel)}. Skicka från telefonen i stället.</div>` : ''}
-    ${lank ? `
-      <div class="msg" id="smsmsg">${esc(text)}</div>
+    <p class="small ${k.vilLank ? '' : 'muted'}" style="margin:0 0 10px">${k.vilLank ? `⚠ Föräldern tryckte "Glömt koden" ${esc(fmtTid(k.vilLank))}. Skicka en ny länk.` : status}</p>
+    ${ny?.sms?.skickat ? `<div class="note small">Sms:et med länken är skickat från ${esc(st.smsFran || 'CapSwe')}.</div>` : ny?.sms?.fel && !ny.sms.av ? `<div class="note warn small">Servern kunde inte skicka sms: ${esc(ny.sms.fel)}. Skicka från telefonen i stället.</div>` : ''}
+    ${st.sms ? `
+      <div class="btn-row two">
+        ${serverKnapp(lank ? 'Skicka länken igen' : 'Skicka länken som sms')}
+        ${lank ? `<a class="btn secondary" href="${esc(smsLank(k.telefon, text))}">💬 Från min telefon</a>` : `<button class="btn secondary" data-action="klient-lank">🔗 Bara skapa länken</button>`}
+      </div>
+      <p class="small muted" style="margin:0 0 4px">Länken öppnar appen och loggar in. Efter det loggar föräldern in med mobilnumret och en sms-kod. ${kvar} av ${st.smsTak || 25} sms kvar i dag.</p>`
+    : lank ? `
       <div class="btn-row two">
         <a class="btn grad" href="${esc(smsLank(k.telefon, text))}">💬 Skicka sms från telefonen</a>
-        ${st.sms ? `<button class="btn secondary" data-action="klient-lank" data-skicka="1">Skicka från servern</button>` : `<button class="btn secondary" data-action="kopiera" data-el="smsmsg">Kopiera texten</button>`}
-      </div>
-      <p class="small muted" style="margin:0">Länken: <a href="${esc(lank)}" target="_blank" rel="noopener">${esc(lank.replace(/^https?:\/\//, ''))}</a> · <a data-action="kopiera" data-text="${esc(lank)}" href="#/admin/klient/${k.id}">kopiera</a> · <a data-action="klient-lank" href="#/admin/klient/${k.id}">ny länk</a></p>`
+        <button class="btn secondary" data-action="kopiera" data-el="smsmsg">Kopiera texten</button>
+      </div>`
     : `<div class="btn-row"><button class="btn secondary" data-action="klient-lank">🔗 Skapa ny länk${k.harPin ? ' (om koden glömts)' : ''}</button></div>
       <p class="small muted" style="margin:0">En ny länk låter föräldern välja en ny kod. Den gamla koden slutar gälla när den nya är vald.</p>`}
+    ${lank ? `<details class="sms-text"><summary class="small">Visa sms-texten och länken</summary>
+      <div class="msg" id="smsmsg">${esc(text)}</div>
+      <p class="small muted" style="margin:0">Länken: <a href="${esc(lank)}" target="_blank" rel="noopener">${esc(lank.replace(/^https?:\/\//, ''))}</a> · <a data-action="kopiera" data-text="${esc(lank)}" href="#/admin/klient/${k.id}">kopiera</a> · <a data-action="klient-lank" href="#/admin/klient/${k.id}">ny länk</a></p>
+    </details>` : ''}
+    ${logg.length ? `<ul class="sms-logg small">${logg.map(e => `<li>${SMS_TYP[e.typ] || e.typ} · ${esc(fmtTid(e.t))} · ${SMS_ST[e.status] || esc(e.status)}${e.fel ? ` <span class="muted">(${esc(e.fel)})</span>` : ''}</li>`).join('')}</ul>` : ''}
   </section>`;
 }
 
@@ -288,7 +317,7 @@ function bokaVy() {
 
 export function klienterAfterRender(view) {
   const sok = view.querySelector('#klientsok');
-  if (sok) sok.addEventListener('input', () => { st.sok = sok.value; const lista = view.querySelector('.klient-lista'); const q = st.sok.trim().toLowerCase(); if (lista) { lista.innerHTML = st.klienter.filter(k => !q || [k.barn, k.foralder, k.telefon, visaTel(k.telefon), k.lag, k.email].some(x => (x || '').toLowerCase().includes(q))).map(kort).join(''); } });
+  if (sok) sok.addEventListener('input', () => { st.sok = sok.value; const lista = view.querySelector('.klient-lista'); const q = st.sok.trim().toLowerCase(); if (lista) { lista.innerHTML = st.klienter.filter(k => traff(k, q)).map(kort).join(''); } });
 }
 
 export async function klienterAction(action, el, e) {
@@ -304,7 +333,7 @@ export async function klienterAction(action, el, e) {
   if (action === 'klient-lank') {
     e.preventDefault();
     const r = await api.admin.post(`/admin/klient/${k.id}/lank`, { skicka: !!el.dataset.skicka });
-    if (r.ok) { st.nyLank = { klientId: k.id, ...r }; d.klient = r.klient; d.lank = r.lank; d.smsText = r.smsText; toast(r.sms?.skickat ? 'Sms:et är skickat' : 'Ny länk skapad'); } else toast(`Gick inte: ${r.fel}`);
+    if (r.ok) { st.nyLank = { klientId: k.id, ...r }; d.klient = r.klient; d.lank = r.lank; d.smsText = r.smsText; smsRakna(r); st.laddat = false; toast(r.sms?.skickat ? `Sms:et med länken är skickat till ${visaTel(k.telefon)}` : r.sms?.tak ? 'Dagens sms är slut. Skicka från din telefon i stället.' : el.dataset.skicka ? `Sms:et gick inte iväg: ${r.sms?.fel || 'okänt fel'}` : 'Ny länk skapad'); } else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }
   if (action === 'klient-boka-vecka') { st.veckaVald = el.dataset.v; route(); return true; }
@@ -364,14 +393,15 @@ export async function klienterAction(action, el, e) {
 
 export async function klienterSubmit(kind, f, fd) {
   const { toast, route, go } = ui;
-  const falt = () => ({ barn: fd.get('barn'), fodd: fd.get('fodd'), position: fd.get('position'), lag: fd.get('lag'), niva: +fd.get('niva') || 1, foralder: fd.get('foralder'), telefon: fd.get('telefon'), email: fd.get('email'), anteckning: fd.get('anteckning'), status: fd.get('status') });
+  const falt = () => ({ barn: fd.get('barn'), efternamn: fd.get('efternamn'), fodd: fd.get('fodd'), position: fd.get('position'), lag: fd.get('lag'), niva: +fd.get('niva') || 1, foralder: fd.get('foralder'), telefon: fd.get('telefon'), email: fd.get('email'), anteckning: fd.get('anteckning'), status: fd.get('status') });
   if (kind === 'klient-ny') {
     const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
     const r = await api.admin.post('/admin/klient', { ...falt(), skicka: fd.get('skicka') === 'on' });
     btn.disabled = false;
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
-    st.nyLank = { klientId: r.klient.id, ...r }; st.laddat = false; st.vald = null;
-    toast(r.sms?.skickat ? `${r.klient.barn} är inlagd och sms:et skickat` : `${r.klient.barn} är inlagd. Skicka länken till ${r.klient.foralder || 'föräldern'}.`);
+    st.nyLank = { klientId: r.klient.id, ...r }; st.laddat = false; st.vald = null; smsRakna(r);
+    const vem = helt(r.klient) || r.klient.foralder || visaTel(r.klient.telefon);
+    toast(r.sms?.skickat ? `${vem} är inlagd och länken skickad som sms` : `${vem} är inlagd. Skicka länken till ${r.klient.foralder || 'föräldern'}.`);
     go(`/admin/klient/${r.klient.id}`); return true;
   }
   if (kind === 'klient-spara') {
