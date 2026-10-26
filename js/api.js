@@ -31,14 +31,16 @@ export const api = {
 };
 
 // Logga in med kod (länken #/k/KOD ur sms:et, eller en gammal e-postkod)
+// Servern noterar om inloggningen skedde i appen eller i webbläsaren (Haris ser det på klienten)
+const kalla = () => (window.Capacitor?.isNativePlatform?.() ? 'app' : 'webb');
 export async function loggaInMedKod(kod) {
-  const r = await api.post('/auth/kod', { kod });
+  const r = await api.post('/auth/kod', { kod, kalla: kalla() });
   if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now() };
   return r;
 }
 // Logga in med mobilnummer och den kod föräldern valt
 export async function loggaInMedTelefon(telefon, pin) {
-  const r = await api.post('/auth/login', { telefon, pin });
+  const r = await api.post('/auth/login', { telefon, pin, kalla: kalla() });
   if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now() };
   return r;
 }
@@ -51,7 +53,7 @@ export const glomtKod = telefon => api.post('/auth/glomt', { telefon });
 // Sms-inloggning: kod till numret, sedan verifiera
 export const smsBeKod = telefon => api.post('/auth/sms', { telefon });
 export async function smsVerifiera(telefon, kod) {
-  const r = await api.post('/auth/sms/verifiera', { telefon, kod });
+  const r = await api.post('/auth/sms/verifiera', { telefon, kod, kalla: kalla() });
   if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now() };
   return r;
 }

@@ -8,12 +8,15 @@ name = "cap-api"
 main = "src/index.js"
 compatibility_date = "2026-09-01"
 workers_dev = true
-routes = [{ pattern = "cap-api.8bitcat.io", custom_domain = true }]
+routes = [{ pattern = "cap-api.8bitcat.io", custom_domain = true }, { pattern = "cap.8bitcat.io", custom_domain = true }]
 
 [vars]
 APP_BASE = "https://8bitcat.github.io/cap-online/"
 PUSH_BASE = "https://cap-push.8bitcat.io"
 # sms: avsändare, tak per dygn och länken till appen (tom tills TestFlight-länken eller App Store finns)
+# korta länkar i sms:en (/k/KOD loggar in i appen, /app hämtar den) och appens id för universella länkar
+LANK_BASE = "https://cap.8bitcat.io"
+IOS_APP_ID = "GYTVJ3CTBJ.se.completeathletic.caponline"
 SMS_FROM = "CapSwe"
 SMS_MAX_DAG = "25"
 APP_LANK_IOS = ""

@@ -21,7 +21,7 @@ const hero = (rubrik, text) => `
 const nyHos = () => `
   <section class="panel">
     <h3>Ny hos Haris?</h3>
-    <p class="small muted" style="margin:0">Haris lägger in ert mobilnummer och skickar en länk. Sedan loggar du in med numret. <a href="#/login/kod">Har du en kod med bokstäver?</a> · <a data-action="gast" href="#/">Prova utan konto</a></p>
+    <p class="small muted" style="margin:0">Haris lägger in ert mobilnummer och skickar två sms: ett där du hämtar appen och ett som loggar in dig. <a data-action="gast" href="#/">Prova utan konto</a></p>
   </section>
   <p class="small muted" style="text-align:center;margin-top:24px"><a href="#/admin">Admin</a> · för Haris och Carl</p>`;
 const kodFalt = (namn, etikett, extra = '') => `<div class="field"><label for="${namn}">${etikett}</label><input type="password" id="${namn}" name="${namn === 'pin2' ? 'pin2' : 'pin'}" inputmode="numeric" pattern="[0-9]*" maxlength="6" ${extra} style="font-size:22px;letter-spacing:.3em;text-align:center;font-weight:700"></div>`;
@@ -31,7 +31,7 @@ export function loginPage({ fel = '', telefon = senast.telefon, lage = '', kod =
   const infoRad = info ? `<div class="note small" style="margin:0 0 12px">${esc(info)}</div>` : '';
   const sms = statusNu().sms;
   if (lage === 'glomt') return `
-  ${hero('Glömt koden?', 'Skriv ditt mobilnummer så får du en ny länk där du väljer en ny kod.')}
+  ${hero('Glömt koden?', 'Skriv ditt mobilnummer så skickar Haris en ny inloggningslänk.')}
   <section class="panel">
     ${felRad}${infoRad}
     <form data-form="glomt">
@@ -40,19 +40,24 @@ export function loginPage({ fel = '', telefon = senast.telefon, lage = '', kod =
     </form>
     <p class="small muted" style="margin:12px 0 0"><a href="#/login">‹ Tillbaka till inloggningen</a></p>
   </section>`;
-  if (lage === 'kod') return `
-  ${hero('Kod från Haris', 'Har du fått en kod med sex tecken? Skriv in den här. Har du fått en länk räcker det att öppna den.')}
-  <section class="panel">
-    ${felRad}
+  // Koden ur inloggnings-sms:et (samma kod som i länken), när länken inte öppnar appen
+  const kodForm = `
     <form data-form="kod">
       <div class="field">
-        <label for="kod">Din kod</label>
-        <input type="text" id="kod" name="kod" value="${esc(kod)}" placeholder="T.ex. ABC-234" autocapitalize="characters" spellcheck="false" maxlength="8" style="font-size:22px;letter-spacing:.2em;text-align:center;font-weight:700">
+        <label for="kod">Koden från sms:et</label>
+        <input type="text" id="kod" name="kod" value="${esc(kod)}" placeholder="ABC-234" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="7" required style="font-size:26px;letter-spacing:.2em;text-align:center;font-weight:800;text-transform:uppercase">
       </div>
-      <button class="btn grad block" type="submit">Fortsätt</button>
-    </form>
-    <p class="small muted" style="margin:12px 0 0"><a href="#/login">‹ Logga in med mobilnummer i stället</a></p>
-  </section>`;
+      <button class="btn grad block" type="submit">Logga in</button>
+    </form>`;
+  const iApp = !!window.Capacitor?.isNativePlatform?.();
+  if (lage === 'kod' || (!sms && lage !== 'pin')) return `
+  ${hero(iApp ? 'Logga in i appen' : 'Välkommen', 'Tryck på inloggningslänken i sms:et från Haris, så loggas du in. Du kan också skriva koden från sms:et här.')}
+  <section class="panel">
+    ${felRad}${infoRad}
+    ${kodForm}
+    <p class="small muted" style="margin:12px 0 0;text-align:center">${sms ? '<a href="#/login">Logga in med mobilnummer och sms-kod</a>' : '<a href="#/login/pin">Har du valt en egen kod? Logga in med mobilnummer och kod</a>'}</p>
+  </section>
+  ${nyHos()}`;
 
   // Sms-inloggning: steg 2, skriv koden
   if (sms && lage !== 'pin' && smsSteg) return `
@@ -77,12 +82,12 @@ export function loginPage({ fel = '', telefon = senast.telefon, lage = '', kod =
       <div class="field"><label for="stel">Mobilnummer</label><input type="tel" id="stel" name="telefon" value="${esc(telefon)}" placeholder="070-123 45 67" autocomplete="tel" required></div>
       <button class="btn grad block" type="submit">Skicka kod</button>
     </form>
-    <p class="small muted" style="margin:12px 0 0;text-align:center"><a href="#/login/pin">Har du valt en egen kod? Logga in med den</a></p>
+    <p class="small muted" style="margin:12px 0 0;text-align:center"><a href="#/login/kod">Har du en kod från Haris? Skriv den här</a></p>
   </section>
   ${nyHos()}`;
-  // Utan sms: mobilnummer + egen kod
+  // Mobilnummer + egen kod (valfri, väljs under Mer)
   return `
-  ${hero('Välkommen', 'Logga in med ditt mobilnummer och koden du valde. Första gången: öppna länken du fått av Haris.')}
+  ${hero('Egen kod', 'Logga in med ditt mobilnummer och koden du valt under Mer. Första gången: tryck på inloggningslänken i sms:et från Haris.')}
   <section class="panel">
     ${felRad}${infoRad}
     <form data-form="login-tel">
@@ -90,7 +95,7 @@ export function loginPage({ fel = '', telefon = senast.telefon, lage = '', kod =
       ${kodFalt('lpin', 'Din kod', 'placeholder="4–6 siffror" autocomplete="current-password" required')}
       <button class="btn grad block" type="submit">Logga in</button>
     </form>
-    <p class="small" style="margin:12px 0 0;text-align:center">${sms ? '<a href="#/login">‹ Logga in med sms-kod</a> · ' : ''}<a href="#/login/glomt">Glömt koden?</a></p>
+    <p class="small" style="margin:12px 0 0;text-align:center"><a href="#/login">‹ ${sms ? 'Logga in med sms-kod' : 'Logga in med koden från sms:et'}</a> · <a href="#/login/glomt">Glömt koden?</a></p>
   </section>
   ${nyHos()}`;
 }
@@ -122,7 +127,7 @@ export function pinPage({ fel = '' } = {}) {
   if (!u) return null;
   const forsta = !u.harPin;
   return `
-  ${hero(forsta ? `Hej${u.namn ? ' ' + esc(u.namn) : ''}!` : 'Välj en ny kod', forsta ? `Välj en kod med fyra till sex siffror. Sedan loggar du in med <b>${esc(visaTel(u.telefon))}</b> och koden.` : 'Fyra till sex siffror. Den gamla slutar gälla direkt.')}
+  ${hero(forsta ? 'Egen kod' : 'Välj en ny kod', forsta ? `Valfritt. Med en egen kod, fyra till sex siffror, kan du logga in med <b>${esc(visaTel(u.telefon))}</b> på en ny telefon utan att be Haris om en ny länk.` : 'Fyra till sex siffror. Den gamla slutar gälla direkt.')}
   <section class="panel">
     ${fel ? `<div class="note warn small" style="margin:0 0 12px">${esc(fel)}</div>` : ''}
     <form data-form="pin">
@@ -130,7 +135,7 @@ export function pinPage({ fel = '' } = {}) {
       ${kodFalt('pin2', 'Samma kod igen', 'minlength="4" required autocomplete="new-password"')}
       <button class="btn grad block" type="submit">${forsta ? 'Spara koden och börja' : 'Byt kod'}</button>
     </form>
-    ${forsta ? '' : '<p class="small muted" style="margin:12px 0 0;text-align:center"><a href="#/mer">Avbryt</a></p>'}
+    <p class="small muted" style="margin:12px 0 0;text-align:center"><a href="#/mer">${forsta ? 'Inte nu' : 'Avbryt'}</a></p>
   </section>`;
 }
 
@@ -157,12 +162,13 @@ export function appPage() {
 }
 
 // #/k/KOD – länken ur sms:et loggar in direkt; utan sms väljer man egen kod, annars visas Hämta appen
+// Länken loggar in direkt – i appen (via caponline://k/KOD eller cap.8bitcat.io/k/KOD) eller i webbläsaren.
+// Första gången leder startsidan vidare till barnets namn och födelseår.
 export async function loggaInViaLank(kod, { toast, go }) {
   const r = await loggaInMedKod(kod);
   if (!r.ok) { toast(r.fel || 'Länken fungerade inte'); return go('/login'); }
-  efterInloggning(r.user, { toast, tyst: !!r.valjPin });
-  const native = !!window.Capacitor?.isNativePlatform?.();
-  go(r.valjPin ? '/pin' : native ? '/' : '/app');
+  efterInloggning(r.user, { toast });
+  go('/');
 }
 
 export function efterInloggning(user, { toast, tyst = false } = {}) {
@@ -217,7 +223,7 @@ export async function kontoSubmit(kind, f, fd, { toast, go, render }) {
     const telefon = fd.get('telefon');
     const r = await loggaInMedTelefon(telefon, fd.get('pin'));
     if (!r.ok) { ater(); render(loginPage({ lage: 'pin', telefon, fel: r.fel || 'Gick inte att logga in' })); return; }
-    efterInloggning(r.user, { toast }); go(r.user.harPin || statusNu().sms ? '/' : '/pin'); return;
+    efterInloggning(r.user, { toast }); go('/'); return;
   }
   if (kind === 'glomt') {
     const telefon = fd.get('telefon');
@@ -225,12 +231,12 @@ export async function kontoSubmit(kind, f, fd, { toast, go, render }) {
     ater();
     if (!r.ok) { render(loginPage({ lage: 'glomt', telefon, fel: r.fel || 'Gick inte' })); return; }
     senast.telefon = telefon; try { localStorage.setItem('cap_tel', telefon); } catch { /* ok */ }
-    render(loginPage({ lage: 'pin', telefon, info: r.meddelande || 'En ny länk är på väg.' })); return;
+    render(loginPage({ telefon, info: r.meddelande || 'En ny länk är på väg.' })); return;
   }
   if (kind === 'kod') {
     const r = await loggaInMedKod(fd.get('kod'));
     if (!r.ok) { ater(); render(loginPage({ lage: 'kod', kod: fd.get('kod'), fel: r.fel || 'Koden fungerade inte' })); return; }
-    efterInloggning(r.user, { toast, tyst: !!r.valjPin }); go(r.valjPin ? '/pin' : '/'); return;
+    efterInloggning(r.user, { toast }); go('/'); return;
   }
   if (kind === 'pin') {
     const pin = String(fd.get('pin') || ''), pin2 = String(fd.get('pin2') || '');

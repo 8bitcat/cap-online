@@ -3,6 +3,8 @@
 # Appen laddar prototypen från https://8bitcat.github.io/cap-online/ (server.url), så innehållet
 # uppdateras med tools/deploy-pages.py. Nytt bygge här behövs bara när det nativa ändras
 # (Capacitor, ikon, Info.plist, rättigheter) eller när ett TestFlight-bygge går ut (90 dagar).
+# Bygge 3 (2026-10-26): @capacitor/app + länkschemat caponline:// (inloggningslänken i sms 2), kamera- och
+# mikrofontexterna, cacherensning vid start. Kräver ingen ändring av App ID:t eller profilen.
 #   Starta: Codemagic → cap-online → Start new build → ios-testflight
 #   Före första bygget: APP_STORE_APPLE_ID nedan (App Store Connect → appen → App Information → Apple ID)
 #   och en App Store-profil för se.completeathletic.caponline sparad i Codemagic (Code signing identities).

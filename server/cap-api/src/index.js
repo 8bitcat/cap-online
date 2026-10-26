@@ -126,13 +126,49 @@ async function skickaTillKlient(env, k, typ, text, base) {
   k.smsLogg = [...(k.smsLogg || []), e].slice(-12);
   return r;
 }
-const lank = (env, kod) => `${env.APP_BASE}#/k/${kod}`;
-// Välkomst-sms:et: länken till appen (när den finns), webblänken som loggar in direkt, och hur man loggar in sedan
-function smsText(env, k, l) {
-  const hej = `Hej${k.foralder ? ' ' + k.foralder : ''}! Haris har lagt in ${k.barn || 'ditt barn'} i CAP Online.`;
-  const app = env.APP_LANK_IOS ? `\nHämta appen: ${env.APP_LANK_IOS}\nEller öppna i webbläsaren: ${l}` : `\nÖppna appen: ${l}`;
-  const login = smsPa(env) ? 'Logga in med ditt mobilnummer, du får en kod som sms.' : 'Välj en kod med fyra siffror, sedan loggar du in med mobilnummer och kod.';
-  return `${hej}${app}\n${login}\n/Haris`;
+// Korta länkar på LANK_BASE (cap.8bitcat.io, samma worker): /k/KOD loggar in, /app hämtar appen.
+// Utan LANK_BASE går länkarna direkt till webbappen.
+const lank = (env, kod) => env.LANK_BASE ? `${env.LANK_BASE}/k/${kod}` : `${env.APP_BASE}#/k/${kod}`;
+const hamtaLank = env => env.LANK_BASE ? `${env.LANK_BASE}/app` : `${env.APP_BASE}#/app`;
+const kodVisa = kod => `${kod.slice(0, 3)}-${kod.slice(3)}`;
+// Carl 2026-10-26: "ett sms för att hämta appen och ett som man sedan trycker på för att logga in när appen är inne i telefonen"
+function smsHamta(env, k) {
+  return `Hej${k.foralder ? ' ' + k.foralder : ''}! Haris har lagt in ${k.barn || 'ditt barn'} i CAP Online, träningsappen från Complete Athletic Performance.\nHämta appen här: ${hamtaLank(env)}\nNär appen är installerad trycker du på länken i nästa sms, så loggas du in.\n/Haris`;
+}
+function smsLogga(env, k, kod) {
+  return `Logga in i CAP Online: ${lank(env, kod)}\nTryck på länken när appen är installerad. Går det inte: öppna appen och skriv koden ${kodVisa(kod)}.\n/Haris`;
+}
+const giltigKod = k => (k.kod?.kod && !k.kod.forbrukad ? k.kod.kod : null);
+// var föräldern loggade in senast: i appen eller i webbläsaren
+const kallaAv = d => (d?.kalla === 'app' ? 'app' : 'webb');
+function inloggad(k, kalla) { k.senast = nu(); k.inloggad = { ...(k.inloggad || {}), [kalla]: nu() }; if (k.status === 'ny') k.status = 'aktiv'; k.vilLank = null; }
+
+// Sidan bakom inloggningslänken när den öppnas i Safari: knappen öppnar appen (caponline://k/KOD).
+// När appen har Associated Domains öppnar iOS appen direkt och sidan syns aldrig.
+function landning(env, kod, finns) {
+  const webb = `${env.APP_BASE}#/k/${kod}`;
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const html = `<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Logga in · CAP Online</title><meta name="theme-color" content="#000912">
+<style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:#000912;color:#fdfdfd;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;padding:24px 16px}
+main{width:100%;max-width:420px;text-align:center}.eb{font-size:12px;font-weight:800;letter-spacing:.2em;color:#00d4cb}h1{font-size:28px;margin:6px 0 8px}p{color:#9aa5b1;margin:0 0 18px}
+a.btn{display:block;padding:15px 18px;border-radius:12px;font-weight:700;text-decoration:none;margin:10px 0;border:1px solid #243040;color:#fdfdfd;background:#182230}
+a.btn.grad{background:linear-gradient(90deg,#0a9e9a,#00d4cb 55%,#00f0ff);color:#00242a;border:0;font-size:18px}
+.kod{font-size:30px;font-weight:800;letter-spacing:.18em;margin:18px 0 4px}.sm{font-size:13px;color:#67727e}.hint{display:none;background:rgba(251,191,36,.08);border-left:3px solid #fbbf24;text-align:left;padding:10px 12px;border-radius:0 10px 10px 0;color:#fdfdfd;font-size:14px}</style></head>
+<body><main><div class="eb">CAP ONLINE</div>
+${finns ? `<h1>Logga in i appen</h1><p>Tryck på knappen så öppnas CAP Online och du loggas in.</p>
+<a class="btn grad" id="oppna" href="caponline://k/${kod}">Öppna CAP Online</a>
+<div class="hint" id="hint">Hittade du inte appen? Hämta den först, kom sedan tillbaka till sms:et och tryck på länken igen.</div>
+<a class="btn" href="${esc(hamtaLank(env))}">Har du inte appen? Hämta den</a>
+<a class="btn" href="${esc(webb)}">Fortsätt i webbläsaren</a>
+<div class="kod">${kodVisa(kod)}</div><div class="sm">Fungerar inte knappen: öppna appen och skriv koden.</div>`
+  : `<h1>Länken har gått ut</h1><p>Be Haris skicka en ny inloggningslänk.</p><a class="btn" href="${esc(env.APP_BASE)}">Till CAP Online</a>`}
+</main><script>
+var ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+${finns ? `if(!ios){location.replace(${JSON.stringify(webb)});}
+document.getElementById('oppna').addEventListener('click',function(){setTimeout(function(){if(document.visibilityState==='visible')document.getElementById('hint').style.display='block';},1800);});` : ''}
+</script></body></html>`;
+  return new Response(html, { status: finns ? 200 : 410, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 }
 
 // ---------- klienter ----------
@@ -148,7 +184,7 @@ function renKlient(d, gammal = {}) {
     position: POSITIONER.includes(d.position) ? d.position : (gammal.position || 'okand'), lag: ren(d.lag, 60),
     niva, nivaHistorik: hist, anteckning: ren(d.anteckning, 2000),
     status: ['ny', 'aktiv', 'paus'].includes(d.status) ? d.status : (gammal.status || 'ny'),
-    pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [],
+    pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [], inloggad: gammal.inloggad || {},
   };
 }
 // Det föräldern och adminlistan får se (aldrig pin-hashen eller sms-loggens nycklar)
@@ -387,6 +423,21 @@ export default {
     const p = url.pathname;
     const base = (env.PUBLIC_BASE || url.origin).replace(/\/$/, '');
 
+    const lankVard = env.LANK_BASE && url.host === new URL(env.LANK_BASE).host;
+    if (req.method === 'GET' && p === '/.well-known/apple-app-site-association') {
+      return new Response(JSON.stringify({ applinks: { details: [{ appIDs: [env.IOS_APP_ID || 'GYTVJ3CTBJ.se.completeathletic.caponline'], components: [{ '/': '/k/*' }] }] } }), { headers: { 'content-type': 'application/json' } });
+    }
+    const mkl = /^\/k\/([A-Za-z0-9-]{6,8})\/?$/.exec(p);
+    if (req.method === 'GET' && mkl) {
+      const kod = mkl[1].toUpperCase().replace(/[^A-Z0-9]/g, '');
+      return landning(env, kod, !!(await env.DB.get(`kod:${kod}`)) || !!(await env.DB.get(`inv:${kod}`)));
+    }
+    if (req.method === 'GET' && (p === '/app' || p === '/app/')) {
+      const ua = req.headers.get('user-agent') || '';
+      const ios = /iPhone|iPad|iPod/.test(ua);
+      return Response.redirect(ios && env.APP_LANK_IOS ? env.APP_LANK_IOS : `${env.APP_BASE}#/app`, 302);
+    }
+    if (req.method === 'GET' && p === '/' && lankVard) return Response.redirect(env.APP_BASE, 302);
     if (req.method === 'GET' && p === '/') return svar({ ok: true, app: 'CAP Online API', r2: !!env.MEDIA, sms: smsPa(env), appLank: env.APP_LANK_IOS || '' });
     if (req.method === 'GET' && p.startsWith('/media/')) return media(req, env, decodeURIComponent(p.slice(7)));
 
@@ -447,7 +498,7 @@ export default {
       await env.DB.delete(`otp:${tel}`);
       const k = await hamtaKlient(env, await env.DB.get(`tel:${tel}`));
       if (!k) return fel('numret finns inte hos Haris längre', 404);
-      k.senast = nu(); if (k.status === 'ny') k.status = 'aktiv'; k.vilLank = null;
+      inloggad(k, kallaAv(d));
       await sparaKlient(env, k);
       return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k) });
     }
@@ -460,12 +511,11 @@ export default {
       if (kl) {
         const k = await hamtaKlient(env, kl.klientId);
         if (!k) return fel('kontot finns inte längre', 404);
-        k.senast = nu(); if (k.kod?.kod === kod && !k.kod.anvand) k.kod.anvand = nu(); if (k.status === 'ny') k.status = 'aktiv'; k.vilLank = null;
-        // med sms-inloggning behövs ingen egen kod: länken används en gång, sedan loggar man in med nummer + sms-kod
-        const valjPin = !smsPa(env) && !k.pin;
-        if (smsPa(env) && k.kod?.kod === kod) { await env.DB.delete(`kod:${kod}`); k.kod = { ...k.kod, forbrukad: nu() }; }
+        // länken fungerar flera gånger (först i Safari, sedan i appen) tills Haris skapar en ny
+        if (k.kod?.kod === kod && !k.kod.anvand) k.kod.anvand = nu();
+        inloggad(k, kallaAv(d));
         await sparaKlient(env, k);
-        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k), valjPin });
+        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k) });
       }
       // gammal e-postkod
       const inv = await env.DB.get(`inv:${kod}`, 'json');
@@ -498,7 +548,7 @@ export default {
       if (!k.pin) return fel('du har ingen kod än, öppna länken du fick av Haris först', 409);
       if ((await pinHash(d.pin, k.pin.salt)) !== k.pin.hash) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel(`fel kod${forsok >= 6 ? `, ${10 - forsok - 1} försök kvar` : ''}`, 403); }
       await env.DB.delete(limKey);
-      k.senast = nu(); if (k.status === 'ny') k.status = 'aktiv';
+      inloggad(k, kallaAv(d));
       await sparaKlient(env, k);
       return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k) });
     }
@@ -510,7 +560,6 @@ export default {
       if (!k) return fel('inte inloggad', 401);
       const salt = slump(16, SMA);
       k.pin = { salt, hash: await pinHash(d.pin, salt), t: nu() };
-      if (k.kod?.kod) { await env.DB.delete(`kod:${k.kod.kod}`); k.kod = { ...k.kod, anvand: k.kod.anvand || nu(), forbrukad: nu() }; }
       k.vilLank = null; k.status = 'aktiv';
       await sparaKlient(env, k);
       return svar({ ok: true, user: userAvKlient(k) });
@@ -522,8 +571,8 @@ export default {
       const id = await env.DB.get(`tel:${tel}`);
       const k = id ? await hamtaKlient(env, id) : null;
       if (!k) return fel('numret finns inte hos Haris än', 404);
-      const kod = await nyKod(env, k);
-      const sms = await skickaTillKlient(env, k, 'lank', smsText(env, k, lank(env, kod)), base);
+      const kod = giltigKod(k) || await nyKod(env, k);
+      const sms = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kod), base);
       if (!sms.skickat) k.vilLank = nu();
       await sparaKlient(env, k);
       return svar({ ok: true, skickat: sms.skickat, meddelande: sms.skickat ? 'En ny länk är skickad som sms till ditt nummer.' : 'Haris får ett meddelande och skickar en ny länk till dig.' });
@@ -642,11 +691,12 @@ export default {
         const k = renKlient(d, { id: nyttId('k') });
         const kod = await nyKod(env, k);
         const l = lank(env, kod);
-        const sms = d.skicka ? await skickaTillKlient(env, k, 'lank', smsText(env, k, l), base) : { ok: false, skickat: false, av: !smsPa(env) };
+        let sms = { ok: false, skickat: false, av: !smsPa(env) };
+        if (d.skicka) { sms = await skickaTillKlient(env, k, 'hamta', smsHamta(env, k), base); if (sms.skickat) sms = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kod), base); }
         await sparaKlient(env, k);
         await env.DB.put(`tel:${tel}`, k.id);
         const ids = await klientIndex(env); if (!ids.includes(k.id)) { ids.push(k.id); await env.DB.put('klienter', JSON.stringify(ids)); }
-        return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, smsText: smsText(env, k, l), ...(await smsDag(env)) });
+        return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, hamtaText: smsHamta(env, k), loggaText: smsLogga(env, k, kod), hamtaLank: hamtaLank(env), ...(await smsDag(env)) });
       }
       const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka)(?:\/([a-z0-9]+))?)?$/.exec(p);
       if (mk) {
@@ -655,9 +705,10 @@ export default {
         const del = mk[2], sub = mk[3];
         if (!del && req.method === 'GET') {
           const [veckor, planer, bedomningar, media] = await Promise.all([hamtaAlla(env, 'vecka:'), hamtaAlla(env, 'plan:'), env.DB.get(`bed:${k.id}`, 'json'), env.DB.get(`med:${k.id}`, 'json')]);
-          const l = k.kod?.kod && !k.kod.forbrukad ? lank(env, k.kod.kod) : null;
+          const kod = giltigKod(k);
           return svar({ ok: true, klient: publikKlient(k), bokningar: bokningarFor(veckor, k.id), planer: planer.filter(x => x.uid === k.id).sort((a, b) => (b.datum + b.uppdaterad).localeCompare(a.datum + a.uppdaterad)),
-            bedomningar: bedomningar || [], media: media || [], lank: l, smsText: l ? smsText(env, k, l) : '', sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
+            bedomningar: bedomningar || [], media: media || [], lank: kod ? lank(env, kod) : null, kod, hamtaText: smsHamta(env, k), loggaText: kod ? smsLogga(env, k, kod) : '', hamtaLank: hamtaLank(env),
+            sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
         }
         if (!del && req.method === 'PUT') {
           const d = await json(); if (!d) return fel('trasig JSON');
@@ -682,13 +733,19 @@ export default {
           return svar({ ok: true });
         }
         const d = (await json()) || {};
+        // typ: hamta (sms 1), logga (sms 2) eller bada. ny: true ger en ny inloggningslänk (den gamla slutar gälla).
         if (del === 'lank' && req.method === 'POST') {
-          const kod = await nyKod(env, k);
-          const l = lank(env, kod);
-          const sms = d.skicka ? await skickaTillKlient(env, k, 'lank', smsText(env, k, l), base) : { ok: false, skickat: false, av: !smsPa(env) };
-          if (sms.skickat) k.vilLank = null;
+          const typ = ['hamta', 'logga', 'bada'].includes(d.typ) ? d.typ : 'logga';
+          let kod = giltigKod(k);
+          if (typ !== 'hamta' && (d.ny || !kod)) kod = await nyKod(env, k);
+          let sms = { ok: false, skickat: false, av: !smsPa(env) };
+          if (d.skicka) {
+            if (typ !== 'logga') sms = await skickaTillKlient(env, k, 'hamta', smsHamta(env, k), base);
+            if (typ !== 'hamta' && (typ === 'logga' || sms.skickat)) sms = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kod), base);
+          }
+          if (sms.skickat && typ !== 'hamta') k.vilLank = null;
           await sparaKlient(env, k);
-          return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, smsText: smsText(env, k, l), ...(await smsDag(env)) });
+          return svar({ ok: true, klient: publikKlient(k), lank: kod ? lank(env, kod) : null, kod, sms, hamtaText: smsHamta(env, k), loggaText: kod ? smsLogga(env, k, kod) : '', hamtaLank: hamtaLank(env), ...(await smsDag(env)) });
         }
         if (del === 'niva' && req.method === 'POST') {
           const niva = Math.min(5, Math.max(1, Math.round(+d.niva || k.niva)));

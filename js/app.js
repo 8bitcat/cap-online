@@ -735,7 +735,7 @@ function merPage() {
     ${rad('/foralder', '💛', 'Föräldraguiden', 'Kommunikation, feedback, motivation')}
     ${rad('/notiser', '🔔', 'Notiser', 'Påminnelser och nyheter från Haris')}
     ${rad('/start/1', '✏️', 'Ändra barnets uppgifter', 'Namn, ålder, position, drömspelare')}
-    ${store.session?.user?.klientId && !statusNu().sms ? rad('/pin', '🔑', 'Byt inloggningskod', 'Koden du loggar in med tillsammans med mobilnumret') : ''}
+    ${store.session?.user?.klientId && !statusNu().sms ? rad('/pin', '🔑', 'Egen inloggningskod', 'Valfritt: logga in med mobilnummer och kod på en ny telefon') : ''}
     ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP Online på telefonens hemskärm')}
     ${rad('/prototyper', '🧪', 'Prototyperna', 'De fyra tidigare spåren, för jämförelse')}
   </section>
@@ -1899,6 +1899,17 @@ async function boot() {
     else if (!r.offline && /inte inloggad/.test(r.fel || '')) { store.session = null; route(); }
   });
   window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); window.__capInstall = e; if (location.hash === '#/app') route(); });
+  // Inloggningslänken öppnar appen: caponline://k/KOD (knappen på cap.8bitcat.io/k/KOD) eller, med Associated
+  // Domains, https://cap.8bitcat.io/k/KOD direkt. Kräver @capacitor/app i bygget (från bygge 3).
+  try {
+    const C2 = window.Capacitor;
+    if (C2?.isNativePlatform?.() && C2.isPluginAvailable?.('App')) {
+      let senastLank = '';
+      const oppnaLank = u => { const m = /\/k\/([A-Za-z0-9-]{6,8})/.exec(u || ''); if (m && u !== senastLank) { senastLank = u; location.hash = '#/k/' + m[1]; } };
+      C2.Plugins.App.addListener('appUrlOpen', e => oppnaLank(e?.url)).catch?.(() => {});
+      C2.Plugins.App.getLaunchUrl().then(r => oppnaLank(r?.url)).catch(() => {});
+    }
+  } catch { /* äldre bygge utan App-pluginet */ }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) kollaNyVersion(); });
   await adminInit({ toast, route, go, content: C, onAction, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, onAction });

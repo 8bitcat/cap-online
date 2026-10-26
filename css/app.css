@@ -652,3 +652,8 @@ body.admin .view { max-width: 1080px; }
 .steg-lista li { padding-left: 4px; }
 .ikon-dela { display: inline-block; border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: 13px; }
 @media (hover: none) { .klient-card:hover { border-color: var(--line); } .klient-card.flagg:hover { border-color: var(--warn); } .btn.rec.on:hover { background: var(--danger); } }
+
+/* Inloggning hos Haris: två sms i steg */
+.sms-steg { border-top: 1px solid var(--line); padding: 12px 0 6px; }
+.sms-steg-head { display: flex; align-items: center; gap: 10px; }
+.sms-nr { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: var(--brand-ink); font-weight: 800; font-size: 14px; flex: none; }

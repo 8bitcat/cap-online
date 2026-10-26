@@ -35,7 +35,7 @@ const alder = fodd => fodd ? `${new Date().getFullYear() - fodd} år` : '';
 const helt = k => [k.barn, k.efternamn].filter(Boolean).join(' ');
 const traff = (k, q) => !q || [k.barn, k.efternamn, helt(k), k.foralder, k.telefon, visaTel(k.telefon), k.lag, k.email].some(x => (x || '').toLowerCase().includes(q));
 const fmtTid = iso => { const [d, t] = String(iso || '').split('T'); return d ? `${fmtIso(d)} ${(t || '').slice(0, 5)}` : ''; };
-const SMS_TYP = { lank: 'Länk', kod: 'Inloggningskod', test: 'Test' };
+const SMS_TYP = { hamta: 'Hämta appen', lank: 'Inloggningslänk', kod: 'Inloggningskod', test: 'Test' };
 const SMS_ST = { levererat: '<span style="color:var(--ok)">levererat ✓</span>', skickat: 'skickat', skickas: 'skickas…', misslyckat: '<span style="color:var(--danger)">gick inte fram</span>' };
 
 export async function klienterLadda(tvinga = false) {
@@ -98,7 +98,7 @@ function kort(k) {
       <span class="small muted">${esc(k.foralder || '')}${k.foralder ? ' · ' : ''}${esc(visaTel(k.telefon))} · ${esc(POS[k.position] || '')}${k.lag ? ` · ${esc(k.lag)}` : ''}</span>
       <span class="small kc-rad">${n ? `📅 ${DAG[n.dag]} ${fmtIso(n.datum)} ${esc(n.start)}` : '📅 Ingen tid bokad'}${k.senasteBed ? ` · 📊 ${esc(k.senasteBed.namn)} ${fmtSek(k.senasteBed.medel)}` : ''}${k.antalPass ? ` · ${k.antalPass} pass` : ''}</span>
     </span>
-    <span class="kc-flagg">${k.vilLank ? '⚠ Ny länk' : !k.senast ? '<span class="muted">Ej inloggad än</span>' : ''}</span>
+    <span class="kc-flagg">${k.vilLank ? '⚠ Ny länk' : k.inloggad?.app ? '<span style="color:var(--ok)">I appen ✓</span>' : !k.senast ? '<span class="muted">Ej inloggad än</span>' : '<span class="muted">Inte i appen än</span>'}</span>
   </a>`;
 }
 
@@ -112,7 +112,7 @@ function kundForm(k) {
   <section>
     <a class="back" href="#${ny ? '/admin/klienter' : '/admin/klient/' + k.id}">‹ ${ny ? 'Klienter' : esc(k.barn)}</a>
     <h1>${ny ? 'Ny kund' : 'Ändra uppgifter'}</h1>
-    ${ny ? `<p class="small muted">${st.sms ? 'Föräldern får en länk som sms från CapSwe. Sedan loggar hen in med mobilnumret och en kod som kommer på sms.' : 'Föräldern får en länk via sms. Där väljer hen en kod med fyra siffror och loggar sedan in med mobilnumret och koden.'} Barnets namn och födelseår kan föräldern också fylla i själv första gången.</p>` : ''}
+    ${ny ? `<p class="small muted">Föräldern får två sms: ett där hen hämtar appen och ett med en länk som loggar in i appen. Barnets namn och födelseår kan föräldern också fylla i själv första gången.</p>` : ''}
     <form data-form="${ny ? 'klient-ny' : 'klient-spara'}" class="panel">
       <h3>Spelaren</h3>
       <div class="auto-rad" style="display:flex;gap:12px;flex-wrap:wrap">
@@ -131,7 +131,7 @@ function kundForm(k) {
       <div class="field"><label for="kemail">E-post (valfritt)</label><input type="email" id="kemail" name="email" value="${esc(k.email || '')}" placeholder="namn@exempel.se"></div>
       <div class="field"><label for="kant">Anteckning</label><textarea id="kant" name="anteckning" placeholder="Styrkor, vad ni jobbar på, annat att komma ihåg…">${esc(k.anteckning || '')}</textarea></div>
       ${ny ? '' : `<div class="field"><label for="kstatus">Status</label><select id="kstatus" name="status">${[['ny', 'Ny'], ['aktiv', 'Aktiv'], ['paus', 'Paus']].map(([v, t]) => `<option value="${v}" ${k.status === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`}
-      ${ny && st.sms ? `<label class="toggle"><input type="checkbox" name="skicka" checked><span><b>Skicka länken som sms direkt</b><small>Från ${esc(st.smsFran || 'CapSwe')} till numret ovan. ${st.smsIdag || 0} av ${st.smsTak || 25} sms använda i dag.</small></span></label>` : ''}
+      ${ny && st.sms ? `<label class="toggle"><input type="checkbox" name="skicka" checked><span><b>Skicka båda sms:en direkt</b><small>Från ${esc(st.smsFran || 'CapSwe')} till numret ovan. ${st.smsIdag || 0} av ${st.smsTak || 25} sms använda i dag.</small></span></label>` : ''}
       <div class="btn-row two" style="margin-top:12px"><button class="btn grad" type="submit">${ny ? 'Lägg till kunden' : 'Spara'}</button><a class="btn secondary" href="#${ny ? '/admin/klienter' : '/admin/klient/' + k.id}">Avbryt</a></div>
     </form>
   </section>`;
@@ -192,37 +192,37 @@ function klientSida() {
   </div>`;
 }
 
+// Inloggning (Carl 2026-10-26): två sms. 1 = hämta appen, 2 = länken som loggar in i appen (med koden som reserv).
+// Båda kan skickas från Haris telefon (Meddelanden öppnas ifyllt, gratis) eller från servern när en sms-tjänst finns.
 function lankPanel(d) {
   const k = d.klient;
   const ny = st.nyLank?.klientId === k.id ? st.nyLank : null;
-  const lank = ny?.lank || d.lank;
-  const text = ny?.smsText || d.smsText;
-  const status = k.senast ? `Inloggad · senast ${esc(fmtTid(k.senast))}` : k.kod?.anvand ? (st.sms ? 'Har öppnat länken' : 'Har öppnat länken men inte valt kod än') : 'Har inte loggat in än';
+  const hamtaText = ny?.hamtaText || d.hamtaText || '';
+  const loggaText = ny?.loggaText ?? d.loggaText ?? '';
+  const kod = ny?.kod || d.kod;
+  const ii = k.inloggad || {};
+  const status = ii.app ? `<span style="color:var(--ok)">Inloggad i appen ✓</span> · ${esc(fmtTid(ii.app))}` : k.senast ? `Inloggad i webbläsaren ${esc(fmtTid(ii.webb || k.senast))}, inte i appen än` : 'Har inte loggat in än';
   const logg = (k.smsLogg || []).slice(-4).reverse();
   const kvar = Math.max(0, (st.smsTak || 25) - (st.smsIdag || 0));
-  const serverKnapp = (txt, klass = 'grad') => `<button class="btn ${klass}" data-action="klient-lank" data-skicka="1" ${kvar ? '' : 'disabled title="Dagens sms är slut"'}>📤 ${txt}</button>`;
+  const steg = (n, rubrik, text, typ, id, extra = '') => `
+    <div class="sms-steg">
+      <div class="sms-steg-head"><span class="sms-nr">${n}</span><b>${rubrik}</b></div>
+      ${text ? `<div class="btn-row two" style="margin:8px 0 6px">
+        <a class="btn ${n === 1 && !ii.app ? 'grad' : n === 2 && !ii.app ? 'grad' : 'secondary'}" href="${esc(smsLank(k.telefon, text))}">💬 Skicka från min telefon</a>
+        ${st.sms ? `<button class="btn secondary" data-action="klient-lank" data-typ="${typ}" data-skicka="1" ${kvar ? '' : 'disabled title="Dagens sms är slut"'}>📤 Skicka från servern</button>` : `<button class="btn secondary" data-action="kopiera" data-el="${id}">Kopiera texten</button>`}
+      </div>
+      <details class="sms-text"><summary class="small">Visa sms:et</summary><div class="msg" id="${id}">${esc(text)}</div>${extra}</details>`
+      : `<div class="btn-row" style="margin:8px 0 6px"><button class="btn secondary" data-action="klient-lank" data-typ="logga">🔗 Skapa inloggningslänk</button></div>`}
+    </div>`;
   return `
   <section class="panel ${k.vilLank || ny ? 'brand' : ''}">
     <div class="section-head"><h3>Inloggning</h3><span class="small muted">${esc(visaTel(k.telefon))}</span></div>
-    <p class="small ${k.vilLank ? '' : 'muted'}" style="margin:0 0 10px">${k.vilLank ? `⚠ Föräldern tryckte "Glömt koden" ${esc(fmtTid(k.vilLank))}. Skicka en ny länk.` : status}</p>
-    ${ny?.sms?.skickat ? `<div class="note small">Sms:et med länken är skickat från ${esc(st.smsFran || 'CapSwe')}.</div>` : ny?.sms?.fel && !ny.sms.av ? `<div class="note warn small">Servern kunde inte skicka sms: ${esc(ny.sms.fel)}. Skicka från telefonen i stället.</div>` : ''}
-    ${st.sms ? `
-      <div class="btn-row two">
-        ${serverKnapp(lank ? 'Skicka länken igen' : 'Skicka länken som sms')}
-        ${lank ? `<a class="btn secondary" href="${esc(smsLank(k.telefon, text))}">💬 Från min telefon</a>` : `<button class="btn secondary" data-action="klient-lank">🔗 Bara skapa länken</button>`}
-      </div>
-      <p class="small muted" style="margin:0 0 4px">Länken öppnar appen och loggar in. Efter det loggar föräldern in med mobilnumret och en sms-kod. ${kvar} av ${st.smsTak || 25} sms kvar i dag.</p>`
-    : lank ? `
-      <div class="btn-row two">
-        <a class="btn grad" href="${esc(smsLank(k.telefon, text))}">💬 Skicka sms från telefonen</a>
-        <button class="btn secondary" data-action="kopiera" data-el="smsmsg">Kopiera texten</button>
-      </div>`
-    : `<div class="btn-row"><button class="btn secondary" data-action="klient-lank">🔗 Skapa ny länk${k.harPin ? ' (om koden glömts)' : ''}</button></div>
-      <p class="small muted" style="margin:0">En ny länk låter föräldern välja en ny kod. Den gamla koden slutar gälla när den nya är vald.</p>`}
-    ${lank ? `<details class="sms-text"><summary class="small">Visa sms-texten och länken</summary>
-      <div class="msg" id="smsmsg">${esc(text)}</div>
-      <p class="small muted" style="margin:0">Länken: <a href="${esc(lank)}" target="_blank" rel="noopener">${esc(lank.replace(/^https?:\/\//, ''))}</a> · <a data-action="kopiera" data-text="${esc(lank)}" href="#/admin/klient/${k.id}">kopiera</a> · <a data-action="klient-lank" href="#/admin/klient/${k.id}">ny länk</a></p>
-    </details>` : ''}
+    <p class="small ${k.vilLank ? '' : 'muted'}" style="margin:0 0 6px">${k.vilLank ? `⚠ Föräldern tryckte "Glömt koden" ${esc(fmtTid(k.vilLank))}. Skicka sms 2 igen.` : status}</p>
+    ${ny?.sms?.skickat ? `<div class="note small">Sms:et är skickat från ${esc(st.smsFran || 'CapSwe')}.</div>` : ny?.sms?.fel && !ny.sms.av ? `<div class="note warn small">Servern kunde inte skicka sms: ${esc(ny.sms.fel)}. Skicka från telefonen i stället.</div>` : ''}
+    <p class="small muted" style="margin:0 0 4px">Skicka båda till föräldern. Först hämtar hen appen, sedan trycker hen på länken i sms 2 så loggas hen in i appen.</p>
+    ${steg(1, 'Hämta appen', hamtaText, 'hamta', 'smsHamta', d.hamtaLank ? `<p class="small muted" style="margin:0">Länken: ${esc(d.hamtaLank.replace(/^https?:\/\//, ''))}</p>` : '')}
+    ${steg(2, 'Logga in i appen', loggaText, 'logga', 'smsLogga', kod ? `<p class="small muted" style="margin:0">Koden: <b>${esc(kod.slice(0, 3))}-${esc(kod.slice(3))}</b> · <a data-action="kopiera" data-text="${esc(ny?.lank || d.lank || '')}" href="#/admin/klient/${k.id}">kopiera länken</a> · <a data-action="klient-lank" data-typ="logga" data-ny="1" href="#/admin/klient/${k.id}">ny länk</a> (den gamla slutar gälla)</p>` : '')}
+    ${st.sms ? `<p class="small muted" style="margin:6px 0 0">${kvar} av ${st.smsTak || 25} sms kvar i dag.</p>` : ''}
     ${logg.length ? `<ul class="sms-logg small">${logg.map(e => `<li>${SMS_TYP[e.typ] || e.typ} · ${esc(fmtTid(e.t))} · ${SMS_ST[e.status] || esc(e.status)}${e.fel ? ` <span class="muted">(${esc(e.fel)})</span>` : ''}</li>`).join('')}</ul>` : ''}
   </section>`;
 }
@@ -332,8 +332,13 @@ export async function klienterAction(action, el, e) {
   }
   if (action === 'klient-lank') {
     e.preventDefault();
-    const r = await api.admin.post(`/admin/klient/${k.id}/lank`, { skicka: !!el.dataset.skicka });
-    if (r.ok) { st.nyLank = { klientId: k.id, ...r }; d.klient = r.klient; d.lank = r.lank; d.smsText = r.smsText; smsRakna(r); st.laddat = false; toast(r.sms?.skickat ? `Sms:et med länken är skickat till ${visaTel(k.telefon)}` : r.sms?.tak ? 'Dagens sms är slut. Skicka från din telefon i stället.' : el.dataset.skicka ? `Sms:et gick inte iväg: ${r.sms?.fel || 'okänt fel'}` : 'Ny länk skapad'); } else toast(`Gick inte: ${r.fel}`);
+    const typ = el.dataset.typ || 'logga';
+    const r = await api.admin.post(`/admin/klient/${k.id}/lank`, { typ, skicka: !!el.dataset.skicka, ny: !!el.dataset.ny });
+    if (r.ok) {
+      st.nyLank = { klientId: k.id, ...r }; d.klient = r.klient; d.lank = r.lank; d.kod = r.kod; d.hamtaText = r.hamtaText; d.loggaText = r.loggaText; smsRakna(r); st.laddat = false;
+      const vad = typ === 'hamta' ? 'Sms 1 (hämta appen)' : 'Sms 2 (logga in)';
+      toast(r.sms?.skickat ? `${vad} är skickat till ${visaTel(k.telefon)}` : r.sms?.tak ? 'Dagens sms är slut. Skicka från din telefon i stället.' : el.dataset.skicka ? `Sms:et gick inte iväg: ${r.sms?.fel || 'okänt fel'}` : el.dataset.ny ? 'Ny inloggningslänk skapad. Den gamla gäller inte längre.' : 'Inloggningslänken är skapad');
+    } else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }
   if (action === 'klient-boka-vecka') { st.veckaVald = el.dataset.v; route(); return true; }
@@ -401,7 +406,7 @@ export async function klienterSubmit(kind, f, fd) {
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
     st.nyLank = { klientId: r.klient.id, ...r }; st.laddat = false; st.vald = null; smsRakna(r);
     const vem = helt(r.klient) || r.klient.foralder || visaTel(r.klient.telefon);
-    toast(r.sms?.skickat ? `${vem} är inlagd och länken skickad som sms` : `${vem} är inlagd. Skicka länken till ${r.klient.foralder || 'föräldern'}.`);
+    toast(r.sms?.skickat ? `${vem} är inlagd och båda sms:en skickade` : `${vem} är inlagd. Skicka sms 1 och 2 till ${r.klient.foralder || 'föräldern'} härunder.`);
     go(`/admin/klient/${r.klient.id}`); return true;
   }
   if (kind === 'klient-spara') {

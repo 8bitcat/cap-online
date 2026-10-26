@@ -33,27 +33,33 @@ kundflödet från ny kund till diagram, kräver Chrome och den lokala servern).
 ## Konto, admin och API
 
 - **API:** `server/cap-api/` är en Cloudflare Worker på <https://cap-api.8bitcat.io>
-  (KV). Driftsätt med `bash tools/api-deploy.sh` (`--secrets` första gången,
-  `--r2` när R2 är påslaget, `--sms` när 46elks-kontot finns).
-  Adminlösenordet ligger i `.secrets/cap-admin-losen.txt`.
-- **Ny kund:** Haris lägger in förälder och mobilnummer i admin → Klienter →
-  Ny kund (barnets uppgifter är valfria, föräldern fyller i dem). Med sms på
-  skickar servern länken direkt från **CapSwe**; annars öppnar "Skicka sms
-  från telefonen" Meddelanden med texten ifylld. Klientsidan har "Skicka
-  länken igen" och visar leveransstatus för varje sms.
-- **Sms (46elks):** avsändare `SMS_FROM`, tak `SMS_MAX_DAG` (25 per dygn) och
-  `APP_LANK_IOS` står i `server/cap-api/wrangler.toml`. Slå på med användare
-  och lösenord från 46elks i `.secrets/cap-sms.txt` (två rader) och kör
-  `bash tools/api-deploy.sh --sms`. Testsms finns under admin → Mer.
-- **Inloggning:** med sms på skriver föräldern sitt mobilnummer och får en
-  kod med sex siffror (`/auth/sms`, `/auth/sms/verifiera`). Länken i
-  välkomst-sms:et loggar in en gång och visar "Hämta appen". Med sms av:
-  länken leder till "välj en kod" (4–6 siffror), sedan nummer + kod
-  (`/auth/login`), och "Glömt koden?" flaggar klienten (⚠ Ny länk). Sessionen
-  gäller 400 dagar och förlängs vid användning. Gamla e-postkoder fungerar
-  under `#/login/kod`. "Prova utan konto" finns för demo.
-- **Test av sms-flödet utan riktiga sms:** `tools/sms-test.js` mot
-  `wrangler dev` med `SMS_TEST=1` (instruktion överst i filen).
+  och korta länkar på <https://cap.8bitcat.io> (samma worker, KV). Driftsätt
+  med `bash tools/api-deploy.sh` (`--secrets` första gången, `--r2` när R2 är
+  påslaget). Adminlösenordet ligger i `.secrets/cap-admin-losen.txt`.
+- **Ny kund, två sms** (2026-10-26): Haris lägger in förälder och
+  mobilnummer i admin → Klienter → Ny kund. Klientsidan visar **sms 1 Hämta
+  appen** (`cap.8bitcat.io/app`: iPhone → `APP_LANK_IOS` när den finns,
+  annars webbappens Hämta appen-sida) och **sms 2 Logga in i appen**
+  (`cap.8bitcat.io/k/KOD` + koden som reserv). "Skicka från min telefon"
+  öppnar Meddelanden med texten ifylld, gratis. Haris ser om föräldern är
+  inloggad i appen eller bara i webbläsaren.
+- **Inloggningslänken:** `cap.8bitcat.io/k/KOD` i Safari visar "Öppna CAP
+  Online", som öppnar appen med `caponline://k/KOD` (länkschemat i
+  Info.plist, @capacitor/app i appen, från bygge 3). På Android och dator går
+  den direkt till webbappen. Länken fungerar flera gånger tills Haris skapar en
+  ny. `/.well-known/apple-app-site-association` finns redan, så med
+  Associated Domains på App ID:t (och `applinks:cap.8bitcat.io` i
+  App.entitlements) öppnar länken appen direkt utan Safari-sidan.
+- **Inloggning utan länk:** i appen skriver man koden ur sms 2. Valfri egen
+  kod (Mer → Egen inloggningskod) ger inloggning med mobilnummer + kod.
+  Sessionen gäller 400 dagar och förlängs vid användning. Gamla e-postkoder
+  fungerar. "Prova utan konto" finns för demo.
+- **Sms från servern är förberett men avstängt** (Carl vill inte ha 46elks):
+  sms-koder vid inloggning, avsändare `SMS_FROM` (CapSwe), tak `SMS_MAX_DAG`
+  (25 per dygn) och leveransstatus. Koden för 46elks sitter i `skickaSmsNu`
+  i `server/cap-api/src/index.js` och kan bytas mot en annan sändare, till
+  exempel en Android-telefon med SMS Gateway for Android. Test utan riktiga
+  sms: `tools/sms-test.js` (SMS_TEST=1). De två sms:en: `tools/app-lank-test.js`.
 - **Klientsidan (admin):** nivå 1–5 med historik (höj/sänk), tider (boka åt
   kunden, även i stängda veckor), pass (Planera nytt pass förifyllt med
   spelaren), bedömningar per typ med diagram, filmer och ljud, anteckning.

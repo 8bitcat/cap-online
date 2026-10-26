@@ -3,6 +3,36 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-26 – två sms: hämta appen, logga in i appen
+
+- **Ingen 46elks** (Carl: "jag vill inte använda 46elks"). Sms:en skickas
+  från Haris telefon via "Skicka från min telefon" (Meddelanden öppnas
+  ifyllt). Det kostar inget och kräver inget konto. Serverns sms-kod finns
+  kvar men är avstängd. Gratisvägen för automatiska sms är en Android-telefon
+  med SMS Gateway for Android (avsändaren blir då telefonens nummer); den är
+  inte byggd, Carl får välja.
+- **Två sms** (Carl: "ingen förälder kommer ha appen, så vi behöver skapa
+  ett sms för att hämta appen och ett som man sedan trycker på för att logga
+  in när appen är inne i telefonen"). Sms 1: `cap.8bitcat.io/app`. Sms 2:
+  `cap.8bitcat.io/k/KOD` och koden i klartext. Båda skickas samtidigt;
+  föräldern installerar appen och trycker sedan på länken i sms 2.
+- **Länken till appen = eget länkschema** `caponline://` i stället för
+  Universal Links, eftersom Associated Domains kräver en ändring på App ID:t
+  hos Apple och en ny profil; utan dem skulle bygget fallera. Safari-sidan
+  bakom länken har knappen "Öppna CAP Online". Associated Domains är
+  förberett på servern och tar bort Safari-sidan när Carl slår på det.
+- **Länken fungerar flera gånger** (tidigare engångs med sms): föräldern kan
+  råka trycka innan appen är installerad, och ska ändå kunna logga in i
+  appen efteråt. Ny länk från Haris gör den gamla ogiltig.
+- **Ingen tvingad egen kod** efter länken. Det första föräldern gör är
+  barnets namn och födelseår. Egen kod är valfri under Mer.
+- **Haris ser var föräldern loggat in** (`inloggad.app`/`inloggad.webb` på
+  klienten): "I appen ✓" i listan, annars "Inte i appen än".
+- **Hämta appen-länken** pekar på `APP_LANK_IOS` för iPhone. Den är tom tills
+  Carl skapar en publik TestFlight-länk (extern testgrupp, Apples
+  betagranskning) eller appen finns i App Store. Tills dess visas webbappens
+  instruktion för hemskärmen.
+
 ## 2026-10-25 – sms-inloggning, CapSwe, barnets namn först
 
 - **Inloggning med mobilnummer och sms-kod** (Carl: "sms-inloggning via
