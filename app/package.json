@@ -1,7 +1,7 @@
 {
   "name": "cap-online-app",
   "private": true,
-  "appVersion": "0.4",
+  "appVersion": "0.5",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
