@@ -3,6 +3,36 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-26 – Övningsbanken (Excel till Haris)
+
+- **En Excel-fil med alla övningar i appen** (Carl: "skapa en excelfil som vi
+  kallar övningsbanken … haris ska få filen så han kan fylla på … kolumner så
+  vi kan tagga alla videos … planera pass … så läser vi in den sen").
+  `docs/Övningsbanken.xlsx` byggs av `tools/ovningsbank.py` ur content.json,
+  taggar.json och passmallen i admin. Kolumnnycklarna i `KOLUMNER` är kontraktet
+  för den kommande importen: matcha på ID, rader utan ID är nya övningar.
+- **Rullistor i stället för fritext** för Typ, Fas, Område, Nivå, Yta, Film och
+  Finns film; kryss (x) för utrustning och sällskap; Färdighet, Erfarenhet,
+  Position och Plats får flera värden med kommatecken (rullista utan spärr).
+  Listorna ligger på fliken Taggar så Haris kan utöka dem.
+- **Nivå 1–5 = klientregistrets nivåer** (Bollkompis … Matchvinnare), lägsta
+  nivå övningen passar. Befintliga raders färdighet, nivå, sällskap och yta är
+  **(antagande)** – Carls/Claudes tolkning av filmerna, Haris granskar.
+- Fliken Planera pass räknar ihop tiden mot ett riktmärke (55 min) med
+  INDEX/MATCH mot Övningar; formlerna räknas av Excel vid öppning (ingen
+  LibreOffice lokalt för förräkning).
+
+## 2026-10-27 – kortare start, resten på spelarkortet
+
+- **Efter inloggningen bara barnets förnamn, efternamn och födelseår** (Carl:
+  "sen kan man gå vidare. vill man fylla i mer får man gå till
+  spelarkortet"). Knappen heter "Kom igång" och leder till startsidan.
+  Position, fot, erfarenhet, drömspelare, svårigheter, mål och frekvens fylls
+  i under Spelarkortet → "Fyll i mer" (två steg). Tills dess används
+  standardvärden (position "Vet inte än", erfarenhet "Spelat 1–2 år", två
+  pass i veckan) och startsidan visar "Fyll i mer om X på spelarkortet".
+  `profile.mer` håller reda på om det är gjort.
+
 ## 2026-10-26 – två sms: hämta appen, logga in i appen
 
 - **Ingen 46elks** (Carl: "jag vill inte använda 46elks"). Sms:en skickas

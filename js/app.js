@@ -603,21 +603,25 @@ function start(step) {
   const ar = new Date().getFullYear();
   const fodda = Array.from({ length: 11 }, (_, i) => ar - 5 - i); // 5–15 år
   const foddVald = d.fodd || (d.age ? String(ar - Number(d.age)) : '');
-  const head = (n, title, lead) => `
-    <div class="eyebrow">Steg ${n} av 3</div>
+  // Carl 2026-10-27: efter inloggningen bara namn + födelseår, sedan vidare. Resten (steg 2–3) fylls i från spelarkortet.
+  const head = (n, title, lead) => n === 1 ? `
+    <div class="eyebrow">${store.profile ? 'Barnets uppgifter' : 'Välkommen'}</div>
+    <h1>${title}</h1>
+    <p class="muted">${lead}</p>` : `
+    <div class="eyebrow">Spelarkortet · ${n - 1} av 2</div>
     <h1>${title}</h1>
     <p class="muted">${lead}</p>
-    <div class="progress wiz-progress"><i style="width:${Math.round(n / 3 * 100)}%"></i></div>`;
+    <div class="progress wiz-progress"><i style="width:${Math.round((n - 1) / 2 * 100)}%"></i></div>`;
   if (step === 1) return `
   <section class="wiz">
     <img class="hero-logo" src="assets/cap-logo.png" alt="">
-    ${head(1, 'Ditt barn', 'Börja med barnets namn och vilket år hen är född. Passen och filmerna anpassas efter åldern.')}
+    ${head(1, 'Ditt barn', 'Skriv barnets namn och vilket år hen är född, så kan ni börja. Mer om barnet kan du fylla i på spelarkortet när du vill.')}
     <form data-form="wiz1">
       <div class="field"><label for="name">Förnamn</label><input type="text" id="name" name="name" value="${esc(d.name || '')}" placeholder="T.ex. Elsa" autocomplete="off" autocapitalize="words" required></div>
       <div class="field"><label for="efternamn">Efternamn</label><input type="text" id="efternamn" name="efternamn" value="${esc(d.efternamn || '')}" placeholder="T.ex. Andersson" autocomplete="off" autocapitalize="words" required></div>
       <div class="field"><label for="fodd">Födelseår</label>
         <select id="fodd" name="fodd" required><option value="" ${foddVald ? '' : 'selected'} disabled>Välj år</option>${fodda.map(y => `<option value="${y}" ${String(foddVald) === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
-      <button class="btn grad block" type="submit">Nästa ›</button>
+      <button class="btn grad block" type="submit">${store.profile ? 'Spara' : 'Kom igång ›'}</button>
     </form>
     ${store.session ? '' : '<p class="small" style="margin-top:14px"><a href="#/prototyper">‹ Byt prototyp</a></p>'}
   </section>`;
@@ -637,7 +641,7 @@ function start(step) {
         <div class="options drom">
           ${C.stig.drommar.map(x => `<label><input type="radio" name="drom" value="${x.id}" ${d.drom === x.id ? 'checked' : ''}><span><b>${x.ikon} ${esc(x.namn)}</b><small>${esc(x.desc)}</small></span></label>`).join('')}
         </div></div>
-      <div class="btn-row two"><a class="btn secondary" href="#/start/1">‹ Tillbaka</a><button class="btn grad" type="submit">Nästa ›</button></div>
+      <div class="btn-row two"><a class="btn secondary" href="#/spelarkort">‹ Spelarkortet</a><button class="btn grad" type="submit">Nästa ›</button></div>
     </form>
   </section>`;
   const diff = new Set(d.difficulties || []);
@@ -651,7 +655,7 @@ function start(step) {
       <div class="field"><label for="goal">Mål</label><input type="text" id="goal" name="goal" value="${esc(d.goal || '')}" placeholder="T.ex. våga mer med bollen i match"></div>
       <div class="field"><span class="label">Hur ofta kan ni extraträna?</span>
         <div class="options rating">${['1', '2', '3+'].map(f => `<label><input type="radio" name="freq" value="${f}" ${(d.freq || '2') === f ? 'checked' : ''}>${f} / vecka</label>`).join('')}</div></div>
-      <div class="btn-row two"><a class="btn secondary" href="#/start/2">‹ Tillbaka</a><button class="btn grad" type="submit">${store.profile ? 'Spara' : 'Skapa spelarkortet'}</button></div>
+      <div class="btn-row two"><a class="btn secondary" href="#/start/2">‹ Tillbaka</a><button class="btn grad" type="submit">Spara på spelarkortet</button></div>
     </form>
   </section>`;
 }
@@ -701,7 +705,8 @@ function appHome() {
   <section class="greet">
     <div class="eyebrow">Etapp ${L.etapp} · ${esc(levelDef(L.etapp).name)}</div>
     <h1>Hej ${esc(p.name)}!</h1>
-    <p class="muted small" style="margin:0">${dr ? `${dr.ikon} På väg att bli ${esc(dr.namn)} · ` : ''}${esc(position(p.position).name)} · ${L.klara} av ${L.total} steg på stigen</p>
+    <p class="muted small" style="margin:0">${dr ? `${dr.ikon} På väg att bli ${esc(dr.namn)} · ` : ''}${p.mer === false ? `${esc(p.age)} år` : esc(position(p.position).name)} · ${L.klara} av ${L.total} steg på stigen</p>
+    ${p.mer === false ? `<p class="small" style="margin:6px 0 0"><a href="#/spelarkort">Fyll i mer om ${esc(p.name)} på spelarkortet ›</a></p>` : ''}
   </section>
   <section class="start-cards">
     <a class="start-card" href="#/stig">
@@ -734,7 +739,7 @@ function merPage() {
     ${rad('/filmer', '🎬', 'Filmer från Haris', 'Alla publicerade filmer med taggar')}
     ${rad('/foralder', '💛', 'Föräldraguiden', 'Kommunikation, feedback, motivation')}
     ${rad('/notiser', '🔔', 'Notiser', 'Påminnelser och nyheter från Haris')}
-    ${rad('/start/1', '✏️', 'Ändra barnets uppgifter', 'Namn, ålder, position, drömspelare')}
+    ${rad('/start/1', '✏️', 'Ändra barnets namn och födelseår', 'Position, drömspelare och mål finns på spelarkortet')}
     ${store.session?.user?.klientId && !statusNu().sms ? rad('/pin', '🔑', 'Egen inloggningskod', 'Valfritt: logga in med mobilnummer och kod på en ny telefon') : ''}
     ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP Online på telefonens hemskärm')}
     ${rad('/prototyper', '🧪', 'Prototyperna', 'De fyra tidigare spåren, för jämförelse')}
@@ -1194,10 +1199,15 @@ function spelarkort() {
   return `
   <section>
     <div class="eyebrow">Spelarkort</div>
-    <h1>${esc(p.name)}</h1>
+    <h1>${esc([p.name, p.efternamn].filter(Boolean).join(' '))}</h1>
     ${playerCard(p, 'big')}
     ${xpBar()}
   </section>
+  ${p.mer ? '' : `<section class="panel brand">
+    <h3 style="margin-top:0">Berätta mer om ${esc(p.name)}</h3>
+    <p class="small muted">Position, bästa fot, erfarenhet, vilken spelare ${esc(p.name)} vill bli och vad som känns svårt. Då passar passen och filmerna bättre.</p>
+    <a class="btn grad block" href="#/start/2">Fyll i mer</a>
+  </section>`}
   <section class="stats">
     <div class="stat"><b>${logs.length}</b><span>pass loggade</span></div>
     <div class="stat"><b>${store.plans().length}</b><span>planerade pass</span></div>
@@ -1218,8 +1228,9 @@ function spelarkort() {
   ${notisPanel()}
   <section class="btn-row two">
     <a class="btn grad" href="#/planera">Planera dagens pass</a>
-    <a class="btn secondary" href="#/start/1">Ändra profilen</a>
-  </section>`;
+    <a class="btn secondary" href="#/start/2">${p.mer ? 'Ändra spelarkortet' : 'Fyll i mer'}</a>
+  </section>
+  <p class="small" style="text-align:center"><a href="#/start/1">Ändra namn och födelseår</a></p>`;
 }
 
 // Notiser: påminnelser och nyheter från Haris, bara i appen. Kortversion i Bibliotek och Spelarkort.
@@ -1819,13 +1830,21 @@ async function onSubmit(e) {
     const fodd = String(fd.get('fodd') || '');
     const name = (fd.get('name') || '').trim(), efternamn = (fd.get('efternamn') || '').trim();
     if (!/^\d{4}$/.test(fodd)) { toast('Välj vilket år barnet är fött'); return; }
-    store.draft = { ...store.draft, name, efternamn, fodd, age: String(new Date().getFullYear() - Number(fodd)) };
-    if (store.profile) store.profile = { ...store.profile, name, efternamn, fodd, age: store.draft.age };
+    const age = String(new Date().getFullYear() - Number(fodd));
+    const isNew = !store.profile;
+    // Ny profil: standardvärden tills föräldern fyller i mer på spelarkortet (position, fot, erfarenhet, mål …)
+    const p = isNew
+      ? { position: store.draft.position || 'okand', foot: 'Höger', experience: 'Spelat 1–2 år', drom: '', difficulties: [], strengths: '', goal: '', freq: '2', ...store.draft, name, efternamn, fodd, age, mer: false }
+      : { ...store.profile, name, efternamn, fodd, age };
+    p.recommended = recommend(p);
+    store.profile = p;
+    store.draft = {};
     if (store.session?.user?.klientId) {
       const r = await sparaBarn({ barn: name, efternamn, fodd });
       if (!r.ok && !r.offline) toast(`Kunde inte spara hos Haris: ${r.fel || 'okänt fel'}`);
     }
-    go('/start/2');
+    if (isNew) { paminnUppdatera(); celebrate(before, `Välkommen, ${name}!`); go('/'); }
+    else { toast('Sparat'); go('/spelarkort'); }
   } else if (kind === 'wiz2') {
     store.draft = { ...store.draft, position: fd.get('position'), foot: fd.get('foot'), experience: fd.get('experience'), drom: fd.get('drom') || '' };
     if (store.session?.user?.klientId) sparaBarn({ barn: store.draft.name || store.profile?.name, efternamn: store.draft.efternamn ?? store.profile?.efternamn, fodd: store.draft.fodd || store.profile?.fodd, position: fd.get('position') });
@@ -1837,13 +1856,15 @@ async function onSubmit(e) {
       difficulties: fd.getAll('difficulties'), strengths: (fd.get('strengths') || '').trim(),
       goal: (fd.get('goal') || '').trim(), freq: fd.get('freq'),
     };
+    const forstaGangen = !store.profile?.mer;
+    p.mer = true;
     p.recommended = recommend(p);
     store.profile = p;
     store.draft = {};
     paminnUppdatera();
-    if (isNew) store.addRequest({ kind: 'valj', text: `${p.name}, ${p.age} år, ${position(p.position).name}, ${p.experience}. Svårt: ${p.difficulties.join(', ') || '–'}. Mål: ${p.goal || '–'}` });
-    celebrate(before, isNew ? 'Spelarkortet är klart' : 'Profilen är sparad');
-    go('/');
+    if (isNew || forstaGangen) store.addRequest({ kind: 'valj', text: `${p.name}, ${p.age} år, ${position(p.position).name}, ${p.experience}. Svårt: ${p.difficulties.join(', ') || '–'}. Mål: ${p.goal || '–'}` });
+    celebrate(before, forstaGangen ? 'Spelarkortet är ifyllt' : 'Spelarkortet är sparat');
+    go('/spelarkort');
   } else if (kind === 'planera') {
     const plan = planSession({ minutes: Number(fd.get('minutes')), focus: fd.get('focus') });
     store.addPlan(plan);
