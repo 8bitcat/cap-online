@@ -16,7 +16,10 @@
 // Tider och bokning (förälder)
 //   GET  /veckor          Bearer                    → {nu, veckor: [{v, slots}]} öppna veckor från och med denna
 //   POST /boka/hall · /boka/bekrafta · /boka/avboka {v, slot}
-//   GET  /mina            Bearer                    → {klient, bokningar, planer, bedomningar, media}
+//   POST /boka/swishad    {v, slot, angra}          → föräldern säger att hen swishat (Haris bekräftar)
+//   GET  /mina            Bearer                    → {klient, bokningar, planer, bedomningar, media, betalning}
+// Betalning (Carl 2026-10-27): Swish Företag har inget API. Appen öppnar Swish med Haris nummer, priset och ett
+//   meddelande ifyllt, och Haris bockar av betalningen. /veckor och /mina skickar med betalning {swish, pris}.
 // Admin (Bearer <admintoken> från /admin/login)
 //   POST /admin/login     {losen}                   → {token}
 //   Klientregistret: GET /admin/klienter · POST /admin/klient · GET/PUT/DELETE /admin/klient/<id>
@@ -28,13 +31,16 @@
 //   Filmer: GET /admin/filmer · POST /admin/film · PUT/DELETE /admin/film/<id>
 //   Uppladdning i delar till R2: POST /admin/upload/start {filmId|klientId, filnamn, typ} · PUT /admin/upload/part · POST /admin/upload/complete · PUT /admin/upload/poster/<id>
 //   Tider: GET /admin/veckor · PUT /admin/vecka/<v> · POST /admin/vecka/<v>/auto · POST /admin/vecka/<v>/duplicera
+//     POST /admin/vecka/<v>/betald {slot, betald}   Haris bockar av (eller ångrar) en betalning
 //   Stigen: GET /config/stig · PUT /admin/config/stig
+//   Swish: GET/PUT /admin/config/betalning {swish, pris}
 //   Pass: GET /admin/planer · POST /admin/plan · GET/PUT/DELETE /admin/plan/<id>
 //   Övrigt: POST /admin/notis (push) · POST /admin/inbjudan + GET /admin/inbjudningar (gamla e-postkoder, kvar för bakåtkompatibilitet)
 //
 // KV: adm:<token> · klient:<id> · klienter (index) · tel:<telefon>=id · kod:<KOD>={klientId} · sess:<token>={uid}
 //     bed:<klientId> (bedömningar) · med:<klientId> (filmer/ljud) · lim:<telefon> (inloggningsförsök)
-//     film:<id> · vecka:<YYYY-Www> · config:stig · plan:<id> · inv:<KOD>, user:<uid>, email:<email> (gamla konton)
+//     film:<id> · vecka:<YYYY-Www> · config:stig · config:betalning · plan:<id> · inv:<KOD>, user:<uid>, email:<email> (gamla konton)
+//     En bokning (slot.bokad) har pris (låst vid bokningen), swishad (föräldern) och betald (Haris), tidsstämplar eller null.
 // SMS: 46elks när hemligheterna SMS_USER och SMS_PASS finns (SMS_FROM = avsändare, standard "CAP", eller ett eget
 //      nummer hos 46elks om föräldrarna ska kunna svara). Annars skickar Haris länken själv från sin telefon (appen
 //      öppnar Meddelanden med texten ifylld) och föräldrarna loggar in med en egen kod. SMS_TEST=1 (bara lokalt i
@@ -316,9 +322,21 @@ function publikVecka(vecka, uid) {
 // Bokade tider för ett konto, ur alla veckor
 function bokningarFor(veckor, uid) {
   const ut = [];
-  for (const w of veckor) for (const s of w.slots) if (s.bokad?.uid === uid) ut.push({ v: w.v, id: s.id, dag: s.dag, start: s.start, slut: s.slut, plats: s.plats, barn: s.bokad.barn, datum: datumFor(w.v, s.dag), mandag: mandag(w.v).toISOString().slice(0, 10), av: s.bokad.av || 'foralder' });
+  for (const w of veckor) for (const s of w.slots) if (s.bokad?.uid === uid) ut.push({ v: w.v, id: s.id, dag: s.dag, start: s.start, slut: s.slut, plats: s.plats, barn: s.bokad.barn, datum: datumFor(w.v, s.dag), mandag: mandag(w.v).toISOString().slice(0, 10), av: s.bokad.av || 'foralder',
+    pris: s.bokad.pris || null, swishad: s.bokad.swishad || null, betald: s.bokad.betald || null });
   return ut.sort((a, b) => (a.datum + a.start).localeCompare(b.datum + b.start));
 }
+
+// ---------- betalning med Swish Företag ----------
+// Företagsnummer 123xxxxxxx, insamlingsnummer 90xxxxx, eller ett mobilnummer (Swish vill ha 46-formen)
+function swishNr(v) {
+  let d = String(v ?? '').replace(/\D/g, '');
+  if (/^07\d{8}$/.test(d)) d = '46' + d.slice(1);
+  return /^(123\d{7}|90\d{5}|467\d{8})$/.test(d) ? d : '';
+}
+const hamtaBetalning = async env => (await env.DB.get('config:betalning', 'json')) || { swish: '', pris: null };
+// till föräldrarna bara när både nummer och pris finns, annars visas ingen Swish-knapp
+const publikBetalning = b => (b?.swish && b?.pris ? { swish: b.swish, pris: b.pris } : null);
 async function sessionUser(env, req) {
   const t = bearer(req);
   const s = t && await env.DB.get(`sess:${t}`, 'json');
@@ -592,7 +610,7 @@ export default {
       if (!user) return fel('inte inloggad', 401);
       const nuV = veckaAv();
       const alla = (await hamtaAlla(env, 'vecka:')).filter(w => w.oppen && w.v >= nuV).sort((a, b) => a.v.localeCompare(b.v));
-      return svar({ ok: true, nu: nuV, veckor: alla.map(w => publikVecka(stadaHall(w), user.uid)) });
+      return svar({ ok: true, nu: nuV, veckor: alla.map(w => publikVecka(stadaHall(w), user.uid)), betalning: publikBetalning(await hamtaBetalning(env)) });
     }
     if (p.startsWith('/boka/') && req.method === 'POST') {
       const user = await sessionUser(env, req);
@@ -602,7 +620,7 @@ export default {
       if (!VECKA_RE.test(v)) return fel('ogiltig vecka');
       const vecka = stadaHall(await hamtaVecka(env, v));
       const s = vecka.slots.find(x => x.id === String(d.slot || ''));
-      if (!s || (!vecka.oppen && p !== '/boka/avboka')) return fel('tiden finns inte', 404);
+      if (!s || (!vecka.oppen && p !== '/boka/avboka' && p !== '/boka/swishad')) return fel('tiden finns inte', 404);
       const now = Date.now();
       if (p === '/boka/hall') {
         if (s.bokad) return fel(s.bokad.uid === user.uid ? 'du har redan bokat den här tiden' : 'tiden är redan bokad', 409);
@@ -614,10 +632,16 @@ export default {
       if (p === '/boka/bekrafta') {
         if (s.bokad) return fel('tiden hann bli bokad', 409);
         if (!s.hall || s.hall.uid !== user.uid || s.hall.tills < now) return fel('dina 60 sekunder gick ut, håll platsen igen', 410);
-        s.bokad = { uid: user.uid, namn: user.namn || '', barn: ren(d.barn, 40) || user.barn || '', email: user.email || '', telefon: user.telefon || '', t: nu(), av: 'foralder' };
+        s.bokad = { uid: user.uid, namn: user.namn || '', barn: ren(d.barn, 40) || user.barn || '', email: user.email || '', telefon: user.telefon || '', t: nu(), av: 'foralder', pris: (await hamtaBetalning(env)).pris || null };
         s.hall = null;
         await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
         return svar({ ok: true, slot: publikVecka(vecka, user.uid).slots.find(x => x.id === s.id) });
+      }
+      if (p === '/boka/swishad') {
+        if (s.bokad?.uid !== user.uid) return fel('det är inte din bokning', 403);
+        if (!s.bokad.betald) s.bokad.swishad = d.angra ? null : nu();
+        await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
+        return svar({ ok: true });
       }
       if (p === '/boka/avboka') {
         if (s.bokad?.uid === user.uid) s.bokad = null;
@@ -635,7 +659,7 @@ export default {
       const klient = user.klientId ? publikKlient(await hamtaKlient(env, user.klientId)) : null;
       const bedomningar = user.klientId ? ((await env.DB.get(`bed:${user.klientId}`, 'json')) || []) : [];
       const media = user.klientId ? ((await env.DB.get(`med:${user.klientId}`, 'json')) || []).filter(m => m.delad) : [];
-      return svar({ ok: true, bokningar, planer, klient, bedomningar, media });
+      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, betalning: publikBetalning(await hamtaBetalning(env)) });
     }
 
     // barnets namn och födelseår, det första föräldern fyller i (Carl 2026-10-25)
@@ -789,7 +813,7 @@ export default {
           if (del === 'boka') {
             if (s.bokad) return fel(s.bokad.uid === k.id ? 'klienten har redan den tiden' : `tiden är redan bokad av ${s.bokad.barn || s.bokad.namn || 'någon annan'}`, 409);
             if (s.hall && s.hall.tills > Date.now()) return fel('någon håller platsen just nu, prova om en minut', 409);
-            s.bokad = { uid: k.id, namn: k.foralder, barn: k.barn, telefon: k.telefon, email: k.email, t: nu(), av: 'haris' };
+            s.bokad = { uid: k.id, namn: k.foralder, barn: k.barn, telefon: k.telefon, email: k.email, t: nu(), av: 'haris', pris: (await hamtaBetalning(env)).pris || null };
             s.hall = null;
           } else if (s.bokad?.uid === k.id) s.bokad = null;
           await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
@@ -835,7 +859,7 @@ export default {
         const veckor = (await hamtaAlla(env, 'vecka:')).filter(w => w.v >= veckaPlus(nuV, -1)).sort((a, b) => a.v.localeCompare(b.v)).map(stadaHall);
         return svar({ ok: true, nu: nuV, veckor, mandag: Object.fromEntries(veckor.map(w => [w.v, mandag(w.v).toISOString().slice(0, 10)])) });
       }
-      const mv = /^\/admin\/vecka\/(\d{4}-W\d{2})(\/auto|\/duplicera)?$/.exec(p);
+      const mv = /^\/admin\/vecka\/(\d{4}-W\d{2})(\/auto|\/duplicera|\/betald)?$/.exec(p);
       if (mv) {
         const v = mv[1];
         const d = await json(); if (!d) return fel('trasig JSON');
@@ -873,6 +897,26 @@ export default {
           await env.DB.put(`vecka:${till}`, JSON.stringify(ny));
           return svar({ ok: true, vecka: ny });
         }
+        if (mv[2] === '/betald' && req.method === 'POST') {
+          const s = vecka.slots.find(x => x.id === String(d.slot || ''));
+          if (!s?.bokad) return fel('tiden är inte bokad', 404);
+          s.bokad.betald = d.betald ? nu() : null;
+          await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
+          return svar({ ok: true, vecka });
+        }
+      }
+
+      // Swish-nummer och pris per pass
+      if (p === '/admin/config/betalning' && req.method === 'GET') return svar({ ok: true, config: await hamtaBetalning(env) });
+      if (p === '/admin/config/betalning' && req.method === 'PUT') {
+        const d = await json(); if (!d) return fel('trasig JSON');
+        const swish = swishNr(d.swish);
+        if (String(d.swish || '').trim() && !swish) return fel('Swish-numret ser fel ut, skriv t.ex. 123 456 78 90');
+        const pris = Math.round(+String(d.pris ?? '').replace(',', '.') || 0);
+        if (pris < 0 || pris > 100000) return fel('priset ser fel ut');
+        const cfg = { swish, pris: pris || null, uppdaterad: nu() };
+        await env.DB.put('config:betalning', JSON.stringify(cfg));
+        return svar({ ok: true, config: cfg });
       }
 
       // stigens listor

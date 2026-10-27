@@ -2,6 +2,7 @@
 // boka en tid åt en befintlig kund (tiden blir röd i kalendern).
 import { api } from './api.js';
 import { klienterNu, klienterLadda, klienterLaddade, klientGlom, visaTel } from './admin-klienter.js';
+import { betalStatus } from './swish.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -34,6 +35,7 @@ export async function tiderLadda(tvinga = false) {
   const r = await api.admin.get('/admin/veckor');
   if (r.ok) { st.nu = r.nu; st.veckor = r.veckor; st.mandag = r.mandag; st.laddat = true; if (!st.vald || st.vald < veckaPlus(st.nu, -1)) st.vald = st.nu; }
 }
+export const tiderGlom = () => { st.laddat = false; };
 const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen: false, slots: [] };
 
 export function tiderView() {
@@ -55,7 +57,8 @@ export function tiderView() {
             <input type="time" data-f="start" value="${esc(x.start)}" ${x.bokad ? 'disabled' : ''}> – <input type="time" data-f="slut" value="${esc(x.slut)}" ${x.bokad ? 'disabled' : ''}>
             <input type="text" data-f="plats" value="${esc(x.plats || '')}" placeholder="Plats" style="flex:1;min-width:120px">
           </div>
-          ${x.bokad ? `<div class="small"><b style="color:var(--danger)">Bokad:</b> ${x.bokad.uid && klienterNu().some(k => k.id === x.bokad.uid) ? `<a href="#/admin/klient/${x.bokad.uid}">${esc(x.bokad.barn || '')}</a>` : esc(x.bokad.barn || '')}${x.bokad.namn ? ` (${esc(x.bokad.namn)})` : ''}${x.bokad.telefon ? ` · <a href="tel:${esc(x.bokad.telefon)}">${esc(visaTel(x.bokad.telefon))}</a>` : x.bokad.email ? ` · ${esc(x.bokad.email)}` : ''}${x.bokad.av === 'haris' ? ' · av Haris' : ''} <button class="film" data-action="tid-avboka" data-id="${x.id}">Avboka</button></div>`
+          ${x.bokad ? `<div class="small"><b style="color:var(--danger)">Bokad:</b> ${x.bokad.uid && klienterNu().some(k => k.id === x.bokad.uid) ? `<a href="#/admin/klient/${x.bokad.uid}">${esc(x.bokad.barn || '')}</a>` : esc(x.bokad.barn || '')}${x.bokad.namn ? ` (${esc(x.bokad.namn)})` : ''}${x.bokad.telefon ? ` · <a href="tel:${esc(x.bokad.telefon)}">${esc(visaTel(x.bokad.telefon))}</a>` : x.bokad.email ? ` · ${esc(x.bokad.email)}` : ''}${x.bokad.av === 'haris' ? ' · av Haris' : ''} <button class="film" data-action="tid-avboka" data-id="${x.id}">Avboka</button>
+            <div class="betal-rad-admin">${betalStatus(x.bokad)} <button type="button" class="film" data-action="tid-betald" data-id="${x.id}" ${x.bokad.betald ? '' : 'data-betald="1"'}>${x.bokad.betald ? 'Ångra betald' : 'Markera betald'}</button></div></div>`
           : x.hall ? '<div class="small muted">Någon håller platsen just nu.</div>'
           : st.bokaFor === x.id ? `<div class="boka-rad"><select data-boka-klient>${klienterNu().map(k => `<option value="${k.id}">${esc(k.barn)} · ${esc(k.foralder || visaTel(k.telefon))}</option>`).join('') || '<option value="">Inga klienter än</option>'}</select><button type="button" class="btn" data-action="tid-boka-klient" data-id="${x.id}">Boka</button><button type="button" class="btn secondary" data-action="tid-boka" data-id="">Avbryt</button></div>`
           : `<div class="small"><button type="button" class="film" data-action="tid-boka" data-id="${x.id}">Boka åt en kund</button></div>`}
@@ -144,6 +147,13 @@ export async function tiderAction(action, el) {
   }
   if (action === 'tid-bort') { const slots = lasSlots().filter(x => x.id !== el.dataset.id); const r = await sparaVecka(slots, w.oppen); toast(r.ok ? 'Tiden är borttagen' : `Gick inte: ${r.fel}`); route(); return true; }
   if (action === 'tid-boka') { st.bokaFor = el.dataset.id || null; route(); return true; }
+  if (action === 'tid-betald') {
+    const betald = !!el.dataset.betald;
+    const r = await api.admin.post(`/admin/vecka/${st.vald}/betald`, { slot: el.dataset.id, betald });
+    if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; klientGlom(); toast(betald ? 'Markerad som betald' : 'Betalningen är ångrad'); }
+    else toast(`Gick inte: ${r.fel}`);
+    route(); return true;
+  }
   if (action === 'tid-boka-klient') {
     const sel = document.querySelector('[data-boka-klient]'); const kid = sel?.value;
     if (!kid) { toast('Lägg in klienten under Klienter först'); return true; }

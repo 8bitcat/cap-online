@@ -3,6 +3,7 @@
 // bedömningarna över tid som diagram. Samma sida på datorn och i appen.
 import { api } from './api.js';
 import { diagram, sammanfattning } from './diagram.js';
+import { betalStatus } from './swish.js';
 import { vantande, lokalUrl, laddaUppVantande, taBortLokal, r2Pa, sattR2 } from './media.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -143,6 +144,9 @@ function klientSida() {
   const d = st.vald, k = d.klient;
   const kommande = d.bokningar.filter(b => b.datum >= idag());
   const tidigare = d.bokningar.filter(b => b.datum < idag());
+  const obetalda = tidigare.filter(b => !b.betald).reverse();
+  const tidRad = (b, kan) => `<li class="row bokning"><span class="grow"><b>${DAGL[b.dag]} ${fmtIso(b.datum)}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])} · bokad av ${b.av === 'haris' ? 'Haris' : 'föräldern'}</div>
+    <div class="betal-rad-admin">${betalStatus(b)} <button type="button" class="film" data-action="klient-betald" data-v="${b.v}" data-slot="${b.id}" ${b.betald ? '' : 'data-betald="1"'}>${b.betald ? 'Ångra betald' : 'Markera betald'}</button></div></span>${kan ? `<button class="film" data-action="klient-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button>` : ''}</li>`;
   return `
   <section>
     <a class="back" href="#/admin/klienter">‹ Klienter</a>
@@ -170,8 +174,9 @@ function klientSida() {
   </section>
   <section>
     <div class="section-head"><h2>Tider</h2><a class="small" href="#/admin/klient/${k.id}/boka">Boka ›</a></div>
-    ${kommande.length ? `<ul class="list">${kommande.map(b => `<li class="row"><span class="grow"><b>${DAGL[b.dag]} ${fmtIso(b.datum)}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])} · bokad av ${b.av === 'haris' ? 'Haris' : 'föräldern'}</div></span><button class="film" data-action="klient-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button></li>`).join('')}</ul>` : '<p class="muted small">Ingen kommande tid. Boka en åt familjen, så ser de den i appen.</p>'}
-    ${tidigare.length ? `<p class="small muted" style="margin-top:8px">${tidigare.length} tidigare ${tidigare.length === 1 ? 'tillfälle' : 'tillfällen'}, senast ${fmtIso(tidigare.at(-1).datum)}.</p>` : ''}
+    ${kommande.length ? `<ul class="list">${kommande.map(b => tidRad(b, true)).join('')}</ul>` : '<p class="muted small">Ingen kommande tid. Boka en åt familjen, så ser de den i appen.</p>'}
+    ${obetalda.length ? `<h3 style="margin:14px 0 6px">Inte betalda</h3><ul class="list">${obetalda.map(b => tidRad(b, false)).join('')}</ul>` : ''}
+    ${tidigare.length ? `<p class="small muted" style="margin-top:8px">${tidigare.length} tidigare ${tidigare.length === 1 ? 'tillfälle' : 'tillfällen'}, senast ${fmtIso(tidigare.at(-1).datum)}${tidigare.length - obetalda.length > 0 ? ` · ${tidigare.length - obetalda.length} betalda` : ''}.</p>` : ''}
   </section>
   <section>
     <div class="section-head"><h2>Pass</h2><a class="small" href="#/admin/pass/ny/${k.id}">+ Nytt ›</a></div>
@@ -351,6 +356,13 @@ export async function klienterAction(action, el, e) {
     if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Tryck igen'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = 'Avboka'; el.classList.remove('armed'); }, 4000); return true; }
     const r = await api.admin.post(`/admin/klient/${k.id}/avboka`, { v: el.dataset.v, slot: el.dataset.slot });
     if (r.ok) { d.bokningar = r.bokningar; st.laddat = false; toast('Avbokad'); } else toast(`Gick inte: ${r.fel}`);
+    route(); return true;
+  }
+  if (action === 'klient-betald') {
+    const betald = !!el.dataset.betald;
+    const r = await api.admin.post(`/admin/vecka/${el.dataset.v}/betald`, { slot: el.dataset.slot, betald });
+    if (r.ok) { const b = d.bokningar.find(x => x.v === el.dataset.v && x.id === el.dataset.slot); if (b) b.betald = betald ? new Date().toISOString() : null; st.laddat = false; ui.tiderAndrad?.(); toast(betald ? 'Markerad som betald' : 'Betalningen är ångrad'); }
+    else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }
   if (action === 'klient-bed-ny') { st.bedForm = !st.bedForm; route(); return true; }

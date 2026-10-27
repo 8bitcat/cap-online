@@ -657,3 +657,14 @@ body.admin .view { max-width: 1080px; }
 .sms-steg { border-top: 1px solid var(--line); padding: 12px 0 6px; }
 .sms-steg-head { display: flex; align-items: center; gap: 10px; }
 .sms-nr { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: var(--brand-ink); font-weight: 800; font-size: 14px; flex: none; }
+
+/* Betala med Swish (Swish Företag: förifylld länk, Haris bockar av) */
+.betalrad { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-top: 10px; }
+.betalrad > .small.muted { flex-basis: 100%; }
+.btn.swish { background: #fff; color: #111; border-color: #fff; min-height: 44px; padding: 10px 16px; }
+.btn.swish:hover { background: #f1f1f1; color: #111; }
+.betald { color: var(--ok); font-weight: 700; }
+.swishad { color: var(--warn); font-weight: 700; }
+.list li.row.bokning { align-items: flex-start; }
+.nyss-bokad .betalrad .btn.swish { flex: 1 1 220px; }
+.betal-rad-admin { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 4px; }

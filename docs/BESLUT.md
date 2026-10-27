@@ -3,6 +3,37 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-27 – betala med Swish (förifylld länk)
+
+- **Swish Företag med förifylld länk** (Carl: "här är hans swish går det att
+  göra en länk så att allt är förifyllt? priset för passet och numret").
+  Haris har Swish Företag 123 285 27 62. Det finns inget API för Swish
+  Företag, så appen kan inte se vem som betalat. Swish Handel (automatisk
+  bekräftelse) kostar bankavgifter och certifikat och väntar tills Haris vill.
+- **Länkformatet är Swish eget** (developer.swish.nu → Guides → Generate QR
+  codes): `https://app.swish.nu/1/p/sw/?sw=<nr>&amt=<belopp>&msg=<text>`.
+  Beloppet har decimalpunkt, meddelandet är URL-kodat med %20 och får bara
+  innehålla a–ö, A–Ö, 0–9, mellanslag och `!?(),.-:;` (högst 50 tecken).
+  Ingen `cur`, inget `edit`, så belopp och meddelande är låsta. app.swish.nu
+  är en universell länk som öppnar Swish-appen direkt. `js/swish.js`.
+- **Meddelandet är bokningen**: "CAP Alva Lind 2 nov kl 16.00". Haris ser
+  det i sin Swish och vet vilket pass betalningen gäller.
+- **Nummer och pris i Admin → Mer → Betalning med Swish** (KV
+  `config:betalning`). Swish-knappen visas för föräldrarna först när båda
+  finns. Priset låses på bokningen när den görs. **Priset är inte satt**:
+  Carl eller Haris skriver det i admin.
+- **Föräldern**: priset står på bokningssidan och när platsen hålls. Efter
+  bokningen kommer panelen "Tiden är bokad" med **Betala 300 kr med Swish**,
+  och samma knapp finns under Mina bokningar. "Jag har swishat" sätter
+  `swishad` så att Haris vet att han ska titta.
+- **Haris** bockar av med **Markera betald** under Tider eller på klientens
+  sida (`betald`), och kan ångra. Föräldern ser då Betald ✓ i stället för
+  knappen. Obetalda tidigare pass listas på klientens sida.
+- Test: `tools/swish-test.js` mot wrangler dev (24 kontroller).
+- **Inte provat på en riktig telefon** att Swish öppnas med beloppet ifyllt.
+  Formatet är Swish dokumenterade, och "Prova länken på mobilen" i admin
+  gör det enkelt att kolla.
+
 ## 2026-10-26 – Övningsbanken (Excel till Haris)
 
 - **En Excel-fil med alla övningar i appen** (Carl: "skapa en excelfil som vi

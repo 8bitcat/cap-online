@@ -1,7 +1,8 @@
 // Adminsidan för Haris (Carl 2026-10-21/23): klientregister, tider, pass, filmer med taggar, stigen, nyhet som push.
 import { store } from './store.js';
 import { api, laddaUppFilm, laddaUppPoster, hamtaFilmer } from './api.js';
-import { tiderInit, tiderView, tiderAction, tiderSubmit } from './admin-tider.js';
+import { tiderInit, tiderView, tiderAction, tiderSubmit, tiderGlom } from './admin-tider.js';
+import { swishLank, visaSwish, kr } from './swish.js';
 import { passInit, passView, passAction, passSubmit, passStopur, passStoppa, passFilVald, passGlom } from './admin-pass.js';
 import { stigAdminInit, stigAdminView, stigAdminAction } from './admin-stig.js';
 import { klienterInit, klienterView, klienterAction, klienterSubmit, klienterAfterRender, klienterLadda, klientGlom } from './admin-klienter.js';
@@ -19,7 +20,7 @@ const FLIKAR = [['klienter', 'Klienter'], ['tider', 'Tider'], ['filmer', 'Filmer
 
 export async function adminInit(deps) {
   // när ett pass sparas/tas bort ska klientsidan hämtas om nästa gång
-  ui = { ...deps, klientAndrad: () => { klientGlom(); }, passAndrad: () => { passGlom(); } };
+  ui = { ...deps, klientAndrad: () => { klientGlom(); }, passAndrad: () => { passGlom(); }, tiderAndrad: () => { tiderGlom(); } };
   tiderInit(ui); passInit(ui); stigAdminInit(ui, deps.content); klienterInit(ui);
   if (!TAGS) TAGS = await (await fetch('data/taggar.json', { cache: 'no-cache' })).json();
 }
@@ -77,6 +78,7 @@ function merFlik() {
     <a class="card" href="#/admin/pass"><div class="card-body"><div class="eyebrow">Pass</div><h3>Alla pass</h3><p class="desc">Passen för alla klienter i en lista. Nya pass planeras från klientens sida.</p></div></a>
   </section>
   ${nyhetFlik()}
+  ${betalningPanel()}
   <section class="panel">
     <h3>Tjänster</h3>
     <ul class="checks small">
@@ -89,6 +91,31 @@ function merFlik() {
     </form>` : ''}
   </section>
   <section class="panel"><div class="section-head"><h3>Konto</h3><a class="small" data-action="admin-ut" href="#/admin">Logga ut</a></div><p class="small muted" style="margin:0"><a href="#/">Till förälderappen ›</a></p></section>`;
+}
+
+// Swish Företag (Carl 2026-10-27): numret och priset per pass. Föräldrarna får en Swish-knapp med allt ifyllt
+// när båda finns. Appen kan inte se betalningen, så Haris bockar av den under Tider eller på klientens sida.
+function betalningPanel() {
+  if (!state.betalning && !state.betalningHamtar) {
+    state.betalningHamtar = true;
+    api.admin.get('/admin/config/betalning').then(r => { state.betalning = r.ok ? r.config : { swish: '', pris: null }; }).finally(() => { state.betalningHamtar = false; if (location.hash === '#/admin/mer') ui.route(); });
+  }
+  const b = state.betalning;
+  if (!b) return `<section class="panel"><h3>Betalning med Swish</h3><p class="small muted" style="margin:0">Hämtar…</p></section>`;
+  const klar = b.swish && b.pris;
+  return `
+  <section class="panel ${klar ? 'brand' : ''}">
+    <h3>Betalning med Swish</h3>
+    <p class="small muted" style="margin-top:0">${klar
+      ? `Föräldrarna får knappen <b>Betala ${esc(kr(b.pris))} med Swish</b> när de bokat. Swish öppnas med ${esc(visaSwish(b.swish))}, beloppet och ett meddelande som "CAP Alva Lind 3 nov kl 17.00" ifyllt. Du ser betalningen i din Swish och bockar av den under Tider.`
+      : 'Skriv Swish-numret och priset för ett pass. När båda finns får föräldrarna en Swish-knapp med allt ifyllt efter bokningen.'}</p>
+    <form data-form="admin-betalning" class="auto-rad" style="align-items:end">
+      <label>Swish-nummer <input type="text" name="swish" inputmode="numeric" value="${esc(visaSwish(b.swish))}" placeholder="123 456 78 90"></label>
+      <label>Pris per pass (kr) <input type="number" name="pris" min="0" max="100000" step="1" value="${b.pris || ''}" placeholder="t.ex. 300"></label>
+      <button class="btn secondary" type="submit">Spara</button>
+    </form>
+    ${klar ? `<p class="small" style="margin:10px 0 0"><a href="${esc(swishLank(b.swish, b.pris, 'CAP test'))}">Prova länken på mobilen ›</a> <span class="muted">Öppnar Swish med ${esc(kr(b.pris))} och "CAP test", betala inte.</span></p>` : ''}
+  </section>`;
 }
 
 /* ---------- Filmer ---------- */
@@ -285,6 +312,14 @@ export async function adminSubmit(kind, f, fd) {
     if (!r.ok) { toast(`Gick inte att spara: ${r.fel}`); return true; }
     toast(film.status === 'publicerad' ? 'Sparad och publicerad' : 'Sparad som utkast');
     state.redigerar = null; await adminLadda(); hamtaFilmer({ tvinga: true }); route(); return true;
+  }
+  if (kind === 'admin-betalning') {
+    const r = await api.admin.put('/admin/config/betalning', { swish: fd.get('swish'), pris: fd.get('pris') });
+    // vid fel ritas inget om, så att det Haris skrivit står kvar
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    state.betalning = r.config;
+    toast(r.config.swish && r.config.pris ? 'Sparat. Föräldrarna ser Swish-knappen nu.' : 'Sparat. Swish-knappen visas när både nummer och pris finns.');
+    route(); return true;
   }
   if (kind === 'admin-smstest') {
     const r = await api.admin.post('/admin/smstest', { telefon: fd.get('telefon') });
