@@ -59,7 +59,9 @@ const TEL = '070-555 66 77';
     return hall;
   };
   await boka(0);
-  koll('första passet: Swish 850 kr', (await text(f, '.nyss-bokad a.btn.swish')) === 'Betala 850 kr med Swish');
+  koll('första passet: rutan Betala 850 kr med Swish', (await text(f, '.betal-ark a.btn.swish')) === 'Betala 850 kr med Swish');
+  await f.click('[data-action=boka-ark-stang]'); await f.waitForTimeout(300);
+  koll('Betala senare stänger rutan, Swish finns kvar', !(await f.$('.betal-ark')) && (await text(f, '.nyss-bokad a.btn.swish')) === 'Betala 850 kr med Swish');
   await f.waitForSelector('#mina .kop', { timeout: 10000 });
   koll('köp-rutorna med pris per pass', (await text(f, '#mina .kop-lista')).includes('690 kr per pass') && (await text(f, '#mina .kop-lista')).includes('645 kr per pass'), await text(f, '#mina .kop-lista'));
 
@@ -83,7 +85,7 @@ const TEL = '070-555 66 77';
   koll('texten säger att bokningarna dras från paketet', (await text(f, 'section p.muted.small')).includes('Du har 9 pass kvar i ditt paket'));
   const hall2 = await boka(0);
   koll('platsen som hålls: dras från paketet', hall2.includes('dras från ditt paket (9 kvar)'), hall2);
-  koll('bokad: passet dras från paketet, 8 kvar', (await text(f, '.nyss-bokad')).includes('Passet dras från paketet, 8 kvar') && !(await f.$('.nyss-bokad a.btn.swish')), await text(f, '.nyss-bokad'));
+  koll('bokad: passet dras från paketet, 8 kvar, ingen betalruta', (await text(f, '.nyss-bokad')).includes('Passet dras från paketet, 8 kvar') && !(await f.$('.nyss-bokad a.btn.swish')) && !(await f.$('.betal-ark')), await text(f, '.nyss-bokad'));
   await f.click('.paket-kort [data-action=boka-paket-swishad]'); await vantaToast(f, 'Tack!');
   koll('Jag har swishat för paketet', await vantaText(f, '.paket-kort', 'Swishad'));
 

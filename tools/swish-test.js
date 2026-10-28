@@ -97,16 +97,17 @@ const TEL = '070-333 44 55';
   const nyss = await f.$('.nyss-bokad');
   koll('panelen "Tiden är bokad" visas', !!nyss);
   await f.waitForTimeout(600);
-  koll('"Tiden är bokad" syns utan att man scrollar', await syns('.nyss-bokad .btn.swish'));
-  const href = await f.$eval('.nyss-bokad a.btn.swish', e => e.getAttribute('href')).catch(() => '');
-  const knapp = await f.$eval('.nyss-bokad a.btn.swish', e => e.textContent).catch(() => '');
+  // Carl 2026-10-28: direkt efter bokningen kommer rutan Betala passet upp
+  koll('rutan Betala passet kommer upp', await syns('.betal-ark a.btn.swish') && (await f.$eval('.betal-ark h2', e => e.textContent)) === 'Betala passet');
+  const href = await f.$eval('.betal-ark a.btn.swish', e => e.getAttribute('href')).catch(() => '');
+  const knapp = await f.$eval('.betal-ark a.btn.swish', e => e.textContent).catch(() => '');
   koll('Swish-knappen', knapp === 'Betala 300 kr med Swish', knapp);
   const q = href ? new URL(href).searchParams : new URLSearchParams();
   koll('länken har Haris nummer och priset', href.startsWith('https://app.swish.nu/1/p/sw/?') && q.get('sw') === '1232852762' && q.get('amt') === '300.00' && !q.has('cur') && !q.has('edit'), href);
   koll('meddelandet har barnet, datumet och tiden', new RegExp(`^CAP Alva Lind \\d{1,2} [a-z]{3} kl ${tidInfo.start.replace(':', '\\.')}$`).test(q.get('msg') || ''), q.get('msg'));
   await shot(f, 'foralder-bokad', false);
-  await f.click('.nyss-bokad [data-action=boka-swishad]'); await vantaToast(f, 'Tack!'); await f.waitForTimeout(500);
-  koll('Jag har swishat', (await f.$eval('.nyss-bokad .betalrad', e => e.textContent)).includes('Swishad'), await toast(f));
+  await f.click('.betal-ark [data-action=boka-swishad]'); await vantaToast(f, 'Tack!'); await f.waitForTimeout(500);
+  koll('Jag har swishat: rutan stängs', !(await f.$('.betal-ark')) && (await f.$eval('.nyss-bokad .betalrad', e => e.textContent)).includes('Swishad'), await toast(f));
 
   // ---- Haris ser det under Tider och bockar av ----
   await a.reload({ waitUntil: 'networkidle' }); await a.goto(base + 'index.html#/admin/tider'); await a.waitForSelector('.vecka-titel', { timeout: 10000 });

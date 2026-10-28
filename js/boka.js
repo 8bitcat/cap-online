@@ -17,7 +17,8 @@ const MAN = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt
 let data = { nu: null, veckor: [], betalning: null, hamtat: 0 };
 let mina = { bokningar: [], planer: [], betalning: null, hamtat: 0 };
 let hall = null;      // { v, slot, tills }
-let klar = null;      // { v, slot } nyss bokad: visar Swish-knappen överst
+let klar = null;      // { v, slot } nyss bokad: visar Swish-knappen under tiderna
+let betala = null;    // { v, slot } rutan Betala passet direkt efter bokningen
 let tick = null;
 let ui = null;
 
@@ -147,7 +148,8 @@ export function bokaPage(v) {
     <div class="progress" style="margin-top:6px"><i id="hallBar" style="width:100%"></i></div>
     <div class="btn-row two"><button class="btn grad" data-action="boka-bekrafta">Boka för ${esc(barn || 'oss')}</button><button class="btn secondary" data-action="boka-slapp">Ångra</button></div>
   </section>` : ''}
-  <section id="mina"></section>`;
+  <section id="mina"></section>
+  ${betalArk()}`;
 }
 
 function slotKnapp(v, x, passerad) {
@@ -176,6 +178,27 @@ export async function fyllMina(el) {
     ${planer ? `<div class="cards">${planer}</div>` : '<p class="muted small">När Haris delat ett pass med er syns det här, med tider, filmer och hans kommentarer.</p>'}
     ${m.klient ? `<p class="small" style="margin-top:14px"><a href="#/utveckling">📈 ${esc(m.klient.barn || 'Spelaren')}s utveckling: nivå, bedömningar och filmer ›</a></p>` : ''}`;
   el.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', ui.onAction));
+}
+
+// Carl 2026-10-28: "när man bokat så skulle man hamna direkt i Swish-appen eller få upp en ruta betala för passet".
+// Rutan kommer upp direkt efter bokningen när passet ska betalas; Betala senare stänger den och Swish-knappen finns
+// kvar under Mina bokningar.
+function betalArk() {
+  const b = betala && mina.bokningar.find(x => x.v === betala.v && x.id === betala.slot);
+  const bet = mina.betalning || data.betalning;
+  if (!b || b.paket || b.betald || b.swishad || !bet) return '';
+  const pris = b.pris || bet.pris;
+  const msg = bokningsMeddelande(b, mina.klient?.efternamn || store.profile?.efternamn || '');
+  return `<div class="betal-ark" role="dialog" aria-modal="true" aria-labelledby="betalArkRubrik">
+    <div class="betal-ark-box">
+      <div class="eyebrow" style="color:var(--ok)">✓ Tiden är bokad</div>
+      <h2 id="betalArkRubrik" style="margin:6px 0 2px">Betala passet</h2>
+      <p class="small muted" style="margin:0 0 14px">${esc(DAG[b.dag])} ${fmtDatum(datumFor(b.v, b.dag))} · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}${b.barn ? ` · ${esc(b.barn)}` : ''}</p>
+      <a class="btn swish block stor" href="${esc(swishLank(bet.swish, pris, msg))}">Betala ${esc(kr(pris))} med Swish</a>
+      <p class="small muted" style="margin:10px 0 14px">Swish öppnas med Haris nummer ${esc(visaSwish(bet.swish))}, ${esc(kr(pris))} och meddelandet "${esc(msg)}" ifyllt. Kom sedan tillbaka hit och tryck Jag har swishat.</p>
+      <div class="btn-row two" style="margin:0"><button class="btn grad" data-action="boka-swishad" data-v="${b.v}" data-slot="${b.id}">Jag har swishat</button><button class="btn secondary" data-action="boka-ark-stang">Betala senare</button></div>
+    </div>
+  </div>`;
 }
 
 // Ett paket på barnet: hur många pass som är kvar (fyllda prickar), Swish tills Haris bockat av
@@ -242,14 +265,21 @@ export async function bokaAction(action, el) {
   if (action === 'boka-bekrafta') {
     if (!hall) return true;
     const r = await api.post('/boka/bekrafta', { v: hall.v, slot: hall.slot, barn: store.profile?.name || '' }, token());
-    toast(r.ok ? 'Tiden är bokad. Vi ses!' : (r.fel || 'Gick inte att boka'));
     klar = r.ok ? { v: hall.v, slot: hall.slot } : null;
     hall = null; clearInterval(tick);
-    await Promise.all([hamtaVeckor(true), hamtaMina(true)]); ritaKvar();
-    if (klar) document.querySelector('.nyss-bokad')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    await Promise.all([hamtaVeckor(true), hamtaMina(true)]);
+    const b = klar && mina.bokningar.find(x => x.v === klar.v && x.id === klar.slot);
+    const pk = b?.paket && (data.paket || []).find(x => x.id === b.paket);
+    // ska passet betalas kommer rutan Betala passet upp direkt, annars ett kort besked
+    betala = b && !b.paket && !b.betald && (mina.betalning || data.betalning) ? klar : null;
+    if (!r.ok) toast(r.fel || 'Gick inte att boka');
+    else if (!betala) toast(pk ? `Tiden är bokad. Passet dras från paketet, ${pk.kvar} kvar.` : 'Tiden är bokad. Vi ses!');
+    ritaKvar();
+    if (klar && !betala) document.querySelector('.nyss-bokad')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return true;
   }
   if (action === 'boka-klar-stang') { klar = null; ritaKvar(); return true; }
+  if (action === 'boka-ark-stang') { betala = null; ritaKvar(); toast('Du kan betala senare under Mina bokningar.'); return true; }
   // Carl 2026-10-28: notisen när Haris öppnar en vecka når bara telefoner med notiser på
   if (action === 'boka-notis') {
     const r = await pushSatt(true);
@@ -260,6 +290,7 @@ export async function bokaAction(action, el) {
   if (action === 'boka-swishad') {
     const r = await api.post('/boka/swishad', { v, slot, angra: !!el.dataset.angra }, token());
     toast(r.ok ? (el.dataset.angra ? 'Ångrat' : 'Tack! Haris bekräftar när pengarna kommit.') : (r.fel || 'Gick inte'));
+    if (r.ok && betala?.v === v && betala?.slot === slot) betala = null;
     await hamtaMina(true); ritaKvar(); return true;
   }
   // Paket: köp (tryck två gånger), Jag har swishat, ångra köpet

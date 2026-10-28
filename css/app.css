@@ -723,3 +723,14 @@ body.admin .view { max-width: 1080px; }
 .kop .btn { grid-column: 1 / -1; margin-top: 6px; }
 .kop-pris { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
 .paket-kort .betalrad .btn.swish { flex: 1 1 220px; }
+/* Rutan Betala passet direkt efter bokningen (Carl 2026-10-28) */
+.betal-ark { position: fixed; inset: 0; z-index: 60; background: rgba(0, 4, 9, .66); display: flex; align-items: flex-end; justify-content: center; }
+.betal-ark-box {
+  width: 100%; max-width: 560px; background: var(--surface); border: 1px solid var(--brand-deep); border-bottom: 0;
+  border-radius: 22px 22px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  box-shadow: 0 -18px 50px rgba(0, 0, 0, .55); animation: ark-upp .25s ease-out;
+}
+@keyframes ark-upp { from { transform: translateY(40px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .betal-ark-box { animation: none; } }
+.btn.swish.stor { font-size: 18px; padding: 16px 18px; }
