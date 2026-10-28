@@ -209,19 +209,35 @@ function klientSida() {
   </div>`;
 }
 
-// Paket på barnet (Carl 2026-10-28): t.ex. 10 pass för 6 900 kr. Föräldern köper i appen, eller Haris lägger på
-// det här ("Redan betalt" när pengarna redan kommit). Bokningarna dras från paketet tills passen är slut.
+// Pass och pris på barnet (Carl 2026-10-28): saldot, ett eget pris per pass ("olika barn ska kunna ha deals"),
+// pass betalda utanför appen (från början och använda), paketen och historiken som föräldern också ser.
+const MAN_K = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const loggLista = rader => `<ul class="logg">${rader.map(r => `<li><span class="logg-dat">${esc(fmtTid(r.t))}</span><span class="logg-text">${esc(r.text)}</span>${r.antal ? `<span class="logg-antal ${r.antal > 0 ? 'plus' : 'minus'}">${r.antal > 0 ? '+' : '−'}${Math.abs(r.antal)}</span>` : '<span></span>'}</li>`).join('')}</ul>`;
 function paketPanel(d) {
-  const k = d.klient, lista = (d.paket || []).slice().reverse(), mallar = d.paketMallar || [];
+  const k = d.klient, lista = (d.paket || []).slice().reverse(), mallar = d.paketMallar || [], standard = d.standardPris;
   const kvar = lista.reduce((n, p) => n + p.kvar, 0);
+  const utanfor = lista.find(p => p.utanfor);
+  const logg = (k.passLogg || []).slice().reverse();
   const rad = p => `<li class="row"><span class="grow"><b>${esc(p.namn)}</b> · <span class="pk-kvar">${p.kvar} av ${p.antal} kvar</span>
     ${p.antal <= 24 ? `<div class="hal" aria-hidden="true">${Array.from({ length: p.antal }, (_, i) => `<i class="${i < p.anvanda ? 'anv' : ''}"></i>`).join('')}</div>` : ''}
-    <div class="small muted">${p.av === 'foralder' ? 'Köpt i appen' : 'Lagt på av dig'} ${esc(fmtTid(p.kopt))}</div>
-    <div class="betal-rad-admin">${betalStatus({ ...p, paket: null })} <button type="button" class="film" data-action="klient-paket-betald" data-id="${p.id}" ${p.betald ? '' : 'data-betald="1"'}>${p.betald ? 'Ångra betald' : 'Markera betald'}</button> <button type="button" class="film" data-action="klient-paket-bort" data-id="${p.id}">Ta bort</button></div></span></li>`;
+    <div class="small muted">${p.utanfor ? `${p.tidigare || 0} använda innan appen` : p.av === 'foralder' ? 'Köpt i appen' : 'Lagt på av dig'} · ${esc(fmtTid(p.kopt))}</div>
+    <div class="betal-rad-admin">${p.utanfor ? '' : `${betalStatus({ ...p, paket: null })} <button type="button" class="film" data-action="klient-paket-betald" data-id="${p.id}" ${p.betald ? '' : 'data-betald="1"'}>${p.betald ? 'Ångra betald' : 'Markera betald'}</button> `}<button type="button" class="film" data-action="klient-paket-bort" data-id="${p.id}">Ta bort</button></div></span></li>`;
   return `
-  <section class="panel ${kvar ? 'brand' : ''}">
-    <div class="section-head"><h3>Paket</h3><span class="small muted">${kvar ? `${kvar} pass kvar` : 'inget aktivt'}</span></div>
-    ${lista.length ? `<ul class="list">${lista.map(rad).join('')}</ul>` : '<p class="small muted" style="margin:0">Inget paket än. Lägg på ett här, eller låt föräldern köpa i appen under Med Haris.</p>'}
+  <section class="panel ${kvar ? 'brand' : ''}" id="pass">
+    <div class="section-head"><h3>Pass och pris</h3><span class="pk-kvar">${kvar} ${kvar === 1 ? 'pass' : 'pass'} kvar</span></div>
+    <form data-form="klient-pris" class="rad-form">
+      <label>Pris per pass för ${esc(k.barn || 'barnet')} (kr) <input type="number" name="pris" min="0" step="1" value="${k.pris || ''}" placeholder="${standard ? `standard ${standard}` : 'kr'}"></label>
+      <button class="btn secondary" type="submit">Spara</button>
+    </form>
+    <p class="small muted" style="margin:4px 0 12px">${k.pris ? `${esc(k.barn || 'Barnet')} betalar ${esc(kr(k.pris))} per pass${standard ? ` i stället för ${esc(kr(standard))}` : ''}. Töm rutan för standardpriset.` : `Tomt = standardpriset${standard ? `, ${esc(kr(standard))}` : ''}. Skriv ett eget pris för en deal.`}</p>
+    <h4 style="margin:0 0 4px">Pass betalda utanför appen</h4>
+    <form data-form="klient-utanfor" class="rad-form">
+      <label>Från början <input type="number" name="antal" min="0" max="500" step="1" value="${utanfor?.antal ?? ''}" placeholder="t.ex. 10"></label>
+      <label>Använda <input type="number" name="tidigare" min="0" step="1" value="${utanfor?.tidigare ?? ''}" placeholder="t.ex. 3"></label>
+      <button class="btn secondary" type="submit">Spara</button>
+    </form>
+    <p class="small muted" style="margin:4px 0 12px">T.ex. 10 pass som betalats kontant, varav 3 redan körda. Bokningarna i appen dras sedan från dem.</p>
+    ${lista.length ? `<ul class="list">${lista.map(rad).join('')}</ul>` : ''}
     <form data-form="klient-paket" class="lagg-paket">
       <label class="field" style="margin:12px 0 8px">Lägg på ett paket <select name="mall">${mallar.map(m => `<option value="${m.id}">${esc(m.namn)} · ${esc(kr(m.pris))}</option>`).join('')}</select></label>
       <details class="small"><summary>Eget paket i stället</summary>
@@ -230,6 +246,7 @@ function paketPanel(d) {
       <label class="check" style="margin:10px 0"><input type="checkbox" name="betald"><span>Redan betalt (Swish eller kontant)</span></label>
       <button class="btn grad block" type="submit">Lägg paketet på ${esc(k.barn || 'spelaren')}</button>
     </form>
+    <details class="pass-historik" ${logg.length ? '' : 'hidden'}><summary>Historik (${logg.length})</summary>${loggLista(logg.slice(0, 40))}</details>
   </section>`;
 }
 
@@ -403,19 +420,19 @@ export async function klienterAction(action, el, e) {
   }
   if (action === 'klient-tidpaket') {
     const r = await api.admin.post(`/admin/klient/${k.id}/tidpaket`, { v: el.dataset.v, slot: el.dataset.slot, paket: !!el.dataset.paket });
-    if (r.ok) { d.bokningar = r.bokningar; d.paket = r.paket; st.laddat = false; ui.tiderAndrad?.(); toast(el.dataset.paket ? 'Tiden dras från paketet' : 'Tiden betalas styckvis'); } else toast(`Gick inte: ${r.fel}`);
+    if (r.ok) { d.bokningar = r.bokningar; d.paket = r.paket; if (r.klient) d.klient = r.klient; st.laddat = false; ui.tiderAndrad?.(); toast(el.dataset.paket ? 'Tiden dras från paketet' : 'Tiden betalas styckvis');  } else toast(`Gick inte: ${r.fel}`);
     ritaKvar(); return true;
   }
   if (action === 'klient-paket-betald') {
     const betald = !!el.dataset.betald;
     const r = await api.admin.put(`/admin/klient/${k.id}/paket/${el.dataset.id}`, { betald });
-    if (r.ok) { d.paket = r.paket; st.laddat = false; toast(betald ? 'Paketet är markerat betalt' : 'Betalningen är ångrad'); } else toast(`Gick inte: ${r.fel}`);
+    if (r.ok) { d.paket = r.paket; if (r.klient) d.klient = r.klient; st.laddat = false; toast(betald ? 'Paketet är markerat betalt' : 'Betalningen är ångrad');  } else toast(`Gick inte: ${r.fel}`);
     ritaKvar(); return true;
   }
   if (action === 'klient-paket-bort') {
     if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Tryck igen för att ta bort'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = 'Ta bort'; el.classList.remove('armed'); }, 4000); return true; }
     const r = await api.admin.del(`/admin/klient/${k.id}/paket/${el.dataset.id}`);
-    if (r.ok) { d.paket = r.paket; d.bokningar = r.bokningar; st.laddat = false; ui.tiderAndrad?.(); toast('Paketet är borttaget. Tiderna i det betalas styckvis.'); } else toast(`Gick inte: ${r.fel}`);
+    if (r.ok) { d.paket = r.paket; d.bokningar = r.bokningar; if (r.klient) d.klient = r.klient; st.laddat = false; ui.tiderAndrad?.(); toast('Paketet är borttaget. Tiderna i det betalas styckvis.');  } else toast(`Gick inte: ${r.fel}`);
     ritaKvar(); return true;
   }
   if (action === 'klient-bed-ny') { st.bedForm = !st.bedForm; route(); return true; }
@@ -480,12 +497,20 @@ export async function klienterSubmit(kind, f, fd) {
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
     st.vald.klient = r.klient; st.laddat = false; toast('Sparat'); go(`/admin/klient/${k.id}`); return true;
   }
+  if (kind === 'klient-pris' || kind === 'klient-utanfor') {
+    const k = st.vald.klient;
+    const r = kind === 'klient-pris' ? await api.admin.put(`/admin/klient/${k.id}/pris`, { pris: fd.get('pris') }) : await api.admin.put(`/admin/klient/${k.id}/utanfor`, { antal: fd.get('antal'), tidigare: fd.get('tidigare') });
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    st.vald.klient = r.klient; if (r.paket) { st.vald.paket = r.paket; st.vald.bokningar = r.bokningar; } st.laddat = false; ui.tiderAndrad?.();
+    toast(kind === 'klient-pris' ? (r.klient.pris ? `Eget pris sparat: ${kr(r.klient.pris)} per pass` : 'Standardpriset gäller') : 'Passen betalda utanför appen är sparade');
+    ritaKvar(); return true;
+  }
   if (kind === 'klient-paket') {
     const k = st.vald.klient;
     const eget = String(fd.get('antal') || '').trim() && String(fd.get('pris') ?? '').trim() !== '';
     const r = await api.admin.post(`/admin/klient/${k.id}/paket`, eget ? { antal: fd.get('antal'), pris: fd.get('pris'), betald: fd.get('betald') === 'on' } : { mall: fd.get('mall'), betald: fd.get('betald') === 'on' });
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
-    st.vald.paket = r.paket; st.vald.bokningar = r.bokningar; st.laddat = false; ui.tiderAndrad?.();
+    st.vald.paket = r.paket; st.vald.bokningar = r.bokningar; if (r.klient) st.vald.klient = r.klient; st.laddat = false; ui.tiderAndrad?.();
     const pk = r.paket.at(-1);
     toast(`${pk.namn} är lagt på ${k.barn || 'spelaren'}.${r.flyttade ? ` ${r.flyttade === 1 ? 'En bokad tid' : `${r.flyttade} bokade tider`} dras nu från paketet.` : ''}`);
     ritaKvar(); return true;

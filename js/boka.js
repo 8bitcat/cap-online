@@ -127,7 +127,8 @@ export function bokaPage(v) {
       <p class="small muted" style="margin:2px 0 10px">Då ser du direkt när det går att boka.</p>
       <div class="btn-row two" style="margin:0"><button class="btn grad" data-action="boka-notis">Slå på notiser</button><button class="btn secondary" data-action="boka-notis-nej">Inte nu</button></div>
     </div>` : ''}
-    <p class="muted small">Tryck på en ledig tid så hålls den i 60 sekunder åt dig. Bekräfta innan tiden går ut. Röda tider är redan bokade.${aktivtPaket() ? ` Du har ${aktivtPaket().kvar} pass kvar i ditt paket, bokningarna dras från det.` : bet ? ` Ett pass kostar ${esc(kr(bet.pris))} och betalas med Swish.${bet.paket?.length ? ' Paket med fler pass finns längre ner.' : ''}` : ''}</p>
+    ${(data.paket || []).length ? `<a class="saldo-ruta" href="#/mina-pass"><span><b>${(data.paket || []).reduce((n, p) => n + p.kvar, 0)}</b> pass kvar</span><span class="small">Mina pass och historik ›</span></a>` : ''}
+    <p class="muted small">Tryck på en ledig tid så hålls den i 60 sekunder åt dig. Bekräfta innan tiden går ut. Röda tider är redan bokade.${aktivtPaket() ? ' När du bokar väljer du om du använder ett av dina pass eller swishar för passet.' : bet ? ` Ett pass kostar ${esc(kr(bet.pris))} och betalas med Swish.${bet.paket?.length ? ' Paket med fler pass finns längre ner.' : ''}` : ''}</p>
     <div class="vecka-nav">
       <a class="btn secondary ${kanBak ? '' : 'disabled'}" href="#/boka/${foreg}" ${kanBak ? '' : 'aria-disabled="true" tabindex="-1"'}>‹</a>
       <div class="vecka-titel"><b>Vecka ${Number(v.split('-W')[1])}</b><div class="small muted">${fmtDatum(m)} – ${fmtDatum(s)}${v === nu ? ' · denna vecka' : ''}</div></div>
@@ -144,9 +145,13 @@ export function bokaPage(v) {
   ${h ? `<section class="panel brand hall" data-tills="${h.tills}">
     <div class="eyebrow">Platsen hålls åt dig</div>
     <h3 style="margin:0">${esc(DAG[h.dag])} ${esc(h.start)}–${esc(h.slut)}${h.plats ? ` · ${esc(h.plats)}` : ''}</h3>
-    <div class="xp-row" style="margin-top:8px"><span class="small muted">Bekräfta inom <b id="hallSek">60</b> s${aktivtPaket() ? ` · dras från ditt paket (${aktivtPaket().kvar} kvar)` : bet ? ` · ${esc(kr(bet.pris))}, betalas med Swish efter bokningen` : ''}</span></div>
+    <div class="xp-row" style="margin-top:8px"><span class="small muted">Bekräfta inom <b id="hallSek">60</b> s${aktivtPaket() ? ' · välj hur passet betalas' : bet ? ` · ${esc(kr(bet.pris))}, betalas med Swish efter bokningen` : ''}</span></div>
     <div class="progress" style="margin-top:6px"><i id="hallBar" style="width:100%"></i></div>
-    <div class="btn-row two"><button class="btn grad" data-action="boka-bekrafta">Boka för ${esc(barn || 'oss')}</button><button class="btn secondary" data-action="boka-slapp">Ångra</button></div>
+    ${aktivtPaket() ? `<div class="val-knappar">
+      <button class="btn grad" data-action="boka-bekrafta" data-betalning="paket">Använd ett av dina pass (${aktivtPaket().kvar} kvar)</button>
+      ${bet ? `<button class="btn secondary" data-action="boka-bekrafta" data-betalning="swish">Swisha ${esc(kr(bet.pris))} i stället, spara passen</button>` : ''}
+      <button class="film" data-action="boka-slapp">Ångra</button>
+    </div>` : `<div class="btn-row two"><button class="btn grad" data-action="boka-bekrafta">Boka för ${esc(barn || 'oss')}</button><button class="btn secondary" data-action="boka-slapp">Ångra</button></div>`}
   </section>` : ''}
   <section id="mina"></section>
   ${betalArk()}`;
@@ -220,7 +225,7 @@ function paketKort(p) {
   return `<div class="paket-kort ${p.betald ? '' : 'obetalt'}" id="paket-${p.id}">
     <div class="pk-rad"><b>${esc(p.namn)}</b><span class="pk-kvar">${p.kvar} av ${p.antal} pass kvar</span></div>
     ${prickar}
-    <div class="small muted">${p.av === 'foralder' ? 'Köpt' : 'Från Haris'} ${kopt.getDate()} ${MAN[kopt.getMonth()]} · ${esc(kr(p.pris))}</div>
+    <div class="small muted">${p.av === 'foralder' ? 'Köpt' : 'Från Haris'} ${kopt.getDate()} ${MAN[kopt.getMonth()]} · ${p.utanfor ? `betalda utanför appen, ${p.tidigare || 0} använda innan` : esc(kr(p.pris))}</div>
     <div class="betalrad">${rad}</div>
   </div>`;
 }
@@ -264,7 +269,7 @@ export async function bokaAction(action, el) {
   }
   if (action === 'boka-bekrafta') {
     if (!hall) return true;
-    const r = await api.post('/boka/bekrafta', { v: hall.v, slot: hall.slot, barn: store.profile?.name || '' }, token());
+    const r = await api.post('/boka/bekrafta', { v: hall.v, slot: hall.slot, barn: store.profile?.name || '', betalning: el.dataset.betalning || undefined }, token());
     klar = r.ok ? { v: hall.v, slot: hall.slot } : null;
     hall = null; clearInterval(tick);
     await Promise.all([hamtaVeckor(true), hamtaMina(true)]);
@@ -328,6 +333,28 @@ export async function bokaAction(action, el) {
 }
 
 // Ett pass Haris delat: block med tider, filmer och kommentarer
+const fmtLogg = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${d.getDate()} ${MAN[d.getMonth()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const loggLista = rader => `<ul class="logg">${rader.map(r => `<li><span class="logg-dat">${fmtLogg(r.t)}</span><span class="logg-text">${esc(r.text)}</span>${r.antal ? `<span class="logg-antal ${r.antal > 0 ? 'plus' : 'minus'}">${r.antal > 0 ? '+' : '−'}${Math.abs(r.antal)}</span>` : '<span></span>'}</li>`).join('')}</ul>`;
+
+// Mina pass (Carl 2026-10-28): saldot, paketen och en logg över alla pass – när Haris lagt in eller tagit bort pass,
+// varje bokning och avbokning, med datum. En bokning som betalas styckvis står bara som bokningen.
+export function minaPassPage() {
+  if (!token()) return `<section class="empty"><p class="muted">Logga in för att se dina pass.</p><a class="btn grad" href="#/login">Logga in</a></section>`;
+  if (!mina.hamtat) { hamtaMina().then(ui.kvar()); return `<section class="empty"><p class="muted">Hämtar dina pass…</p></section>`; }
+  if (Date.now() - mina.hamtat > 15000) { const om = ui.kvar(); hamtaMina(true).then(om); }
+  const k = mina.klient, paket = mina.paket || [], logg = (k?.passLogg || []).slice().reverse();
+  const kvar = paket.reduce((n, p) => n + p.kvar, 0);
+  return `
+  <a class="back" href="#/boka">‹ Med Haris</a>
+  <section>
+    <div class="eyebrow">Mina pass${k?.barn ? ` · ${esc(k.barn)}` : ''}</div>
+    <h1>${kvar} ${kvar === 1 ? 'pass' : 'pass'} kvar</h1>
+    <p class="small muted">${mina.betalning?.pris ? `Ett pass kostar ${esc(kr(mina.betalning.pris))}${k?.pris ? ' (ditt pris hos Haris)' : ''}. ` : ''}Här ser du passen som Haris lagt in eller som du köpt, och varje bokning och avbokning.</p>
+  </section>
+  ${paket.length ? `<section>${paket.slice().reverse().map(paketKort).join('')}</section>` : ''}
+  <section><h2>Historik</h2>${logg.length ? loggLista(logg) : '<p class="small muted">Inget har hänt än. När Haris lägger in pass eller du bokar syns det här.</p>'}</section>`;
+}
+
 export function medHarisPage(id) {
   const p = mina.planer.find(x => x.id === id);
   if (!p) {

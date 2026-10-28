@@ -3,6 +3,25 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-28 – pass på barnet: utanför appen, eget pris, val vid bokning, historik
+
+- **⇄ syns alltid** (Haris var bara inloggad som Haris i Chrome och hittade
+  ingen växling i appen). Utan Haris inloggning leder den till lösenordet.
+- **Ny kund: bara mobilnumret** är obligatoriskt, resten under "Mer om spelaren
+  och föräldern (valfritt)".
+- **Pass betalda utanför appen** (Carl: "två rutor hur många från början och hur
+  många som är använda"): ett paket per barn märkt `utanfor` med `antal` och
+  `tidigare`; saldot = antal − tidigare − bokningar. PUT …/utanfor.
+- **Eget pris per barn** ("olika barn ska kunna ha deals"): `klient.pris`, tomt =
+  standardpriset. Gäller styckbokningar och Swish-knappen för det barnet.
+- **Val vid bokning** ("använd dina köpta pass eller swisha för nytt"): har barnet
+  pass kvar visar rutan för platsen Använd ett av dina pass och Swisha … i stället.
+  `/boka/bekrafta {betalning: 'paket'|'swish'}`; äldre appar utan val dras från paketet.
+- **Historik** ("en logg på alla pass … med datum"): `klient.passLogg` med inlagda
+  och borttagna pass, köp, bokningar, avbokningar, flyttar och prisändringar
+  (antal = +/− på saldot, 0 för en styckbokning). Föräldern ser den under
+  Med Haris → Mina pass och under Mer; Haris under Pass och pris på barnet.
+
 ## 2026-10-28 – priser och paket
 
 - **Priserna** (Carl): 850 kr per pass, 10 pass 6 900 kr (690 kr/pass), 20 pass

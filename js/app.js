@@ -5,7 +5,7 @@ import { loggaUt, hamtaFilmer, filmerNu } from './api.js';
 import { loginPage, pinPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
 import { serverStatus, statusNu, sparaBarn } from './api.js';
 import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar } from './admin.js';
-import { bokaInit, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu, veckorGlom } from './boka.js';
+import { bokaInit, minaPassPage, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu, veckorGlom } from './boka.js';
 import { tiderGlom } from './admin-tider.js';
 import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
@@ -135,6 +135,7 @@ const routes = [
   [/^\/boka\/(\d{4}-W\d{2})$/, v => bokaPage(v)],
   [/^\/med-haris\/([a-z0-9]+)$/, medHarisPage],
   [/^\/utveckling$/, utvecklingPage],
+  [/^\/mina-pass$/, minaPassPage],
   [/^\/mer$/, merPage],
   [/^\/film\/([a-z0-9]+)$/, id => filmPage(id)],
   [/^\/filmer$/, filmerPage],
@@ -212,7 +213,7 @@ function renderTabs() {
 
 function activeTab(path) {
   if (path.startsWith('/admin')) { if (/^\/admin\/(klient|pass)/.test(path)) return '/admin/klienter'; const t = TABS.admin.map(x => x[0]).filter(h => path.startsWith(h))[0]; return t || '/admin/klienter'; }
-  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek', '/med-haris': '/boka', '/utveckling': '/' };
+  const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek', '/med-haris': '/boka', '/mina-pass': '/boka', '/utveckling': '/' };
   Object.assign(alias, { '/spelarkort': '/mer', '/bibliotek': '/mer', '/foralder': '/mer', '/notiser': '/mer', '/pin': '/mer', '/app': '/mer', '/pass': '/stig', '/passet': '/stig', '/film': '/stig', '/planera': '/stig', '/plan': '/stig' });
   for (const k in alias) if (path.startsWith(k)) return alias[k];
   const tabs = TABS.app;
@@ -691,6 +692,7 @@ function merPage() {
   <section><div class="eyebrow">Mer</div><h1>${p ? esc(p.name) : 'Mer'}</h1></section>
   <section class="cards">
     ${store.session?.user?.klientId ? rad('/utveckling', '📈', 'Utveckling', 'Nivå hos Haris, bedömningar över tid, filmer och ljud från passen') : ''}
+    ${(() => { const m = minaNu(); const kvar = (m.paket || []).reduce((n, p) => n + p.kvar, 0); return m.klient && ((m.paket || []).length || (m.klient.passLogg || []).length) ? rad('/mina-pass', '🎟', `Mina pass: ${kvar} kvar`, 'Paket, inlagda pass och historik') : ''; })()}
     ${rad('/spelarkort', '🪪', 'Spelarkortet', 'Betyg, XP, märken och svit')}
     ${rad('/bibliotek', '📚', 'Biblioteket', 'Passen, loggade pass och planerade pass')}
     ${rad('/filmer', '🎬', 'Filmer från Haris', 'Alla publicerade filmer med taggar')}

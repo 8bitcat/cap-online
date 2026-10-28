@@ -82,12 +82,18 @@ const TEL = '070-555 66 77';
 
   // ---- nästa bokning dras från paketet ----
   await f.goto(base + `index.html#/boka/${vt}`); await f.waitForSelector('.tid', { timeout: 10000 }); await f.waitForTimeout(500);
-  koll('texten säger att bokningarna dras från paketet', (await text(f, 'section p.muted.small')).includes('Du har 9 pass kvar i ditt paket'));
+  koll('saldot syns på bokningssidan', (await text(f, '.saldo-ruta')).includes('9 pass kvar'), await text(f, '.saldo-ruta'));
   const hall2 = await boka(0);
-  koll('platsen som hålls: dras från paketet', hall2.includes('dras från ditt paket (9 kvar)'), hall2);
+  koll('valet: använd ett köpt pass eller swisha', hall2.includes('Använd ett av dina pass (9 kvar)') && hall2.includes('Swisha 850 kr i stället'), hall2);
   koll('bokad: passet dras från paketet, 8 kvar, ingen betalruta', (await text(f, '.nyss-bokad')).includes('Passet dras från paketet, 8 kvar') && !(await f.$('.nyss-bokad a.btn.swish')) && !(await f.$('.betal-ark')), await text(f, '.nyss-bokad'));
   await f.click('.paket-kort [data-action=boka-paket-swishad]'); await vantaToast(f, 'Tack!');
   koll('Jag har swishat för paketet', await vantaText(f, '.paket-kort', 'Swishad'));
+  // ett pass med Swish fast paketet har pass kvar (Carl: "swisha för nytt och använd inte det köpta")
+  await (await f.$$('.tid:not([disabled]):not(.min)'))[0].click(); await f.waitForSelector('.hall', { timeout: 8000 });
+  await f.click('[data-action=boka-bekrafta][data-betalning=swish]'); await f.waitForSelector('.betal-ark', { timeout: 10000 }).catch(() => {});
+  koll('Swisha i stället: rutan Betala passet', (await text(f, '.betal-ark a.btn.swish')) === 'Betala 850 kr med Swish', await text(f, '.betal-ark'));
+  await f.click('[data-action=boka-ark-stang]'); await vantaText(f, '.paket-kort .pk-kvar', '8 av 10');
+  koll('paketet orört, 8 kvar', (await text(f, '.paket-kort .pk-kvar')) === '8 av 10 pass kvar', await text(f, '.paket-kort .pk-kvar'));
 
   // ---- Haris: klientsidan ----
   await a.goto(base + `index.html#/admin/klient/${kid}`); await a.waitForSelector('form[data-form=klient-paket]', { timeout: 10000 });
@@ -96,30 +102,53 @@ const TEL = '070-555 66 77';
   await a.click('[data-action=klient-paket-betald]'); await vantaToast(a, 'markerat betalt');
   koll('Markera betald på paketet', await vantaText(a, '.lagg-paket', '') && await a.waitForFunction(() => document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('Betald ✓'), null, { timeout: 8000 }).then(() => true, () => false));
   const rader = async () => a.$$eval('li.row.bokning', l => l.map(x => x.textContent.replace(/\s+/g, ' ')));
-  koll('tiderna ingår i paket', (await rader()).length === 2 && (await rader()).every(r => r.includes('Ingår i paket')), (await rader()).join(' || ').slice(0, 200));
+  koll('två tider ingår i paket, en med Swish', (await rader()).length === 3 && (await rader()).filter(r => r.includes('Ingår i paket')).length === 2, (await rader()).join(' || ').slice(0, 240));
   await a.click('li.row.bokning [data-action=klient-tidpaket]'); await vantaToast(a, 'styckvis'); await a.waitForFunction(() => document.querySelector('li.row.bokning')?.textContent.includes('Dra från paketet'), null, { timeout: 8000 }).catch(() => {});
   koll('Betala styckvis i stället', (await rader())[0].includes('850 kr') && (await rader())[0].includes('Dra från paketet') && (await panel()).includes('9 av 10 kvar'), (await rader())[0]);
   await a.click('li.row.bokning [data-action=klient-tidpaket][data-paket="1"]'); await vantaToast(a, 'dras från paketet'); await a.waitForFunction(() => !document.querySelector('li.row.bokning')?.textContent.includes('Dra från paketet'), null, { timeout: 8000 }).catch(() => {});
   koll('Dra från paketet', (await rader())[0].includes('Ingår i paket') && (await panel()).includes('8 av 10 kvar'));
   // Haris lägger på 20 pass, redan betalt
   await a.selectOption('form[data-form=klient-paket] select[name=mall]', { label: '20 pass · 12 900 kr' });
-  await a.check('form[data-form=klient-paket] input[name=betald]'); await a.click('form[data-form=klient-paket] button[type=submit]'); await vantaToast(a, 'är lagt på'); await a.waitForFunction(() => document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('20 av 20'), null, { timeout: 8000 }).catch(() => {});
-  koll('Haris lägger på 20 pass, betalt', (await panel()).includes('20 av 20 kvar') && (await panel()).includes('28 pass kvar'), (await panel()).slice(0, 120));
+  await a.check('form[data-form=klient-paket] input[name=betald]'); await a.click('form[data-form=klient-paket] button[type=submit]'); await vantaToast(a, 'är lagt på'); await a.waitForFunction(() => document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('19 av 20'), null, { timeout: 8000 }).catch(() => {});
+  koll('Haris lägger på 20 pass, betalt (onsdagstiden flyttas in)', (await panel()).includes('19 av 20 kvar') && (await panel()).includes('27 pass kvar'), (await panel()).slice(0, 120));
   await a.screenshot({ path: path.join(UT, 'paket-haris.png'), fullPage: true });
   const del = (await a.$$('[data-action=klient-paket-bort]'))[0];
-  await del.click(); await del.click(); await vantaToast(a, 'borttaget'); await a.waitForFunction(() => !document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('20 av 20'), null, { timeout: 8000 }).catch(() => {});
-  koll('ta bort paketet', !(await panel()).includes('20 av 20'));
+  await del.click(); await del.click(); await vantaToast(a, 'borttaget'); await a.waitForFunction(() => !document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('19 av 20'), null, { timeout: 8000 }).catch(() => {});
+  koll('ta bort paketet', !(await panel()).includes('19 av 20'));
   // Tider: ingen Markera betald på en paketbokning
   await a.goto(base + 'index.html#/admin/tider'); await a.waitForSelector('.vecka-titel');
   for (let i = 0; i < 14 && !(await text(a, '.vecka-titel b')).endsWith(` ${Number(vt.split('-W')[1])}`); i++) { await a.click('[data-action=tid-vecka]:last-of-type'); await a.waitForTimeout(200); }
   const tr = await a.$$eval('.slotrad.bokad .betal-rad-admin', l => l.map(x => x.textContent.replace(/\s+/g, ' ').trim()));
-  koll('Tider: paketbokningar utan Markera betald', tr.length === 2 && tr.every(x => x.includes('Ingår i paket') && !x.includes('Markera betald')), tr.join(' | '));
+  koll('Tider: paketbokningar utan Markera betald', tr.length === 3 && tr.filter(x => x.includes('Ingår i paket') && !x.includes('Markera betald')).length === 2, tr.join(' | '));
 
   // ---- avbokning ger tillbaka passet ----
   await f.goto(base + `index.html#/boka/${vt}`); await f.waitForSelector('#mina li.row.bokning', { timeout: 10000 });
   const av = (await f.$$('#mina [data-action=boka-avboka]'))[0];
   await av.click(); await av.click(); await vantaToast(f, 'Avbokad'); await vantaText(f, '.paket-kort .pk-kvar', '9 av 10');
   koll('avbokat: passet tillbaka (9 av 10)', (await text(f, '.paket-kort .pk-kvar')) === '9 av 10 pass kvar', await text(f, '.paket-kort .pk-kvar'));
+
+  // ---- Haris: eget pris och pass betalda utanför appen ----
+  await a.goto(base + `index.html#/admin/klient/${kid}`); await a.waitForSelector('form[data-form=klient-pris]', { timeout: 10000 });
+  await a.fill('form[data-form=klient-pris] input[name=pris]', '700'); await a.click('form[data-form=klient-pris] button[type=submit]'); await vantaToast(a, 'Eget pris sparat');
+  koll('eget pris sparat', (await toast(a)).includes('700 kr per pass'), await toast(a));
+  await a.fill('form[data-form=klient-utanfor] input[name=antal]', '10'); await a.fill('form[data-form=klient-utanfor] input[name=tidigare]', '3');
+  await a.click('form[data-form=klient-utanfor] button[type=submit]'); await vantaToast(a, 'utanför appen');
+  await a.waitForFunction(() => document.querySelector('#pass .pk-kvar')?.textContent.includes('16 pass kvar'), null, { timeout: 8000 }).catch(() => {});
+  koll('utanför appen: 10 från början, 3 använda ger +7', (await text(a, '#pass .pk-kvar')) === '16 pass kvar', await text(a, '#pass .pk-kvar'));
+  await a.waitForFunction(() => (document.querySelector('.pass-historik')?.textContent || '').includes('utanför appen'), null, { timeout: 8000 }).catch(() => {});
+  koll('Haris ser historiken', (await a.$eval('.pass-historik', e => e.textContent)).includes('Haris lade in 10 pass betalda utanför appen, 3 redan använda'));
+  await a.screenshot({ path: path.join(UT, 'paket-haris-pris.png'), fullPage: true });
+  // ---- föräldern: sitt pris, Mina pass och historiken ----
+  await f.goto(base + `index.html#/boka/${vt}`); await f.reload({ waitUntil: 'networkidle' }); await f.waitForSelector('.tid', { timeout: 10000 });
+  await (await f.$$('.tid:not([disabled]):not(.min)'))[0].click(); await f.waitForSelector('.hall', { timeout: 8000 });
+  koll('föräldern ser sitt eget pris', (await text(f, '.hall')).includes('Swisha 700 kr i stället'), await text(f, '.hall'));
+  await f.click('[data-action=boka-slapp]'); await f.waitForTimeout(500);
+  await f.goto(base + 'index.html#/mina-pass'); await f.waitForSelector('.logg', { timeout: 10000 });
+  const mp = await text(f, '#view');
+  koll('Mina pass: saldo och historik', mp.includes('16 pass kvar') && mp.includes('Köpte 10 pass') && mp.includes('Bokade') && mp.includes('Avbokade') && mp.includes('Haris lade in 10 pass betalda utanför appen'), mp.slice(0, 220));
+  await f.screenshot({ path: path.join(UT, 'paket-minapass.png'), fullPage: true });
+  await f.goto(base + 'index.html#/mer'); await f.waitForTimeout(800);
+  koll('Mer: Mina pass med saldo', (await text(f, '#view')).includes('Mina pass: 16 kvar'));
 
   // städa
   await adm('PUT', `/admin/vecka/${vt}`, { oppen: false, slots: [], notis: false }).catch(() => {});

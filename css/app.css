@@ -737,3 +737,19 @@ body.admin .view { max-width: 1080px; }
 .mer-om { margin: 10px 0 4px; border-top: 1px solid var(--line); padding-top: 10px; }
 .mer-om > summary { cursor: pointer; font-weight: 700; color: var(--brand); padding: 6px 0; }
 .mer-om[open] > summary { margin-bottom: 8px; }
+/* Pass: saldo, val vid bokning, historik (Carl 2026-10-28) */
+.saldo-ruta { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 10px 0 12px; padding: 12px 14px; border: 1px solid var(--brand-deep); border-radius: var(--radius-sm); background: rgba(0, 212, 203, .07); color: var(--text); }
+.saldo-ruta b { font-size: 22px; color: var(--brand); font-variant-numeric: tabular-nums; }
+.saldo-ruta .small { color: var(--brand); }
+.val-knappar { display: grid; gap: 8px; margin-top: 4px; }
+.val-knappar .film { justify-self: center; }
+.logg { list-style: none; padding: 0; margin: 6px 0 0; display: grid; gap: 0; }
+.logg li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.logg-dat { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.logg-antal { font-weight: 800; font-variant-numeric: tabular-nums; }
+.logg-antal.plus { color: var(--ok); }
+.logg-antal.minus { color: var(--warn); }
+.rad-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.rad-form label { flex: 1 1 140px; display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.pass-historik { margin-top: 12px; }
+.pass-historik > summary { cursor: pointer; font-weight: 700; color: var(--brand); }

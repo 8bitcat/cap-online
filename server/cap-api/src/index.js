@@ -15,7 +15,7 @@
 //   GET  /media/<key>                               → filmen/omslaget/ljudet ur R2 (Range-stöd)
 // Tider och bokning (förälder)
 //   GET  /veckor          Bearer                    → {nu, veckor: [{v, slots}]} öppna veckor från och med denna
-//   POST /boka/hall · /boka/bekrafta · /boka/avboka {v, slot}
+//   POST /boka/hall · /boka/bekrafta {v, slot, betalning: 'paket'|'swish'} · /boka/avboka {v, slot}
 //   POST /boka/swishad    {v, slot, angra}          → föräldern säger att hen swishat (Haris bekräftar)
 //   GET  /mina            Bearer                    → {klient, bokningar, planer, bedomningar, media, betalning, paket}
 //   POST /mina/paket {mall} · /mina/paket/swishad {id, angra} · /mina/paket/angra {id}   paket på barnet (klippkort)
@@ -31,6 +31,8 @@
 //     POST /admin/klient/<id>/boka      {v, slot} · POST …/avboka {v, slot}   Haris bokar åt en befintlig kund
 //     POST /admin/klient/<id>/paket {mall | namn, antal, pris; betald} · PUT …/paket/<pid> {betald} · DELETE …/paket/<pid>
 //     POST /admin/klient/<id>/tidpaket {v, slot, paket}   en bokad tid in i paketet (true) eller styckvis (false)
+//     PUT  /admin/klient/<id>/pris {pris}   eget pris per pass · PUT …/utanfor {antal, tidigare}   pass betalda utanför appen
+//     Klienten har passLogg: inlagda/borttagna pass, bokningar och avbokningar (föräldern ser den under Mina pass)
 //   Filmer: GET /admin/filmer · POST /admin/film · PUT/DELETE /admin/film/<id>
 //   Uppladdning i delar till R2: POST /admin/upload/start {filmId|klientId, filnamn, typ} · PUT /admin/upload/part · POST /admin/upload/complete · PUT /admin/upload/poster/<id>
 //   Tider: GET /admin/veckor · PUT /admin/vecka/<v> {oppen, slots, notis} · POST /admin/vecka/<v>/auto · POST /admin/vecka/<v>/duplicera
@@ -195,7 +197,7 @@ function renKlient(d, gammal = {}) {
     position: POSITIONER.includes(d.position) ? d.position : (gammal.position || 'okand'), lag: ren(d.lag, 60),
     niva, nivaHistorik: hist, anteckning: ren(d.anteckning, 2000),
     status: ['ny', 'aktiv', 'paus'].includes(d.status) ? d.status : (gammal.status || 'ny'),
-    pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [], inloggad: gammal.inloggad || {}, paket: gammal.paket || [],
+    pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [], inloggad: gammal.inloggad || {}, paket: gammal.paket || [], pris: gammal.pris ?? null, passLogg: gammal.passLogg || [],
   };
 }
 // Det föräldern och adminlistan får se (aldrig pin-hashen eller sms-loggens nycklar)
@@ -368,8 +370,17 @@ async function pushAlla(env, title, text, hash = '') {
 function paketSaldo(k, veckor) {
   const anv = {};
   for (const w of veckor) for (const s of w.slots) if (s.bokad?.uid === k.id && s.bokad.paket) anv[s.bokad.paket] = (anv[s.bokad.paket] || 0) + 1;
-  return (k.paket || []).map(p => ({ ...p, anvanda: anv[p.id] || 0, kvar: Math.max(0, p.antal - (anv[p.id] || 0)) }));
+  // tidigare = pass som redan var använda när Haris lade in pass betalda utanför appen
+  return (k.paket || []).map(p => { const anvanda = (p.tidigare || 0) + (anv[p.id] || 0); return { ...p, anvanda, kvar: Math.max(0, p.antal - anvanda) }; });
 }
+// Carl 2026-10-28: "olika barn ska kunna ha deals" – Haris sätter ett eget pris per pass på barnet
+const klientPris = (k, cfg) => k?.pris || cfg.pris || null;
+const krText = n => `${Number(n).toLocaleString('sv-SE')} kr`;
+const DAGK = ['', 'mån', 'tis', 'ons', 'tor', 'fre', 'lör', 'sön'];
+const tidText = (v, s) => { const d = new Date(datumFor(v, s.dag) + 'T12:00:00Z'); return `${DAGK[s.dag]} ${d.getUTCDate()} ${MANAD[d.getUTCMonth()]} kl ${s.start}`; };
+// Carl 2026-10-28: "en logg på alla pass" – inlagda och borttagna pass, bokningar och avbokningar, med datum.
+// antal = hur saldot ändrades (+10 inlagt, −1 bokat från paketet, 0 för en bokning som betalas styckvis)
+function logga(k, typ, text, antal = 0, av = '') { k.passLogg = [...(k.passLogg || []), { t: nu(), typ, text: ren(text, 160), antal, av }].slice(-300); }
 const ledigtPaket = (k, veckor) => paketSaldo(k, veckor).find(p => p.kvar > 0) || null;
 const nyttPaket = (m, av, betald) => ({ id: nyttId('pk'), namn: ren(m.namn, 40) || `${m.antal} pass`, antal: m.antal, pris: m.pris, kopt: nu(), av, betald: betald || !m.pris ? nu() : null, swishad: null });
 async function sparaVeckor(env, veckor) { await Promise.all([...veckor].map(w => env.DB.put(`vecka:${w.v}`, JSON.stringify(w)))); }
@@ -390,7 +401,7 @@ async function flyttaTillPaket(env, k, pk, veckor) {
 }
 // Paketet tas bort: tiderna i det betalas styckvis igen, till dagens pris
 async function slappPaket(env, k, pid, veckor) {
-  const pris = (await hamtaBetalning(env)).pris || null;
+  const pris = klientPris(k, await hamtaBetalning(env));
   const andrade = new Set();
   for (const w of veckor) for (const s of w.slots) if (s.bokad?.uid === k.id && s.bokad.paket === pid) { s.bokad.paket = null; s.bokad.pris = pris; andrade.add(w); }
   await sparaVeckor(env, andrade);
@@ -671,7 +682,8 @@ export default {
       const veckor = await hamtaAlla(env, 'vecka:');
       const alla = veckor.filter(w => w.oppen && w.v >= nuV).sort((a, b) => a.v.localeCompare(b.v));
       const k = user.klientId ? await hamtaKlient(env, user.klientId) : null;
-      return svar({ ok: true, nu: nuV, veckor: alla.map(w => publikVecka(stadaHall(w), user.uid)), betalning: publikBetalning(await hamtaBetalning(env)), paket: k ? paketSaldo(k, veckor) : [] });
+      const cfg = await hamtaBetalning(env);
+      return svar({ ok: true, nu: nuV, veckor: alla.map(w => publikVecka(stadaHall(w), user.uid)), betalning: publikBetalning({ ...cfg, pris: klientPris(k, cfg) }), paket: k ? paketSaldo(k, veckor) : [] });
     }
     if (p.startsWith('/boka/') && req.method === 'POST') {
       const user = await sessionUser(env, req);
@@ -693,12 +705,20 @@ export default {
       if (p === '/boka/bekrafta') {
         if (s.bokad) return fel('tiden hann bli bokad', 409);
         if (!s.hall || s.hall.uid !== user.uid || s.hall.tills < now) return fel('dina 60 sekunder gick ut, håll platsen igen', 410);
-        // har barnet ett paket med pass kvar dras tiden från det, annars betalas den styckvis
+        // betalning: 'paket' = ett köpt pass, 'swish' = betala det här passet med Swish (Carl 2026-10-28: "använd dina
+        // köpta pass eller swisha för nytt och använd inte det köpta"). Utan val (äldre appar) dras det från paketet.
         const kl = user.klientId ? await hamtaKlient(env, user.klientId) : null;
-        const pk = kl ? ledigtPaket(kl, await hamtaAlla(env, 'vecka:')) : null;
-        s.bokad = { uid: user.uid, namn: user.namn || '', barn: ren(d.barn, 40) || user.barn || '', email: user.email || '', telefon: user.telefon || '', t: nu(), av: 'foralder', pris: pk ? null : (await hamtaBetalning(env)).pris || null, paket: pk?.id || null };
+        const cfg = await hamtaBetalning(env);
+        const pk = kl && d.betalning !== 'swish' ? ledigtPaket(kl, await hamtaAlla(env, 'vecka:')) : null;
+        if (d.betalning === 'paket' && !pk) return fel('du har inga pass kvar i paketet', 409);
+        s.bokad = { uid: user.uid, namn: user.namn || '', barn: ren(d.barn, 40) || user.barn || '', email: user.email || '', telefon: user.telefon || '', t: nu(), av: 'foralder', pris: pk ? null : klientPris(kl, cfg), paket: pk?.id || null };
         s.hall = null;
         await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
+        if (kl) {
+          if (pk) logga(kl, 'bokad', `Bokade ${tidText(v, s)} med ett pass ur ${pk.namn}`, -1, 'foralder');
+          else logga(kl, 'styck', `Bokade ${tidText(v, s)}${s.bokad.pris ? `, ${krText(s.bokad.pris)} med Swish` : ''}`, 0, 'foralder');
+          await sparaKlient(env, kl);
+        }
         return svar({ ok: true, slot: publikVecka(vecka, user.uid).slots.find(x => x.id === s.id) });
       }
       if (p === '/boka/swishad') {
@@ -708,7 +728,11 @@ export default {
         return svar({ ok: true });
       }
       if (p === '/boka/avboka') {
-        if (s.bokad?.uid === user.uid) s.bokad = null;
+        if (s.bokad?.uid === user.uid) {
+          const kl = user.klientId ? await hamtaKlient(env, user.klientId) : null;
+          if (kl) { logga(kl, 'avbokad', `Avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : ''}`, s.bokad.paket ? 1 : 0, 'foralder'); await sparaKlient(env, kl); }
+          s.bokad = null;
+        }
         if (s.hall?.uid === user.uid) s.hall = null;
         await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
         return svar({ ok: true });
@@ -723,7 +747,8 @@ export default {
       const klient = user.klientId ? publikKlient(await hamtaKlient(env, user.klientId)) : null;
       const bedomningar = user.klientId ? ((await env.DB.get(`bed:${user.klientId}`, 'json')) || []) : [];
       const media = user.klientId ? ((await env.DB.get(`med:${user.klientId}`, 'json')) || []).filter(m => m.delad) : [];
-      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, betalning: publikBetalning(await hamtaBetalning(env)), paket: klient ? paketSaldo(klient, veckor) : [] });
+      const cfg = await hamtaBetalning(env);
+      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [] });
     }
 
     // barnets namn och födelseår, det första föräldern fyller i (Carl 2026-10-25)
@@ -741,8 +766,10 @@ export default {
         if ((k.paket || []).some(x => x.av === 'foralder' && !x.betald && !x.swishad)) return fel('betala paketet du redan köpt först, eller ångra köpet', 409);
         const pk = nyttPaket(m, 'foralder', false);
         k.paket = [...(k.paket || []), pk]; k.uppdaterad = nu();
+        logga(k, 'in', `Köpte ${pk.namn} för ${krText(pk.pris)}`, pk.antal, 'foralder');
         await sparaKlient(env, k);
         const flyttade = await flyttaTillPaket(env, k, pk, veckor);
+        if (flyttade) { logga(k, 'flytt', `${flyttade === 1 ? 'En bokad tid' : `${flyttade} bokade tider`} flyttades in i ${pk.namn}`, -flyttade); await sparaKlient(env, k); }
         return svar({ ok: true, id: pk.id, flyttade, paket: paketSaldo(k, veckor), bokningar: bokningarFor(veckor, k.id) });
       }
       const pk = (k.paket || []).find(x => x.id === String(d.id || ''));
@@ -750,8 +777,10 @@ export default {
       if (p === '/mina/paket/swishad') { if (!pk.betald) pk.swishad = d.angra ? null : nu(); }
       else if (p === '/mina/paket/angra') {
         if (pk.av !== 'foralder' || pk.betald || pk.swishad) return fel('paketet går inte att ångra här, hör av dig till Haris', 409);
+        const kvar = paketSaldo(k, veckor).find(x => x.id === pk.id)?.kvar || 0;
         await slappPaket(env, k, pk.id, veckor);
         k.paket = k.paket.filter(x => x !== pk);
+        logga(k, 'bort', `Ångrade köpet av ${pk.namn}`, -kvar, 'foralder');
       } else return fel('okänd adress', 404);
       k.uppdaterad = nu();
       await sparaKlient(env, k);
@@ -818,7 +847,7 @@ export default {
         const ids = await klientIndex(env); if (!ids.includes(k.id)) { ids.push(k.id); await env.DB.put('klienter', JSON.stringify(ids)); }
         return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, hamtaText: smsHamta(env, k), loggaText: smsLogga(env, k, kod), hamtaLank: hamtaLank(env), ...(await smsDag(env)) });
       }
-      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket)(?:\/([a-z0-9]+))?)?$/.exec(p);
+      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket|pris|utanfor)(?:\/([a-z0-9]+))?)?$/.exec(p);
       if (mk) {
         const k = await hamtaKlient(env, mk[1]);
         if (!k) return fel('klienten finns inte', 404);
@@ -827,7 +856,7 @@ export default {
           const [veckor, planer, bedomningar, media] = await Promise.all([hamtaAlla(env, 'vecka:'), hamtaAlla(env, 'plan:'), env.DB.get(`bed:${k.id}`, 'json'), env.DB.get(`med:${k.id}`, 'json')]);
           const kod = giltigKod(k);
           return svar({ ok: true, klient: publikKlient(k), bokningar: bokningarFor(veckor, k.id), planer: planer.filter(x => x.uid === k.id).sort((a, b) => (b.datum + b.uppdaterad).localeCompare(a.datum + a.uppdaterad)),
-            bedomningar: bedomningar || [], media: media || [], paket: paketSaldo(k, veckor), paketMallar: (await hamtaBetalning(env)).paket, lank: kod ? lank(env, kod) : null, kod, hamtaText: smsHamta(env, k), loggaText: kod ? smsLogga(env, k, kod) : '', hamtaLank: hamtaLank(env),
+            bedomningar: bedomningar || [], media: media || [], paket: paketSaldo(k, veckor), paketMallar: (await hamtaBetalning(env)).paket, standardPris: (await hamtaBetalning(env)).pris, lank: kod ? lank(env, kod) : null, kod, hamtaText: smsHamta(env, k), loggaText: kod ? smsLogga(env, k, kod) : '', hamtaLank: hamtaLank(env),
             sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
         }
         if (!del && req.method === 'PUT') {
@@ -914,18 +943,25 @@ export default {
             }
             const pk = nyttPaket(m, 'haris', !!d.betald);
             k.paket = [...(k.paket || []), pk];
+            logga(k, 'in', `Haris lade in ${pk.namn}${pk.betald ? ', betalt' : ''}`, pk.antal, 'haris');
             await sparaKlient(env, k);
             flyttade = await flyttaTillPaket(env, k, pk, veckor);
+            if (flyttade) logga(k, 'flytt', `${flyttade === 1 ? 'En bokad tid' : `${flyttade} bokade tider`} flyttades in i ${pk.namn}`, -flyttade);
           } else {
             const pk = (k.paket || []).find(x => x.id === sub);
             if (!pk) return fel('paketet finns inte', 404);
-            if (req.method === 'PUT') pk.betald = d.betald ? nu() : null;
-            else if (req.method === 'DELETE') { await slappPaket(env, k, pk.id, veckor); k.paket = k.paket.filter(x => x !== pk); }
+            if (req.method === 'PUT') { pk.betald = d.betald ? nu() : null; logga(k, 'betald', pk.betald ? `Haris bekräftade betalningen av ${pk.namn}` : `Haris ångrade betalningen av ${pk.namn}`, 0, 'haris'); }
+            else if (req.method === 'DELETE') {
+              const kvar = paketSaldo(k, veckor).find(x => x.id === pk.id)?.kvar || 0;
+              await slappPaket(env, k, pk.id, veckor); k.paket = k.paket.filter(x => x !== pk);
+              logga(k, 'bort', `Haris tog bort ${pk.namn} (${kvar} ${kvar === 1 ? 'pass' : 'pass'} kvar)`, -kvar, 'haris');
+            }
             else return fel('okänd metod', 405);
             k.uppdaterad = nu();
             await sparaKlient(env, k);
           }
-          return svar({ ok: true, flyttade, paket: paketSaldo(k, veckor), bokningar: bokningarFor(veckor, k.id) });
+          await sparaKlient(env, k);
+          return svar({ ok: true, flyttade, klient: publikKlient(k), paket: paketSaldo(k, veckor), bokningar: bokningarFor(veckor, k.id) });
         }
         if (del === 'tidpaket' && req.method === 'POST') {
           const veckor = await hamtaAlla(env, 'vecka:');
@@ -936,9 +972,45 @@ export default {
             const pk = ledigtPaket(k, veckor);
             if (!pk) return fel('inget paket med pass kvar', 409);
             s.bokad.paket = pk.id; s.bokad.pris = null; s.bokad.swishad = null;
-          } else { s.bokad.paket = null; s.bokad.pris = (await hamtaBetalning(env)).pris || null; }
+            logga(k, 'flytt', `Haris drog ${tidText(w.v, s)} från ${pk.namn}`, -1, 'haris');
+          } else {
+            s.bokad.paket = null; s.bokad.pris = klientPris(k, await hamtaBetalning(env));
+            logga(k, 'flytt', `${tidText(w.v, s)} betalas styckvis i stället, passet tillbaka`, 1, 'haris');
+          }
           await env.DB.put(`vecka:${w.v}`, JSON.stringify(w));
-          return svar({ ok: true, paket: paketSaldo(k, veckor), bokningar: bokningarFor(veckor, k.id) });
+          await sparaKlient(env, k);
+          return svar({ ok: true, klient: publikKlient(k), paket: paketSaldo(k, veckor), bokningar: bokningarFor(veckor, k.id) });
+        }
+        // eget pris per pass för barnet (tomt = standardpriset)
+        if (del === 'pris' && req.method === 'PUT') {
+          const pris = Math.round(+String(d.pris ?? '').replace(',', '.') || 0);
+          if (pris < 0 || pris > 100000) return fel('priset ser fel ut');
+          k.pris = pris || null; k.uppdaterad = nu();
+          logga(k, 'pris', k.pris ? `Haris satte ett eget pris: ${krText(k.pris)} per pass` : 'Haris tog bort det egna priset, standardpriset gäller', 0, 'haris');
+          await sparaKlient(env, k);
+          return svar({ ok: true, klient: publikKlient(k) });
+        }
+        // pass betalda utanför appen: hur många från början och hur många som redan är använda (ett sådant paket per barn)
+        if (del === 'utanfor' && req.method === 'PUT') {
+          const antal = Math.round(+d.antal || 0), tidigare = Math.round(+d.tidigare || 0);
+          if (antal < 0 || antal > 500 || tidigare < 0 || tidigare > antal) return fel('använda pass kan inte vara fler än passen från början');
+          const veckor = await hamtaAlla(env, 'vecka:');
+          let pk = (k.paket || []).find(x => x.utanfor);
+          if (!antal) {
+            if (pk) { await slappPaket(env, k, pk.id, veckor); k.paket = k.paket.filter(x => x !== pk); logga(k, 'bort', 'Haris tog bort passen betalda utanför appen', -(paketSaldo({ ...k, paket: [pk] }, veckor)[0]?.kvar || 0), 'haris'); }
+          } else if (pk) {
+            const fore = paketSaldo(k, veckor).find(x => x.id === pk.id).kvar;
+            pk.antal = antal; pk.tidigare = tidigare;
+            const efter = paketSaldo(k, veckor).find(x => x.id === pk.id).kvar;
+            logga(k, 'utanfor', `Haris ändrade passen betalda utanför appen: ${antal} från början, ${tidigare} använda`, efter - fore, 'haris');
+          } else {
+            pk = { id: nyttId('pk'), namn: 'Betalda utanför appen', antal, tidigare, pris: 0, kopt: nu(), av: 'haris', betald: nu(), swishad: null, utanfor: true };
+            k.paket = [...(k.paket || []), pk];
+            logga(k, 'in', `Haris lade in ${antal} pass betalda utanför appen${tidigare ? `, ${tidigare} redan använda` : ''}`, antal - tidigare, 'haris');
+          }
+          k.uppdaterad = nu();
+          await sparaKlient(env, k);
+          return svar({ ok: true, klient: publikKlient(k), paket: paketSaldo(k, veckor), bokningar: bokningarFor(veckor, k.id) });
         }
         if ((del === 'boka' || del === 'avboka') && req.method === 'POST') {
           const v = String(d.v || '');
@@ -950,10 +1022,15 @@ export default {
             if (s.bokad) return fel(s.bokad.uid === k.id ? 'klienten har redan den tiden' : `tiden är redan bokad av ${s.bokad.barn || s.bokad.namn || 'någon annan'}`, 409);
             if (s.hall && s.hall.tills > Date.now()) return fel('någon håller platsen just nu, prova om en minut', 409);
             const pk = ledigtPaket(k, await hamtaAlla(env, 'vecka:'));
-            s.bokad = { uid: k.id, namn: k.foralder, barn: k.barn, telefon: k.telefon, email: k.email, t: nu(), av: 'haris', pris: pk ? null : (await hamtaBetalning(env)).pris || null, paket: pk?.id || null };
+            s.bokad = { uid: k.id, namn: k.foralder, barn: k.barn, telefon: k.telefon, email: k.email, t: nu(), av: 'haris', pris: pk ? null : klientPris(k, await hamtaBetalning(env)), paket: pk?.id || null };
             s.hall = null;
-          } else if (s.bokad?.uid === k.id) s.bokad = null;
+            logga(k, pk ? 'bokad' : 'styck', `Haris bokade ${tidText(v, s)}${pk ? ` med ett pass ur ${pk.namn}` : s.bokad.pris ? `, ${krText(s.bokad.pris)}` : ''}`, pk ? -1 : 0, 'haris');
+          } else if (s.bokad?.uid === k.id) {
+            logga(k, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : ''}`, s.bokad.paket ? 1 : 0, 'haris');
+            s.bokad = null;
+          }
           await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
+          await sparaKlient(env, k);
           return svar({ ok: true, vecka, bokningar: bokningarFor([vecka, ...(await hamtaAlla(env, 'vecka:')).filter(w => w.v !== v)], k.id) });
         }
         return fel('okänd klientadress', 404);
@@ -1019,6 +1096,11 @@ export default {
             }
           }
           await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
+          const borta = Object.values(gamla).filter(s => s.bokad && !vecka.slots.some(n => n.bokad && n.bokad.uid === s.bokad.uid && n.bokad.t === s.bokad.t));
+          for (const s of borta) {
+            const kl = await hamtaKlient(env, s.bokad.uid);
+            if (kl) { logga(kl, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : ''}`, s.bokad.paket ? 1 : 0, 'haris'); await sparaKlient(env, kl); }
+          }
           return svar({ ok: true, vecka, kastade: st.kastade, notis });
         }
         if (mv[2] === '/auto' && req.method === 'POST') {
