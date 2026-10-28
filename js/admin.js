@@ -82,8 +82,8 @@ function merFlik() {
   <section class="cards">
     <a class="card" href="#/admin/pass"><div class="card-body"><div class="eyebrow">Pass</div><h3>Alla pass</h3><p class="desc">Passen för alla klienter i en lista. Nya pass planeras från klientens sida.</p></div></a>
   </section>
-  ${nyhetFlik()}
   ${betalningPanel()}
+  ${nyhetFlik()}
   <section class="panel">
     <h3>Tjänster</h3>
     <ul class="checks small">
@@ -98,26 +98,41 @@ function merFlik() {
   <section class="panel"><div class="section-head"><h3>Konto</h3><a class="small" data-action="admin-ut" href="#/admin">Logga ut</a></div><p class="small muted" style="margin:0"><a href="#/">Till förälderappen ›</a></p></section>`;
 }
 
-// Swish Företag (Carl 2026-10-27): numret och priset per pass. Föräldrarna får en Swish-knapp med allt ifyllt
-// när båda finns. Appen kan inte se betalningen, så Haris bockar av den under Tider eller på klientens sida.
+// Priser och Swish (Carl 2026-10-27/28): numret, priset per pass och paketen (850 kr per pass, 10 pass 6 900 kr,
+// 20 pass 12 900 kr). Föräldrarna får en Swish-knapp med allt ifyllt. Appen kan inte se betalningen, så Haris bockar
+// av den under Tider eller på klientens sida.
+const paketRad = (m = {}) => `<div class="paket-rad">
+  <input type="hidden" name="pid" value="${esc(m.id || '')}">
+  <input type="text" name="pnamn" value="${esc(m.namn || '')}" placeholder="Namn, t.ex. 10 pass" aria-label="Paketets namn">
+  <label class="small">Antal pass <input type="number" name="pantal" min="1" max="100" step="1" value="${m.antal || ''}"></label>
+  <label class="small">Pris (kr) <input type="number" name="ppris" min="1" step="1" value="${m.pris || ''}"></label>
+  <button type="button" class="film" data-action="admin-paket-bort" aria-label="Ta bort paketet">✕</button>
+  ${m.antal && m.pris ? `<div class="small muted per">${esc(perPass(m))}</div>` : ''}
+</div>`;
+const perPass = m => { const styck = state.betalning?.pris, spar = styck ? styck * m.antal - m.pris : 0; return `${kr(Math.round(m.pris / m.antal))} per pass${spar > 0 ? ` · ${kr(spar)} billigare än ${m.antal} enstaka pass` : ''}`; };
 function betalningPanel() {
   if (!state.betalning && !state.betalningHamtar) {
     state.betalningHamtar = true;
-    api.admin.get('/admin/config/betalning').then(r => { state.betalning = r.ok ? r.config : { swish: '', pris: null }; }).finally(() => { state.betalningHamtar = false; if (location.hash === '#/admin/mer') ui.route(); });
+    api.admin.get('/admin/config/betalning').then(r => { state.betalning = r.ok ? r.config : { swish: '', pris: null, paket: [] }; }).finally(() => { state.betalningHamtar = false; if (location.hash === '#/admin/mer') ui.route(); });
   }
   const b = state.betalning;
-  if (!b) return `<section class="panel"><h3>Betalning med Swish</h3><p class="small muted" style="margin:0">Hämtar…</p></section>`;
+  if (!b) return `<section class="panel"><h3>Priser och Swish</h3><p class="small muted" style="margin:0">Hämtar…</p></section>`;
   const klar = b.swish && b.pris;
   return `
-  <section class="panel ${klar ? 'brand' : ''}">
-    <h3>Betalning med Swish</h3>
+  <section class="panel ${klar ? 'brand' : ''}" id="priser">
+    <h3>Priser och Swish</h3>
     <p class="small muted" style="margin-top:0">${klar
       ? `Föräldrarna får knappen <b>Betala ${esc(kr(b.pris))} med Swish</b> när de bokat. Swish öppnas med ${esc(visaSwish(b.swish))}, beloppet och ett meddelande som "CAP Alva Lind 3 nov kl 17.00" ifyllt. Du ser betalningen i din Swish och bockar av den under Tider.`
-      : 'Skriv Swish-numret och priset för ett pass. När båda finns får föräldrarna en Swish-knapp med allt ifyllt efter bokningen.'}</p>
-    <form data-form="admin-betalning" class="auto-rad" style="align-items:end">
-      <label>Swish-nummer <input type="text" name="swish" inputmode="numeric" value="${esc(visaSwish(b.swish))}" placeholder="123 456 78 90"></label>
-      <label>Pris per pass (kr) <input type="number" name="pris" min="0" max="100000" step="1" value="${b.pris || ''}" placeholder="t.ex. 300"></label>
-      <button class="btn secondary" type="submit">Spara</button>
+      : 'Skriv Swish-numret och priset för ett pass. Veckor går inte att öppna för bokning förrän båda finns.'}</p>
+    <form data-form="admin-betalning">
+      <div class="auto-rad" style="align-items:end">
+        <label>Swish-nummer <input type="text" name="swish" inputmode="numeric" value="${esc(visaSwish(b.swish))}" placeholder="123 456 78 90"></label>
+        <label>Pris per pass (kr) <input type="number" name="pris" min="0" max="100000" step="1" value="${b.pris || ''}" placeholder="t.ex. 850"></label>
+      </div>
+      <h4 style="margin:16px 0 2px">Paket</h4>
+      <p class="small muted" style="margin:0 0 6px">Flera pass till ett lägre pris. Paketet läggs på barnet och bokningarna dras från det.</p>
+      <div class="paket-rader">${(b.paket || []).map(paketRad).join('')}</div>
+      <div class="btn-row two" style="margin-top:10px"><button type="button" class="btn secondary" data-action="admin-paket-ny">+ Lägg till paket</button><button class="btn grad" type="submit">Spara priserna</button></div>
     </form>
     ${klar ? `<p class="small" style="margin:10px 0 0"><a href="${esc(swishLank(b.swish, b.pris, 'CAP test'))}">Prova länken på mobilen ›</a> <span class="muted">Öppnar Swish med ${esc(kr(b.pris))} och "CAP test", betala inte.</span></p>` : ''}
   </section>`;
@@ -267,6 +282,13 @@ export async function adminAction(action, el, e) {
   if (action.startsWith('klient-')) return klienterAction(action, el, e);
   if (action.startsWith('ov-')) return ovningarAction(action, el, e);
   if (action === 'admin-ut') { e.preventDefault(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.go('/admin'); return true; }
+  if (action === 'admin-paket-ny') {
+    const lista = el.closest('form')?.querySelector('.paket-rader'); if (!lista) return true;
+    lista.insertAdjacentHTML('beforeend', paketRad());
+    const rad = lista.lastElementChild; rad.querySelectorAll('[data-action]').forEach(x => x.addEventListener('click', ui.onAction)); rad.querySelector('input[name=pnamn]').focus();
+    return true;
+  }
+  if (action === 'admin-paket-bort') { el.closest('.paket-rad')?.remove(); return true; }
   if (action === 'admin-ny') { state.redigerar = tomFilm(); route(); return true; }
   if (action === 'admin-redigera') { const f = state.filmer.find(x => x.id === el.dataset.id); state.redigerar = JSON.parse(JSON.stringify(f)); route(); return true; }
   if (action === 'admin-avbryt') { e.preventDefault(); state.redigerar = null; route(); return true; }
@@ -320,11 +342,15 @@ export async function adminSubmit(kind, f, fd) {
     state.redigerar = null; await adminLadda(); hamtaFilmer({ tvinga: true }); route(); return true;
   }
   if (kind === 'admin-betalning') {
-    const r = await api.admin.put('/admin/config/betalning', { swish: fd.get('swish'), pris: fd.get('pris') });
+    const pid = fd.getAll('pid'), antal = fd.getAll('pantal'), pris = fd.getAll('ppris');
+    const paket = fd.getAll('pnamn').map((namn, i) => ({ id: pid[i], namn, antal: antal[i], pris: pris[i] })).filter(m => String(m.namn).trim() || m.antal || m.pris);
+    const halv = paket.findIndex(m => !(+m.antal >= 1) || !(+m.pris >= 1));
+    if (halv >= 0) { toast(`Paket ${halv + 1} saknar antal pass eller pris`); return true; }
+    const r = await api.admin.put('/admin/config/betalning', { swish: fd.get('swish'), pris: fd.get('pris'), paket });
     // vid fel ritas inget om, så att det Haris skrivit står kvar
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
     state.betalning = r.config; tiderGlom();
-    toast(r.config.swish && r.config.pris ? 'Sparat. Föräldrarna ser Swish-knappen nu.' : 'Sparat. Swish-knappen visas när både nummer och pris finns.');
+    toast(r.config.swish && r.config.pris ? `Sparat: ${kr(r.config.pris)} per pass${r.config.paket.length ? ` och ${r.config.paket.length} ${r.config.paket.length === 1 ? 'paket' : 'paket'}` : ''}.` : 'Sparat. Veckor kan öppnas när både Swish-nummer och pris finns.');
     route(); return true;
   }
   if (kind === 'admin-smstest') {

@@ -31,10 +31,11 @@
 //   Filmer: GET /admin/filmer · POST /admin/film · PUT/DELETE /admin/film/<id>
 //   Uppladdning i delar till R2: POST /admin/upload/start {filmId|klientId, filnamn, typ} · PUT /admin/upload/part · POST /admin/upload/complete · PUT /admin/upload/poster/<id>
 //   Tider: GET /admin/veckor · PUT /admin/vecka/<v> {oppen, slots, notis} · POST /admin/vecka/<v>/auto · POST /admin/vecka/<v>/duplicera
+//     En vecka går inte att öppna utan Swish-nummer och pris per pass (409).
 //     När en vecka öppnas går en pushnotis till alla föräldrar med notiser på (en gång per vecka, notis: false hoppar över)
 //     POST /admin/vecka/<v>/betald {slot, betald}   Haris bockar av (eller ångrar) en betalning
 //   Stigen: GET /config/stig · PUT /admin/config/stig
-//   Swish: GET/PUT /admin/config/betalning {swish, pris}
+//   Swish: GET/PUT /admin/config/betalning {swish, pris, paket: [{id, namn, antal, pris}]}
 //   Pass: GET /admin/planer · POST /admin/plan · GET/PUT/DELETE /admin/plan/<id>
 //   Övrigt: POST /admin/notis (push) · POST /admin/inbjudan + GET /admin/inbjudningar (gamla e-postkoder, kvar för bakåtkompatibilitet)
 //
@@ -337,9 +338,16 @@ function swishNr(v) {
   if (/^07\d{8}$/.test(d)) d = '46' + d.slice(1);
   return /^(123\d{7}|90\d{5}|467\d{8})$/.test(d) ? d : '';
 }
-const hamtaBetalning = async env => (await env.DB.get('config:betalning', 'json')) || { swish: '', pris: null };
+const hamtaBetalning = async env => ({ swish: '', pris: null, paket: [], ...((await env.DB.get('config:betalning', 'json')) || {}) });
+// Paketen Haris säljer (Carl 2026-10-28: 10 pass 6 900 kr, 20 pass 12 900 kr): namn, antal pass och pris
+function renPaketMallar(lista) {
+  return (Array.isArray(lista) ? lista : []).slice(0, 8).map(m => {
+    const antal = Math.round(+m.antal || 0), pris = Math.round(+String(m.pris ?? '').replace(',', '.') || 0);
+    return { id: /^[a-z0-9]{2,16}$/.test(String(m.id || '')) ? m.id : nyttId('m'), namn: ren(m.namn, 40) || `${antal} pass`, antal, pris };
+  }).filter(m => m.antal >= 1 && m.antal <= 100 && m.pris >= 1 && m.pris <= 1000000);
+}
 // till föräldrarna bara när både nummer och pris finns, annars visas ingen Swish-knapp
-const publikBetalning = b => (b?.swish && b?.pris ? { swish: b.swish, pris: b.pris } : null);
+const publikBetalning = b => (b?.swish && b?.pris ? { swish: b.swish, pris: b.pris, paket: b.paket || [] } : null);
 // Pushnotis till alla telefoner som slagit på notiser (server/cap-push). hash = sidan appen öppnar vid tryck.
 async function pushAlla(env, title, text, hash = '') {
   if (!env.PUSH_BASE || !env.PUSH_HEMLIG) return { ok: false, skickade: 0, fel: 'push är inte påslaget' };
@@ -880,6 +888,8 @@ export default {
         if (!mv[2] && req.method === 'PUT') {
           const gamla = Object.fromEntries(vecka.slots.map(s => [s.id, s]));
           const varOppen = !!vecka.oppen;
+          // Carl 2026-10-28: "man ska inte kunna öppna en vecka om inte pris är satt"
+          if (!varOppen && d.oppen) { const b = await hamtaBetalning(env); if (!b.swish || !b.pris) return fel('sätt pris per pass innan veckan öppnas, så att föräldrarna kan betala med Swish', 409); }
           vecka.oppen = !!d.oppen;
           const st = stadaSlots((Array.isArray(d.slots) ? d.slots : []).slice(0, 80).map(s => renSlot(s, gamla[s.id])));
           vecka.slots = st.slots;
@@ -937,7 +947,8 @@ export default {
         if (String(d.swish || '').trim() && !swish) return fel('Swish-numret ser fel ut, skriv t.ex. 123 456 78 90');
         const pris = Math.round(+String(d.pris ?? '').replace(',', '.') || 0);
         if (pris < 0 || pris > 100000) return fel('priset ser fel ut');
-        const cfg = { swish, pris: pris || null, uppdaterad: nu() };
+        // paket följer bara med när admin skickar dem, så att t.ex. Tiders prisruta inte tömmer listan
+        const cfg = { swish, pris: pris || null, paket: Array.isArray(d.paket) ? renPaketMallar(d.paket) : (await hamtaBetalning(env)).paket, uppdaterad: nu() };
         await env.DB.put('config:betalning', JSON.stringify(cfg));
         return svar({ ok: true, config: cfg });
       }

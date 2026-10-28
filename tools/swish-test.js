@@ -48,11 +48,11 @@ const TEL = '070-333 44 55';
   await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(1500);
   await a.goto(base + 'index.html#/admin/mer'); await a.waitForSelector('form[data-form=admin-betalning]', { timeout: 10000 });
   await a.fill('form[data-form=admin-betalning] input[name=swish]', '12345'); await a.fill('form[data-form=admin-betalning] input[name=pris]', '300');
-  await a.click('form[data-form=admin-betalning] button'); await vantaToast(a, 'ser fel ut');
+  await a.click('form[data-form=admin-betalning] button[type=submit]'); await vantaToast(a, 'ser fel ut');
   koll('fel nummer stoppas', (await toast(a)).includes('ser fel ut'), await toast(a));
   await a.fill('form[data-form=admin-betalning] input[name=swish]', '123-285 27 62');
-  await a.click('form[data-form=admin-betalning] button'); await vantaToast(a, 'Föräldrarna ser'); await a.waitForTimeout(300);
-  koll('sparat', (await toast(a)).includes('Föräldrarna ser Swish-knappen'), await toast(a));
+  await a.click('form[data-form=admin-betalning] button[type=submit]'); await vantaToast(a, 'Sparat:'); await a.waitForTimeout(300);
+  koll('sparat', (await toast(a)).includes('Sparat: 300 kr per pass'), await toast(a));
   const prova = await a.$eval('a[href^="https://app.swish.nu"]', e => e.getAttribute('href')).catch(() => '');
   koll('prova-länken i admin', prova === 'https://app.swish.nu/1/p/sw/?sw=1232852762&amt=300.00&msg=CAP%20test', prova);
   koll('numret visas formaterat', await a.$eval('form[data-form=admin-betalning] input[name=swish]', e => e.value) === '123 285 27 62');
@@ -135,11 +135,11 @@ const TEL = '070-333 44 55';
 
   // ---- utan pris visas ingen Swish-knapp ----
   await a.goto(base + 'index.html#/admin/mer'); await a.waitForSelector('form[data-form=admin-betalning]', { timeout: 10000 });
-  await a.fill('form[data-form=admin-betalning] input[name=pris]', ''); await a.click('form[data-form=admin-betalning] button'); await vantaToast(a, 'när både nummer och pris');
+  await a.fill('form[data-form=admin-betalning] input[name=pris]', ''); await a.click('form[data-form=admin-betalning] button[type=submit]'); await vantaToast(a, 'när både');
   await f.reload({ waitUntil: 'networkidle' }); await f.waitForSelector('#mina li', { timeout: 10000 }).catch(() => {});
   koll('utan pris: ingen Swish-knapp', !(await f.$('a.btn.swish')) && !(await f.$eval('section p.muted.small', e => e.textContent)).includes('kr och betalas'));
   // återställ priset så att en manuell titt ser knappen
-  await a.fill('form[data-form=admin-betalning] input[name=pris]', '300'); await a.click('form[data-form=admin-betalning] button'); await vantaToast(a, 'Föräldrarna ser');
+  await a.fill('form[data-form=admin-betalning] input[name=pris]', '300'); await a.click('form[data-form=admin-betalning] button[type=submit]'); await vantaToast(a, 'Sparat:');
 
   console.log(fel ? `\n${fel} FEL` : '\nALLT GRÖNT');
   console.log('sidfel:', errs.length ? errs : 'inga');

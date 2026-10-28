@@ -702,3 +702,9 @@ body.admin .view { max-width: 1080px; }
 /* Platsen som hålls ligger kvar längst ner på skärmen ovanför menyn, nära tiden man tryckte på (Carl 2026-10-28) */
 .panel.hall { position: sticky; bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom, 0px) + 8px); z-index: 6; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
 .nyss-bokad { margin: 14px 0; scroll-margin-bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom, 0px) + 12px); }
+/* Admin → Mer: paketen Haris säljer */
+.paket-rad { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 8px; align-items: end; padding: 10px 0; border-top: 1px solid var(--line); }
+.paket-rad input[name=pantal] { width: 76px; }
+.paket-rad input[name=ppris] { width: 110px; }
+.paket-rad .per { grid-column: 1 / -1; }
+@media (max-width: 520px) { .paket-rad { grid-template-columns: 1fr 1fr auto; } .paket-rad input[name=pnamn] { grid-column: 1 / -1; } }

@@ -2,7 +2,7 @@
 // boka en tid åt en befintlig kund (tiden blir röd i kalendern).
 import { api } from './api.js';
 import { klienterNu, klienterLadda, klienterLaddade, klientGlom, visaTel } from './admin-klienter.js';
-import { betalStatus } from './swish.js';
+import { betalStatus, kr, visaSwish } from './swish.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -77,9 +77,10 @@ export function tiderView() {
       </div>`).join('')}</div></div>`;
   }
   // Carl 2026-10-28: "tiden bokad, vi ses – var är betalflödet?" Utan pris får föräldrarna ingen Swish-knapp.
-  const utanPris = st.betalning && !(st.betalning.swish && st.betalning.pris);
+  const harPris = !!(st.betalning?.swish && st.betalning?.pris);
+  const utanPris = st.betalning && !harPris;
   return `
-  ${utanPris ? '<div class="note warn small">Inget pris per pass är satt, så föräldrarna får ingen Swish-knapp när de bokar. <a href="#/admin/mer">Sätt priset under Mer → Betalning med Swish ›</a></div>' : ''}
+  ${utanPris ? '<div class="note warn small">Inget pris per pass är satt. Veckor går inte att öppna förrän priset är satt, och de som redan är öppna har ingen Swish-knapp. Skriv priset i rutan för veckan här under, eller <a href="#/admin/mer">under Mer → Betalning med Swish ›</a></div>' : ''}
   <section>
     <div class="vecka-nav">
       <button class="btn secondary" data-action="tid-vecka" data-v="${veckaPlus(v, -1)}" ${v <= veckaPlus(st.nu, -1) ? 'disabled' : ''}>‹</button>
@@ -92,7 +93,12 @@ export function tiderView() {
     </div>` : `<div class="panel vecka-stangd" style="margin-top:12px">
       <b>Veckan är stängd</b>
       <div class="small muted" style="margin:2px 0 ${w.slots.length ? '10px' : '0'}">${w.slots.length ? `${w.slots.length} tider, men föräldrarna ser dem inte förrän veckan är öppen.` : 'Lägg till tider här under och öppna sedan veckan.'}</div>
-      ${w.slots.length ? `<button class="btn grad block" data-action="tid-oppen" data-oppna="1">Öppna veckan för bokning</button>
+      ${w.slots.length ? `${harPris ? `<button class="btn grad block" data-action="tid-oppen" data-oppna="1">Öppna veckan för bokning</button>
+      <p class="small muted" style="margin:8px 0 0">${esc(kr(st.betalning.pris))} per pass, betalas med Swish till ${esc(visaSwish(st.betalning.swish))}. Ändra under Mer.</p>`
+      : `<div class="field" style="margin:0 0 8px"><label for="oppnaPris">Pris per pass (kr)</label><input type="number" id="oppnaPris" min="1" max="100000" step="1" inputmode="numeric" placeholder="t.ex. 300"></div>
+      ${st.betalning?.swish ? '' : '<div class="field" style="margin:0 0 8px"><label for="oppnaSwish">Swish-nummer</label><input type="text" id="oppnaSwish" inputmode="numeric" placeholder="123 456 78 90"></div>'}
+      <button class="btn grad block" data-action="tid-oppen" data-oppna="1">Spara priset och öppna veckan</button>
+      <p class="small muted" style="margin:8px 0 0">En vecka går inte att öppna utan pris, så att föräldrarna alltid kan betala med Swish när de bokat.</p>`}
       ${w.notis ? `<p class="small muted" style="margin:8px 0 0">Notisen om veckan gick ut ${esc(fmtTid(w.notis))} och skickas inte igen.</p>` : v < st.nu ? '' : '<label class="check" style="margin:10px 0 0"><input type="checkbox" id="oppnaNotis" checked><span>Skicka en notis till alla föräldrar med appen</span></label>'}` : ''}
     </div>`}
   </section>
@@ -153,6 +159,16 @@ export async function tiderAction(action, el) {
   // Carl 2026-10-28: "veckan är sparad men jag får inga tider" – en sparad vecka är inte öppen, det sägs nu tydligt
   if (action === 'tid-oppen') {
     const oppna = el.dataset.oppna === '1';
+    // utan pris: spara priset (och Swish-numret) från rutan först, sedan öppnas veckan
+    if (oppna && !(st.betalning?.swish && st.betalning?.pris)) {
+      const pris = Math.round(+String(document.getElementById('oppnaPris')?.value || '').replace(',', '.'));
+      if (!(pris > 0)) { toast('Skriv priset per pass först'); document.getElementById('oppnaPris')?.focus(); return true; }
+      const swish = st.betalning?.swish || document.getElementById('oppnaSwish')?.value || '';
+      const b = await api.admin.put('/admin/config/betalning', { swish, pris });
+      if (!b.ok) { toast(`Gick inte: ${b.fel}`); return true; }
+      st.betalning = b.config;
+      if (!b.config.swish) { toast('Skriv Haris Swish-nummer också'); route(); return true; }
+    }
     const r = await sparaVecka(lasSlots(), oppna, { notis: !!document.getElementById('oppnaNotis')?.checked });
     toast(!r.ok ? `Gick inte: ${r.fel}` : !oppna ? 'Veckan är stängd' : `Veckan är öppen för bokning.${notisText(r.notis)}`);
     route(); return true;

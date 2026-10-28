@@ -117,6 +117,7 @@ const TEL = '070-444 55 66';
   const adm = (metod, p, data) => fetch(API + p, { method: metod, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }).then(r => r.json());
   const veckaOm = n => { const d = new Date(Date.now() + n * 7 * 864e5); const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7) + 3); const f = new Date(Date.UTC(x.getUTCFullYear(), 0, 4)); return `${x.getUTCFullYear()}-W${String(1 + Math.round(((x - f) / 864e5 - 3 + ((f.getUTCDay() + 6) % 7)) / 7)).padStart(2, '0')}`; };
   const vt = veckaOm(9);
+  await adm('PUT', '/admin/config/betalning', { swish: '1232852762', pris: 850 }); // en vecka går inte att öppna utan pris
   await adm('PUT', `/admin/vecka/${vt}`, { oppen: false, slots: [{ dag: 2, start: '17:00', slut: '18:00' }, { dag: 4, start: '17:00', slut: '18:00' }], notis: false });
   await a.goto(base + `index.html#/boka/${vt}`); await a.waitForSelector('.vecka-titel', { timeout: 10000 }); await a.waitForTimeout(600);
   koll('stängd vecka: föräldern ser inga tider', !(await a.$('.tid')));
