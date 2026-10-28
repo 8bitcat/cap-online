@@ -1,4 +1,4 @@
-// CAP Online API. Cloudflare Worker med KV (DB) och, när det är påslaget, R2 (MEDIA) för filmer och ljud.
+// CAP API. Cloudflare Worker med KV (DB) och, när det är påslaget, R2 (MEDIA) för filmer och ljud.
 //
 // Konton och inloggning (Carl 2026-10-23: "logga in med telefonnummer … sms med länken … glömt lösenord";
 // 2026-10-25: "sms-inloggning via telefonnummer … länken till det numret för att ladda ner appen")
@@ -139,10 +139,10 @@ const hamtaLank = env => env.LANK_BASE ? `${env.LANK_BASE}/app` : `${env.APP_BAS
 const kodVisa = kod => `${kod.slice(0, 3)}-${kod.slice(3)}`;
 // Carl 2026-10-26: "ett sms för att hämta appen och ett som man sedan trycker på för att logga in när appen är inne i telefonen"
 function smsHamta(env, k) {
-  return `Hej${k.foralder ? ' ' + k.foralder : ''}! Haris har lagt in ${k.barn || 'ditt barn'} i CAP Online, träningsappen från Complete Athletic Performance.\nHämta appen här: ${hamtaLank(env)}\nNär appen är installerad trycker du på länken i nästa sms, så loggas du in.\n/Haris`;
+  return `Hej${k.foralder ? ' ' + k.foralder : ''}! Haris har lagt in ${k.barn || 'ditt barn'} i CAP, träningsappen från Complete Athletic Performance.\nHämta appen här: ${hamtaLank(env)}\nNär appen är installerad trycker du på länken i nästa sms, så loggas du in.\n/Haris`;
 }
 function smsLogga(env, k, kod) {
-  return `Logga in i CAP Online: ${lank(env, kod)}\nTryck på länken när appen är installerad. Går det inte: öppna appen och skriv koden ${kodVisa(kod)}.\n/Haris`;
+  return `Logga in i CAP: ${lank(env, kod)}\nTryck på länken när appen är installerad. Går det inte: öppna appen och skriv koden ${kodVisa(kod)}.\n/Haris`;
 }
 const giltigKod = k => (k.kod?.kod && !k.kod.forbrukad ? k.kod.kod : null);
 // var föräldern loggade in senast: i appen eller i webbläsaren
@@ -155,20 +155,20 @@ function landning(env, kod, finns) {
   const webb = `${env.APP_BASE}#/k/${kod}`;
   const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const html = `<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Logga in · CAP Online</title><meta name="theme-color" content="#000912">
+<title>Logga in · CAP</title><meta name="theme-color" content="#000912">
 <style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:#000912;color:#fdfdfd;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;display:grid;place-items:center;padding:24px 16px}
 main{width:100%;max-width:420px;text-align:center}.eb{font-size:12px;font-weight:800;letter-spacing:.2em;color:#00d4cb}h1{font-size:28px;margin:6px 0 8px}p{color:#9aa5b1;margin:0 0 18px}
 a.btn{display:block;padding:15px 18px;border-radius:12px;font-weight:700;text-decoration:none;margin:10px 0;border:1px solid #243040;color:#fdfdfd;background:#182230}
 a.btn.grad{background:linear-gradient(90deg,#0a9e9a,#00d4cb 55%,#00f0ff);color:#00242a;border:0;font-size:18px}
 .kod{font-size:30px;font-weight:800;letter-spacing:.18em;margin:18px 0 4px}.sm{font-size:13px;color:#67727e}.hint{display:none;background:rgba(251,191,36,.08);border-left:3px solid #fbbf24;text-align:left;padding:10px 12px;border-radius:0 10px 10px 0;color:#fdfdfd;font-size:14px}</style></head>
-<body><main><div class="eb">CAP ONLINE</div>
-${finns ? `<h1>Logga in i appen</h1><p>Tryck på knappen så öppnas CAP Online och du loggas in.</p>
-<a class="btn grad" id="oppna" href="caponline://k/${kod}">Öppna CAP Online</a>
+<body><main><div class="eb">CAP</div>
+${finns ? `<h1>Logga in i appen</h1><p>Tryck på knappen så öppnas CAP och du loggas in.</p>
+<a class="btn grad" id="oppna" href="caponline://k/${kod}">Öppna CAP</a>
 <div class="hint" id="hint">Hittade du inte appen? Hämta den först, kom sedan tillbaka till sms:et och tryck på länken igen.</div>
 <a class="btn" href="${esc(hamtaLank(env))}">Har du inte appen? Hämta den</a>
 <a class="btn" href="${esc(webb)}">Fortsätt i webbläsaren</a>
 <div class="kod">${kodVisa(kod)}</div><div class="sm">Fungerar inte knappen: öppna appen och skriv koden.</div>`
-  : `<h1>Länken har gått ut</h1><p>Be Haris skicka en ny inloggningslänk.</p><a class="btn" href="${esc(env.APP_BASE)}">Till CAP Online</a>`}
+  : `<h1>Länken har gått ut</h1><p>Be Haris skicka en ny inloggningslänk.</p><a class="btn" href="${esc(env.APP_BASE)}">Till CAP</a>`}
 </main><script>
 var ios=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 ${finns ? `if(!ios){location.replace(${JSON.stringify(webb)});}
@@ -456,7 +456,7 @@ export default {
       return Response.redirect(ios && env.APP_LANK_IOS ? env.APP_LANK_IOS : `${env.APP_BASE}#/app`, 302);
     }
     if (req.method === 'GET' && p === '/' && lankVard) return Response.redirect(env.APP_BASE, 302);
-    if (req.method === 'GET' && p === '/') return svar({ ok: true, app: 'CAP Online API', r2: !!env.MEDIA, sms: smsPa(env), appLank: env.APP_LANK_IOS || '' });
+    if (req.method === 'GET' && p === '/') return svar({ ok: true, app: 'CAP API', r2: !!env.MEDIA, sms: smsPa(env), appLank: env.APP_LANK_IOS || '' });
     if (req.method === 'GET' && p.startsWith('/media/')) return media(req, env, decodeURIComponent(p.slice(7)));
 
     const json = async () => { try { return await req.json(); } catch { return null; } };
@@ -495,7 +495,7 @@ export default {
       const salt = slump(16, SMA);
       await env.DB.put(`otp:${tel}`, JSON.stringify({ salt, hash: await pinHash(kod, salt), forsok: 0, t: Date.now() }), { expirationTtl: 600 });
       await env.DB.put(`smsl:${tel}`, JSON.stringify({ n: lim.n + 1, senast: Date.now() }), { expirationTtl: 3600 });
-      const r = await skickaTillKlient(env, k, 'kod', `${kod} är din kod till CAP Online. Den gäller i 10 minuter.`, base);
+      const r = await skickaTillKlient(env, k, 'kod', `${kod} är din kod till CAP. Den gäller i 10 minuter.`, base);
       await sparaKlient(env, k);
       if (!r.skickat) return fel(r.tak ? 'Dagens sms är slut. Försök i morgon, eller be Haris skicka en ny länk.' : `sms:et gick inte iväg (${r.fel}). Prova igen om en stund eller hör av dig till Haris.`, r.tak ? 503 : 502);
       return svar({ ok: true, giltigSek: 600, vantaSek: 45 });
@@ -825,7 +825,7 @@ export default {
       if (p === '/admin/smstest' && req.method === 'POST') {
         const d = await json(); if (!d) return fel('trasig JSON');
         const tel = telefonNorm(d.telefon); if (!tel) return fel('mobilnumret ser fel ut');
-        const r = await skickaSms(env, tel, 'Test från CAP Online. Sms-utskicken fungerar. /CapSwe');
+        const r = await skickaSms(env, tel, 'Test från CAP. Sms-utskicken fungerar. /CapSwe');
         return svar({ ok: r.skickat, fel: r.fel, sms: r, ...(await smsDag(env)) }, r.skickat ? 200 : 502);
       }
       if (p === '/admin/smsut' && req.method === 'GET') {
@@ -1000,7 +1000,7 @@ export default {
       }
       if (p === '/admin/notis' && req.method === 'POST') {
         const d = await json(); if (!d) return fel('trasig JSON');
-        const r = await fetch(`${env.PUSH_BASE}/skicka`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ hemlig: env.PUSH_HEMLIG, text: ren(d.text, 180), title: ren(d.title, 40) || 'CAP Online' }) });
+        const r = await fetch(`${env.PUSH_BASE}/skicka`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ hemlig: env.PUSH_HEMLIG, text: ren(d.text, 180), title: ren(d.title, 40) || 'CAP' }) });
         return svar(await r.json().catch(() => ({ ok: false, fel: 'pushservern svarade konstigt' })), r.status);
       }
       return fel('okänd adminadress', 404);

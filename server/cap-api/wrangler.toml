@@ -1,4 +1,4 @@
-# CAP Online API – Cloudflare Worker: konton (koder/inbjudningar), filmer med taggar, uppladdning.
+# CAP API – Cloudflare Worker: konton (koder/inbjudningar), filmer med taggar, uppladdning.
 # Driftsätt: bash tools/api-deploy.sh   (token i .secrets/cloudflare-workers.txt)
 # Hemligheter: ADMIN_LOSEN (adminsidans lösenord), PUSH_HEMLIG (samma som cap-push ADMIN_HEMLIG),
 # SMS_USER + SMS_PASS (46elks, valfritt: utan dem skickar Haris länken själv från telefonen), SMS_FROM (avsändare, CapSwe) och SMS_MAX_DAG (tak per dygn, 25) står under [vars].

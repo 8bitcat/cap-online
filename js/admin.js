@@ -238,7 +238,7 @@ function nyhetFlik() {
     <h2>Skicka en nyhet</h2>
     <p class="small muted">Går som pushnotis till alla telefoner som slagit på "Nyheter från Haris" i appen.</p>
     <form data-form="admin-notis" class="panel">
-      <div class="field"><label for="ntitle">Rubrik</label><input type="text" id="ntitle" name="title" value="CAP Online" maxlength="40"></div>
+      <div class="field"><label for="ntitle">Rubrik</label><input type="text" id="ntitle" name="title" value="CAP" maxlength="40"></div>
       <div class="field"><label for="ntext">Text</label><textarea id="ntext" name="text" required maxlength="180" placeholder="T.ex. Nytt pass ute: Avslut insida!"></textarea></div>
       <button class="btn grad block" type="submit">Skicka till alla</button>
     </form>

@@ -3,6 +3,21 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-28 – appen heter CAP
+
+- **Bara "CAP"** (Haris via Carl: "det ska bara stå CAP i stället för CAP
+  Online"). Bytt i allt föräldrar och Haris ser: titel, hemskärmsnamn
+  (manifest, apple-mobile-web-app-title, iOS CFBundleDisplayName och
+  Capacitor appName), texter i appen, sms:en, inloggningssidan bakom länken
+  och notisernas rubrik.
+- **Kvar som förut**: adresser och tekniska namn (8bitcat.github.io/cap-online,
+  bundle-id se.completeathletic.caponline, länkschemat caponline://,
+  lagringsnycklarna caponline.v3). Appen i App Store Connect heter fortfarande
+  "CAP Online" (tools/asc.py letar efter det namnet). Namnet där byts i
+  App Store Connect inför App Store-släppet, och "CAP" kan vara upptaget där.
+- **Hemskärmsnamnet i iPhone-appen** byts först med nästa bygge i Codemagic
+  (bygge 3). Webben och texterna i appen byts direkt.
+
 ## 2026-10-27 – betala med Swish (förifylld länk)
 
 - **Swish Företag med förifylld länk** (Carl: "här är hans swish går det att

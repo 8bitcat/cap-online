@@ -75,7 +75,7 @@ function program() {
 }
 
 const PROTOS = {
-  app: { n: 0, name: 'CAP Online' },
+  app: { n: 0, name: 'CAP' },
   bibliotek: { n: 1, name: 'Träna mitt barn' },
   spelare: { n: 2, name: 'Spelarkortet' },
   utbildning: { n: 3, name: 'Utbildningsvägen' },
@@ -575,7 +575,7 @@ function prototyper() {
   return `
   <section class="hero">
     <img class="hero-logo" src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
-    <div class="eyebrow">CAP Online · prototyper</div>
+    <div class="eyebrow">CAP · prototyper</div>
     <h1>Välj spår</h1>
     <p class="lead">Fyra tidigare spår, kvar för jämförelse. De delar innehåll och det som sparas på den här enheten. Själva appen når du via Hem.</p>
   </section>
@@ -592,7 +592,7 @@ function prototyper() {
     </div>`).join('')}
   </section>
   <p class="small muted" style="text-align:center">Allt sparas bara i den här webbläsaren. <a data-action="reset" href="#/prototyper">Nollställ</a> om du vill börja om från tomt.</p>
-  <div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP Online v${VERSION}</div>`;
+  <div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP v${VERSION}</div>`;
 }
 
 /* ---------- Startguiden ---------- */
@@ -676,7 +676,7 @@ function valkommenPage() {
   return `
   <section class="hero" style="padding-top:48px">
     <img class="hero-logo" src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance" style="height:64px">
-    <div class="eyebrow">CAP Online</div>
+    <div class="eyebrow">CAP</div>
     <h1>Vem är du?</h1>
     <p class="lead">${esc(C.brand.tagline)}</p>
   </section>
@@ -690,7 +690,7 @@ function valkommenPage() {
       <span><b>Admin</b><small>För Haris: klienter, tider, pass med bedömningar, filmer och stigen.</small></span>
     </a>
   </section>
-  <div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP Online v${VERSION}</div>`;
+  <div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP v${VERSION}</div>`;
 }
 
 function appHome() {
@@ -741,7 +741,7 @@ function merPage() {
     ${rad('/notiser', '🔔', 'Notiser', 'Påminnelser och nyheter från Haris')}
     ${rad('/start/1', '✏️', 'Ändra barnets namn och födelseår', 'Position, drömspelare och mål finns på spelarkortet')}
     ${store.session?.user?.klientId && !statusNu().sms ? rad('/pin', '🔑', 'Egen inloggningskod', 'Valfritt: logga in med mobilnummer och kod på en ny telefon') : ''}
-    ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP Online på telefonens hemskärm')}
+    ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP på telefonens hemskärm')}
     ${rad('/prototyper', '🧪', 'Prototyperna', 'De fyra tidigare spåren, för jämförelse')}
   </section>
   <p class="small muted" style="text-align:center;margin-top:24px">${kontoRad()}</p>
@@ -956,7 +956,7 @@ function programPage() {
 }
 
 function footer() {
-  return `<div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP Online v${VERSION} · <a href="#/prototyper">byt prototyp</a></div>`;
+  return `<div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP v${VERSION} · <a href="#/prototyper">byt prototyp</a></div>`;
 }
 
 /* ---------- Pass ---------- */
@@ -1760,7 +1760,7 @@ async function onAction(e) {
   if (action.startsWith('boka-')) { await bokaAction(action, el); return; }
   if (action === 'gast') { e.preventDefault(); store.guest = true; store.proto = 'app'; toast('Du provar utan konto'); go('/'); return; }
   if (action === 'sms-ny' || action === 'sms-andra') { const path = location.hash.replace(/^#/, '') || '/'; await kontoAction(action, el, { toast, render: html => { view.innerHTML = html; afterRender(path); } }); return; }
-  if (action === 'app-installera') { const ev = window.__capInstall; if (ev) { ev.prompt(); const r = await ev.userChoice.catch(() => ({})); window.__capInstall = null; toast(r.outcome === 'accepted' ? 'CAP Online installeras' : 'Du kan installera senare under Mer'); route(); } return; }
+  if (action === 'app-installera') { const ev = window.__capInstall; if (ev) { ev.prompt(); const r = await ev.userChoice.catch(() => ({})); window.__capInstall = null; toast(r.outcome === 'accepted' ? 'CAP installeras' : 'Du kan installera senare under Mer'); route(); } return; }
   if (action === 'logga-ut') { e.preventDefault(); await loggaUt(); store.guest = false; toast('Utloggad'); go('/login'); return; }
   if (action === 'filmer-alla') { e.preventDefault(); location.hash = location.hash.includes('alla') ? '#/filmer' : '#/filmer?alla'; route(); return; }
   if (action === 'proto') { store.proto = el.dataset.proto; go('/'); route(); }
@@ -1776,17 +1776,17 @@ async function onAction(e) {
   else if (action === 'loop') { e.preventDefault(); loopClip = !loopClip; el.classList.toggle('current', loopClip); toast(loopClip ? 'Upprepar momentet' : 'Spelar vidare efter momentet'); }
   else if (action === 'notis-paminn') {
     paminnSatt(el.checked).then(r => {
-      if (!r.ok) { el.checked = false; toast(r.fel === 'nekad' ? 'Tillåt notiser för CAP Online i Inställningar' : `Gick inte: ${r.fel}`); }
+      if (!r.ok) { el.checked = false; toast(r.fel === 'nekad' ? 'Tillåt notiser för CAP i Inställningar' : `Gick inte: ${r.fel}`); }
       else toast(el.checked ? `Påminnelser ${r.dagar.join(', ')} kl 17` : 'Påminnelserna är av');
     });
   } else if (action === 'notis-push') {
     pushSatt(el.checked).then(r => {
-      if (!r.ok) { el.checked = false; toast(r.fel === 'nekad' ? 'Tillåt notiser för CAP Online i Inställningar' : `Gick inte: ${r.fel}`); }
+      if (!r.ok) { el.checked = false; toast(r.fel === 'nekad' ? 'Tillåt notiser för CAP i Inställningar' : `Gick inte: ${r.fel}`); }
       else toast(el.checked ? 'Registrerar telefonen hos CAP…' : 'Nyheter från Haris är av');
     });
   }
   else if (action === 'notis-testa') {
-    testaLokal().then(r => toast(r.ok ? `Testnotisen kommer om ${r.sekunder} sekunder. Lägg appen i bakgrunden.` : r.fel === 'nekad' ? 'Tillåt notiser för CAP Online i Inställningar' : `Gick inte: ${r.fel}`));
+    testaLokal().then(r => toast(r.ok ? `Testnotisen kommer om ${r.sekunder} sekunder. Lägg appen i bakgrunden.` : r.fel === 'nekad' ? 'Tillåt notiser för CAP i Inställningar' : `Gick inte: ${r.fel}`));
   } else if (action === 'notis-testpush') {
     el.disabled = true;
     testaPush().then(r => { el.disabled = false; toast(r.ok ? 'Testpushen är skickad från servern.' : `Gick inte: ${r.fel}`); });

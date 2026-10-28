@@ -301,7 +301,7 @@ export async function passAction(action, el, e) {
       route(); return true;
     }
     try { st.rec = { blockId: b.id, ...(await startaLjud()) }; route(); }
-    catch (err) { toast(/denied|NotAllowed/i.test(String(err)) ? 'Tillåt mikrofonen för CAP Online i Inställningar' : `Kunde inte starta mikrofonen: ${err?.message || err}`); }
+    catch (err) { toast(/denied|NotAllowed/i.test(String(err)) ? 'Tillåt mikrofonen för CAP i Inställningar' : `Kunde inte starta mikrofonen: ${err?.message || err}`); }
     return true;
   }
   if (action === 'pass-spela') {

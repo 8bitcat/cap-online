@@ -1,4 +1,4 @@
-// Klient mot CAP Online API (server/cap-api): konton med kod, filmer med taggar, admin.
+// Klient mot CAP API (server/cap-api): konton med kod, filmer med taggar, admin.
 import { store } from './store.js';
 
 // Lokalt (localhost) kan API:t pekas om till wrangler dev med localStorage cap_api, för tester utan riktiga sms

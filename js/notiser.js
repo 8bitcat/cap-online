@@ -34,7 +34,7 @@ export async function paminnSatt(on) {
     const p = store.profile || {};
     const dagar = DAGAR[p.freq] || DAGAR['2'];
     await L.schedule({ notifications: dagar.map((weekday, i) => ({
-      id: 101 + i, title: 'CAP Online', body: `Dags för dagens pass med ${p.name || 'barnet'} ⚽ Boll och koner räcker.`,
+      id: 101 + i, title: 'CAP', body: `Dags för dagens pass med ${p.name || 'barnet'} ⚽ Boll och koner räcker.`,
       schedule: { on: { weekday, hour: 17, minute: 0 }, repeats: true, allowWhileIdle: true },
     })) });
     store.notiser = { ...store.notiser, paminn: true };
@@ -83,13 +83,13 @@ export async function paminnUppdatera() {
 // Testknappar. Lokal testnotis om 5 sekunder: i appen via LocalNotifications, på webben via webbläsarens Notification.
 export async function testaLokal() {
   const L = localP();
-  const text = 'Testnotis från CAP Online 👋 Så här ser en påminnelse ut.';
+  const text = 'Testnotis från CAP 👋 Så här ser en påminnelse ut.';
   if (L) {
     try {
       let perm = await L.checkPermissions();
       if (perm.display !== 'granted') perm = await L.requestPermissions();
       if (perm.display !== 'granted') return { ok: false, fel: 'nekad' };
-      await L.schedule({ notifications: [{ id: 999, title: 'CAP Online', body: text, schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true } }] });
+      await L.schedule({ notifications: [{ id: 999, title: 'CAP', body: text, schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true } }] });
       return { ok: true, sekunder: 5 };
     } catch (e) { return { ok: false, fel: String(e?.message || e) }; }
   }
@@ -97,7 +97,7 @@ export async function testaLokal() {
   try {
     const perm = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
     if (perm !== 'granted') return { ok: false, fel: 'nekad' };
-    setTimeout(() => { try { new Notification('CAP Online', { body: text, icon: 'assets/cap-ball-270.png' }); } catch { /* ok */ } }, 5000);
+    setTimeout(() => { try { new Notification('CAP', { body: text, icon: 'assets/cap-ball-270.png' }); } catch { /* ok */ } }, 5000);
     return { ok: true, sekunder: 5 };
   } catch (e) { return { ok: false, fel: String(e?.message || e) }; }
 }

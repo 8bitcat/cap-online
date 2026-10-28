@@ -57,7 +57,7 @@ fs.writeFileSync(idx, html);
 // error.html: visas när webben inte går att nå. Knappen laddar om mot webben.
 fs.writeFileSync(path.join(WWW, 'error.html'), `<!doctype html>
 <html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>CAP Online</title>
+<title>CAP</title>
 <link rel="stylesheet" href="vendor/fonts.css">
 <style>
   html, body { height: 100%; margin: 0; }
@@ -72,7 +72,7 @@ fs.writeFileSync(path.join(WWW, 'error.html'), `<!doctype html>
 <body><main>
   <img src="assets/cap-logo.png" alt="CAP">
   <h1>Ingen anslutning</h1>
-  <p>CAP Online hämtar alltid den senaste versionen från webben. Koppla upp telefonen och försök igen.</p>
+  <p>CAP hämtar alltid den senaste versionen från webben. Koppla upp telefonen och försök igen.</p>
   <button onclick="location.href='${REMOTE}'">Försök igen</button>
 </main></body></html>
 `);

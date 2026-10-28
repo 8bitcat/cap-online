@@ -14,7 +14,7 @@ let tick = null;
 const hero = (rubrik, text) => `
   <section class="hero" style="padding-top:40px">
     <img class="hero-logo" src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
-    <div class="eyebrow">CAP Online</div>
+    <div class="eyebrow">CAP</div>
     <h1>${rubrik}</h1>
     <p class="lead">${text}</p>
   </section>`;
@@ -151,12 +151,12 @@ export function appPage() {
   const loggaIn = `Logga in med ditt mobilnummer${tel ? ` <b>${esc(tel)}</b>` : ''}${sms ? ', du får en kod som sms' : ' och koden du valde'}.`;
   let kropp;
   if (native) kropp = `<div class="panel brand"><h3>Du har redan appen</h3><p class="small muted" style="margin:0">Du är inloggad och förblir det på den här telefonen.</p></div>`;
-  else if (ios && appLank) kropp = `<div class="panel brand"><ol class="steg-lista"><li><a class="btn grad block" href="${esc(appLank)}">Hämta CAP Online till iPhone</a></li><li>Öppna appen. ${loggaIn}</li></ol></div>`;
-  else if (ios) kropp = `<div class="panel brand"><h3>Lägg appen på hemskärmen</h3><ol class="steg-lista"><li>Tryck på <b>Dela</b> <span class="ikon-dela">⬆︎</span> längst ner i Safari.</li><li>Välj <b>Lägg till på hemskärmen</b> och tryck <b>Lägg till</b>.</li><li>Öppna CAP Online från hemskärmen. Du är redan inloggad.</li></ol></div>`;
-  else if (android) kropp = `<div class="panel brand"><h3>Installera appen</h3>${window.__capInstall ? '<button class="btn grad block" data-action="app-installera">Installera CAP Online</button>' : '<ol class="steg-lista"><li>Tryck på <b>⋮</b> uppe till höger i Chrome.</li><li>Välj <b>Installera app</b> eller <b>Lägg till på startskärmen</b>.</li><li>Öppna CAP Online från startskärmen. Du är redan inloggad.</li></ol>'}</div>`;
+  else if (ios && appLank) kropp = `<div class="panel brand"><ol class="steg-lista"><li><a class="btn grad block" href="${esc(appLank)}">Hämta CAP till iPhone</a></li><li>Öppna appen. ${loggaIn}</li></ol></div>`;
+  else if (ios) kropp = `<div class="panel brand"><h3>Lägg appen på hemskärmen</h3><ol class="steg-lista"><li>Tryck på <b>Dela</b> <span class="ikon-dela">⬆︎</span> längst ner i Safari.</li><li>Välj <b>Lägg till på hemskärmen</b> och tryck <b>Lägg till</b>.</li><li>Öppna CAP från hemskärmen. Du är redan inloggad.</li></ol></div>`;
+  else if (android) kropp = `<div class="panel brand"><h3>Installera appen</h3>${window.__capInstall ? '<button class="btn grad block" data-action="app-installera">Installera CAP</button>' : '<ol class="steg-lista"><li>Tryck på <b>⋮</b> uppe till höger i Chrome.</li><li>Välj <b>Installera app</b> eller <b>Lägg till på startskärmen</b>.</li><li>Öppna CAP från startskärmen. Du är redan inloggad.</li></ol>'}</div>`;
   else kropp = `<div class="panel brand"><h3>Öppna på mobilen</h3><p class="small muted" style="margin:0">Appen är gjord för telefonen. Öppna länken i sms:et på mobilen${appLank ? ' eller hämta appen där' : ''}. Här i datorn fungerar den också i webbläsaren.</p></div>`;
   return `
-  ${hero('Hämta appen', native ? '' : 'Lägg CAP Online på telefonen, så är den ett tryck bort.')}
+  ${hero('Hämta appen', native ? '' : 'Lägg CAP på telefonen, så är den ett tryck bort.')}
   <section>${kropp}</section>
   <section class="btn-row"><a class="btn secondary block" href="#/">${native ? 'Till appen' : 'Fortsätt i webbläsaren'} ›</a></section>`;
 }

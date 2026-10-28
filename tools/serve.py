@@ -84,7 +84,7 @@ def main():
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8808
     handler = partial(RangeHandler, directory=str(ROOT))
     with ThreadingHTTPServer(("127.0.0.1", port), handler) as srv:
-        print(f"CAP Online på http://localhost:{port}/  (Ctrl+C avslutar)", flush=True)
+        print(f"CAP på http://localhost:{port}/  (Ctrl+C avslutar)", flush=True)
         srv.serve_forever()
 
 

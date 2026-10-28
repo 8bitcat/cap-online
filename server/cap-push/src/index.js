@@ -1,4 +1,4 @@
-// CAP Online push – Cloudflare Worker (Carl 2026-10-21: "gör också så vi kan ha notiser").
+// CAP push – Cloudflare Worker (Carl 2026-10-21: "gör också så vi kan ha notiser").
 // Telefonerna med appen registrerar sin pushkod, och Carl eller Haris skickar en nyhet till alla –
 // även när appen är stängd. Samma APNs-upplägg som Pixelcity (snabbfilen/server/kbk-push).
 //
@@ -61,7 +61,7 @@ export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const url = new URL(req.url);
-    if (req.method === 'GET' && url.pathname === '/') return svar({ ok: true, app: 'CAP Online', telefoner: (await allaTelefoner(env)).length });
+    if (req.method === 'GET' && url.pathname === '/') return svar({ ok: true, app: 'CAP', telefoner: (await allaTelefoner(env)).length });
     if (req.method !== 'POST') return svar({ ok: false, fel: 'bara POST' }, 405);
     let d = {};
     try { d = await req.json(); } catch { return svar({ ok: false, fel: 'trasig JSON' }, 400); }
@@ -84,12 +84,12 @@ export default {
       if (!(await env.CAP.get(`tok:${token}`))) return svar({ ok: false, fel: 'telefonen är inte registrerad' }, 404);
       if (await env.CAP.get(`test:${token}`)) return svar({ ok: false, fel: 'vänta en stund' }, 429);
       await env.CAP.put(`test:${token}`, '1', { expirationTtl: 60 });
-      const res = await skicka(env, token, `Testnotis från CAP Online 👋 ${new Date().toLocaleTimeString('sv-SE', { timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit' })}`, 'CAP Online');
+      const res = await skicka(env, token, `Testnotis från CAP 👋 ${new Date().toLocaleTimeString('sv-SE', { timeZone: 'Europe/Stockholm', hour: '2-digit', minute: '2-digit' })}`, 'CAP');
       return svar({ ok: res.status === 200, status: res.status, reason: res.reason || '' });
     }
     if (url.pathname === '/skicka') {
       if (!env.ADMIN_HEMLIG || String(d.hemlig || '') !== env.ADMIN_HEMLIG) return svar({ ok: false, fel: 'fel lösen' }, 403);
-      const text = ren(d.text, 180), title = ren(d.title, 40) || 'CAP Online';
+      const text = ren(d.text, 180), title = ren(d.title, 40) || 'CAP';
       if (!text) return svar({ ok: false, fel: 'tom text' }, 400);
       const till = await allaTelefoner(env);
       const jobb = Promise.all(till.map((t) => skicka(env, t.token, text, title).catch((e) => ({ status: 0, reason: String(e) }))));

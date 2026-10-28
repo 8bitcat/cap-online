@@ -1,4 +1,4 @@
-# CAP Online push – Cloudflare Worker. Driftsätt: se tools/push-deploy.sh (token i .secrets/cloudflare-workers.txt).
+# CAP push – Cloudflare Worker. Driftsätt: se tools/push-deploy.sh (token i .secrets/cloudflare-workers.txt).
 # Hemligheter (wrangler secret put): APNS_KEY = Apples .p8 (samma teamnyckel som Pixelcity), ADMIN_HEMLIG = lösen för /skicka.
 name = "cap-push"
 main = "src/index.js"

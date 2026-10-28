@@ -43,7 +43,7 @@ const UT = process.env.UT || __dirname;
   // ---- Sms 1 på iPhone: /app ----
   const r1 = await fetch(hamtaLank, { redirect: 'manual', headers: { 'user-agent': devices['iPhone 13'].userAgent } });
   console.log('\nsms 1 på iPhone →', r1.status, r1.headers.get('location'));
-  // ---- Sms 2 i Safari på iPhone: sidan med Öppna CAP Online ----
+  // ---- Sms 2 i Safari på iPhone: sidan med Öppna CAP ----
   const s = await nyFlik('safari', devices['iPhone 13']);
   await s.goto(loggaLank, { waitUntil: 'load' }); await s.waitForTimeout(500);
   console.log('sms 2 i Safari:', await s.$eval('h1', h => h.textContent), '| knapp:', await s.$eval('#oppna', e => e.getAttribute('href')), '| kod på sidan:', await s.$eval('.kod', e => e.textContent));

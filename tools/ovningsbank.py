@@ -258,7 +258,7 @@ def filmer(c):
         ut.append([s["title"], PAGES + s["video"]["local"], s["videoSeconds"], s["trainingMinutes"],
                    pillar[s["pillar"]], None, f"https://drive.google.com/file/d/{s['video']['driveId']}/view",
                    "I appen", f"Del av CAP-passet. {len(s['steps'])} moment med start/slut."])
-    ut.append(["CAP ONLINE – teknik, bollkontroll och koordination", "",
+    ut.append(["CAP – teknik, bollkontroll och koordination", "",
                None, None, "", None, "https://drive.google.com/file/d/1QRk19keshcHTluFjk6jGoonim_CUAVen/view",
                "Inte i appen", "Den långa filmen (1,4 GB) i Drive. Inte nedladdad eller klippt än – säg till om den ska in."])
     ut.append(["Exempel: Passningar (upplagd i admin)", PAGES + "media/passningar.mp4", 32, 10, "Teknik", None, "",
@@ -521,7 +521,7 @@ def blad_lasmig(wb, c, antal, antal_kunskap):
     ws = wb.create_sheet("Läs mig", 0)
     ws.column_dimensions["A"].width = 26
     ws.column_dimensions["B"].width = 100
-    ws["A1"] = "Övningsbanken – CAP Online"
+    ws["A1"] = "Övningsbanken – CAP"
     ws["A1"].font = f(bold=True, size=16)
     ws["A2"] = f"Alla övningar som finns i appen i dag ({dt.date.today():%Y-%m-%d}). Fyll på med dina egna övningar och tagga dem, så kan vi planera pass och läsa in listan i appen igen."
     ws["A2"].font = f(italic=True)

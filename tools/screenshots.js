@@ -1,4 +1,4 @@
-// Skärmdumpar av CAP Online i telefonformat. Körs med NODE_PATH mot snabbfilens node_modules.
+// Skärmdumpar av CAP i telefonformat. Körs med NODE_PATH mot snabbfilens node_modules.
 const { chromium, devices } = require('playwright');
 const path = require('path');
 const out = __dirname;

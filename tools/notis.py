@@ -1,4 +1,4 @@
-"""Skicka en pushnotis till alla telefoner med CAP Online-appen.
+"""Skicka en pushnotis till alla telefoner med CAP-appen.
 
     python tools/notis.py "Nytt pass ute: Koordination 2!"
     python tools/notis.py "Haris har svarat på ditt Nästa steg" --title "Från Haris"
@@ -24,7 +24,7 @@ def main():
         if not args:
             print(__doc__)
         return
-    title = "CAP Online"
+    title = "CAP"
     if "--title" in args:
         i = args.index("--title"); title = args[i + 1]; del args[i:i + 2]
     text = " ".join(args).strip()

@@ -1,4 +1,4 @@
-"""Släpprutin för CAP Online: en version, ett kommando.
+"""Släpprutin för CAP: en version, ett kommando.
 
     python tools/release.py 0.3.0            # webben + förbereder appen
     python tools/release.py 0.3.0 --no-pages # bara version, commit, tagg, push
@@ -49,7 +49,7 @@ def main():
     sh("git", "add", "js/version.js", "app/package.json")
     sh("git", "-c", "user.name=Carl Palsson", "-c", "user.email=palsson.carl@gmail.com",
        "commit", "-q", "-m", f"chore(release): v{v}")
-    sh("git", "tag", "-a", f"v{v}", "-m", f"CAP Online v{v}")
+    sh("git", "tag", "-a", f"v{v}", "-m", f"CAP v{v}")
     sh("git", "push", "-q", "origin", "main", f"v{v}")
     print(f"v{v} committad, taggad och pushad (app {short})")
 
