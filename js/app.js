@@ -197,8 +197,9 @@ function renderTabs() {
   const tabs = admin ? (store.admin ? TABS.admin : null) : /^\/(valkommen|login|k\/|pin)/.test(path) ? null : TABS.app;
   document.body.classList.toggle('no-tabs', !tabs);
   document.body.classList.toggle('admin', admin && !!store.admin);
-  // växlingen syns för den som är inloggad som Haris på telefonen, och alltid i admin (vägen tillbaka)
-  vaxla.hidden = !(store.admin || admin) || path.startsWith('/k/');
+  // Carl 2026-10-28: Haris hittade inte växlingen (han var bara inloggad som Haris i Chrome, inte i appen).
+  // ⇄ syns därför alltid; utan Haris inloggning leder den till inloggningen för Haris.
+  vaxla.hidden = path.startsWith('/k/');
   vaxla.querySelector('span').textContent = admin ? 'Förälder' : 'Haris';
   vaxla.title = admin ? 'Växla till föräldravyn' : 'Växla till Haris vy';
   vaxla.setAttribute('aria-label', vaxla.title);
@@ -700,7 +701,6 @@ function merPage() {
     ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP på telefonens hemskärm')}
   </section>
   <p class="small muted" style="text-align:center;margin-top:24px">${kontoRad()}</p>
-  ${store.admin ? '' : '<p class="small muted" style="text-align:center"><a href="#/admin">Admin</a> · för Haris. Sedan växlar du med ⇄ uppe till höger.</p>'}
   ${footer()}`;
 }
 

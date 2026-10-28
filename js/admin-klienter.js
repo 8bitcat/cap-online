@@ -115,12 +115,8 @@ function kundForm(k) {
   const ny = !k;
   k = k || { barn: '', efternamn: '', fodd: '', position: 'okand', lag: '', foralder: '', telefon: '', email: '', niva: 1, anteckning: '', status: 'ny' };
   const ar = new Date().getFullYear();
-  return `
-  <section>
-    <a class="back" href="#${ny ? '/admin/klienter' : '/admin/klient/' + k.id}">‹ ${ny ? 'Klienter' : esc(k.barn)}</a>
-    <h1>${ny ? 'Ny kund' : 'Ändra uppgifter'}</h1>
-    ${ny ? `<p class="small muted">Föräldern får två sms: ett där hen hämtar appen och ett med en länk som loggar in i appen. Barnets namn och födelseår kan föräldern också fylla i själv första gången.</p>` : ''}
-    <form data-form="${ny ? 'klient-ny' : 'klient-spara'}" class="panel">
+  const tel = `<div class="field"><label for="ktel">Förälderns mobilnummer</label><input type="tel" id="ktel" name="telefon" value="${esc(ny ? '' : visaTel(k.telefon))}" required placeholder="070-123 45 67" autocomplete="tel"><span class="hint">Det enda som behövs. Används för inloggningen och för sms med länken.</span></div>`;
+  const resten = `
       <h3>Spelaren</h3>
       <div class="auto-rad" style="display:flex;gap:12px;flex-wrap:wrap">
         <div class="field" style="flex:1;min-width:140px"><label for="kbarn">Barnets förnamn</label><input type="text" id="kbarn" name="barn" value="${esc(k.barn)}" placeholder="Föräldern kan fylla i"></div>
@@ -130,15 +126,23 @@ function kundForm(k) {
         <label class="field" style="flex:1;min-width:120px">Född år <select name="fodd"><option value="">–</option>${Array.from({ length: 12 }, (_, i) => ar - 5 - i).map(y => `<option value="${y}" ${String(k.fodd) === String(y) ? 'selected' : ''}>${y} (${ar - y} år)</option>`).join('')}</select></label>
         <label class="field" style="flex:1;min-width:140px">Position <select name="position">${Object.entries(POS).map(([v, t]) => `<option value="${v}" ${k.position === v ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
       </div>
-      <div class="field"><label for="klag">Lag/förening (valfritt)</label><input type="text" id="klag" name="lag" value="${esc(k.lag || '')}" placeholder="T.ex. KBK F2017"></div>
+      <div class="field"><label for="klag">Lag/förening</label><input type="text" id="klag" name="lag" value="${esc(k.lag || '')}" placeholder="T.ex. KBK F2017"></div>
       <div class="field"><label for="kniva">Nivå</label><select id="kniva" name="niva">${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${k.niva === n ? 'selected' : ''}>Nivå ${n} · ${esc(nivaNamn(n))}</option>`).join('')}</select></div>
       <h3 style="margin-top:18px">Föräldern</h3>
       <div class="field"><label for="kforalder">Förälderns namn</label><input type="text" id="kforalder" name="foralder" value="${esc(k.foralder)}" placeholder="T.ex. Anna"></div>
-      <div class="field"><label for="ktel">Mobilnummer</label><input type="tel" id="ktel" name="telefon" value="${esc(ny ? '' : visaTel(k.telefon))}" required placeholder="070-123 45 67" autocomplete="tel"><span class="hint">Används för inloggningen och för sms med länken.</span></div>
-      <div class="field"><label for="kemail">E-post (valfritt)</label><input type="email" id="kemail" name="email" value="${esc(k.email || '')}" placeholder="namn@exempel.se"></div>
+      ${ny ? '' : tel}
+      <div class="field"><label for="kemail">E-post</label><input type="email" id="kemail" name="email" value="${esc(k.email || '')}" placeholder="namn@exempel.se"></div>
       <div class="field"><label for="kant">Anteckning</label><textarea id="kant" name="anteckning" placeholder="Styrkor, vad ni jobbar på, annat att komma ihåg…">${esc(k.anteckning || '')}</textarea></div>
-      ${ny ? '' : `<div class="field"><label for="kstatus">Status</label><select id="kstatus" name="status">${[['ny', 'Ny'], ['aktiv', 'Aktiv'], ['paus', 'Paus']].map(([v, t]) => `<option value="${v}" ${k.status === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`}
-      ${ny && st.sms ? `<label class="toggle"><input type="checkbox" name="skicka" checked><span><b>Skicka båda sms:en direkt</b><small>Från ${esc(st.smsFran || 'CapSwe')} till numret ovan. ${st.smsIdag || 0} av ${st.smsTak || 25} sms använda i dag.</small></span></label>` : ''}
+      ${ny ? '' : `<div class="field"><label for="kstatus">Status</label><select id="kstatus" name="status">${[['ny', 'Ny'], ['aktiv', 'Aktiv'], ['paus', 'Paus']].map(([v, t]) => `<option value="${v}" ${k.status === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div>`}`;
+  return `
+  <section>
+    <a class="back" href="#${ny ? '/admin/klienter' : '/admin/klient/' + k.id}">‹ ${ny ? 'Klienter' : esc(k.barn)}</a>
+    <h1>${ny ? 'Ny kund' : 'Ändra uppgifter'}</h1>
+    ${ny ? `<p class="small muted">Skriv förälderns mobilnummer. Föräldern får två sms: ett där hen hämtar appen och ett med en länk som loggar in. Barnets namn och födelseår fyller föräldern i själv första gången.</p>` : ''}
+    <form data-form="${ny ? 'klient-ny' : 'klient-spara'}" class="panel">
+      ${ny ? `${tel}
+      ${st.sms ? `<label class="toggle"><input type="checkbox" name="skicka" checked><span><b>Skicka båda sms:en direkt</b><small>Från ${esc(st.smsFran || 'CapSwe')} till numret ovan. ${st.smsIdag || 0} av ${st.smsTak || 25} sms använda i dag.</small></span></label>` : ''}
+      <details class="mer-om"><summary>Mer om spelaren och föräldern (valfritt)</summary>${resten}</details>` : resten}
       <div class="btn-row two" style="margin-top:12px"><button class="btn grad" type="submit">${ny ? 'Lägg till kunden' : 'Spara'}</button><a class="btn secondary" href="#${ny ? '/admin/klienter' : '/admin/klient/' + k.id}">Avbryt</a></div>
     </form>
   </section>`;

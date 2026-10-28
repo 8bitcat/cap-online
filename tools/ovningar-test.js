@@ -44,7 +44,7 @@ const TEL = '070-444 55 66';
 
   // en klient att planera åt
   for (const kort of await a.$$('.klient-card')) { if ((await kort.textContent()).includes(TEL)) { await kort.click(); await a.waitForTimeout(1000); await a.click('[data-action=klient-radera]'); await a.click('[data-action=klient-radera]'); await a.waitForTimeout(1200); break; } }
-  await a.goto(base + 'index.html#/admin/klient/ny'); await a.waitForSelector('#kforalder');
+  await a.goto(base + 'index.html#/admin/klient/ny'); await a.waitForSelector('#ktel'); await a.click('.mer-om summary');
   await a.fill('#kbarn', 'Ida'); await a.fill('#kefter', 'Berg'); await a.fill('#kforalder', 'Lisa'); await a.fill('#ktel', TEL);
   await a.click('form[data-form=klient-ny] button[type=submit]');
   await a.waitForURL(/#\/admin\/klient\/k[a-z0-9]+$/, { timeout: 15000 }); await a.waitForSelector('.sms-steg .msg', { state: 'attached', timeout: 10000 });
@@ -141,8 +141,9 @@ const TEL = '070-444 55 66';
   const f = await nyFlik('förälder', devices['iPhone 13']);
   await loggaInForalder(f);
   await f.goto(base + 'index.html#/mer'); await f.waitForTimeout(800);
-  koll('förälder utan admin: ingen ⇄', await f.$eval('#vaxla', e => e.hidden));
-  koll('Mer har länken Admin för Haris', (await f.$eval('#view', e => e.textContent)).includes('för Haris'));
+  koll('förälder utan admin: ⇄ syns och leder till Haris inloggning', await f.$eval('#vaxla', e => !e.hidden));
+  await f.click('#vaxla'); await f.waitForTimeout(600);
+  koll('⇄ utan inloggning: lösenordsrutan', !!(await f.$('#losen')), url(f));
 
   console.log(fel ? `\n${fel} FEL` : '\nALLT GRÖNT');
   console.log('sidfel:', errs.length ? errs : 'inga');

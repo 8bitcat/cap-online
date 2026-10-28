@@ -63,7 +63,7 @@ const TEL = '070-333 44 55';
   // ---- Haris: ny kund och lediga tider nästa vecka ----
   await a.goto(base + 'index.html#/admin/klienter'); await a.waitForTimeout(1200);
   for (const kort of await a.$$('.klient-card')) { if ((await kort.textContent()).includes(TEL)) { await kort.click(); await a.waitForTimeout(1200); await a.click('[data-action=klient-radera]'); await a.click('[data-action=klient-radera]'); await a.waitForTimeout(1200); break; } }
-  await a.goto(base + 'index.html#/admin/klient/ny'); await a.waitForTimeout(500);
+  await a.goto(base + 'index.html#/admin/klient/ny'); await a.waitForSelector('#ktel'); await a.click('.mer-om summary');
   await a.fill('#kforalder', 'Sara'); await a.fill('#ktel', TEL);
   await a.click('form[data-form=klient-ny] button[type=submit]');
   await a.waitForURL(/#\/admin\/klient\/k[a-z0-9]+$/, { timeout: 15000 }); await a.waitForSelector('.sms-steg .msg', { state: 'attached', timeout: 10000 });

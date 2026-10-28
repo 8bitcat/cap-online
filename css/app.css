@@ -734,3 +734,6 @@ body.admin .view { max-width: 1080px; }
 @keyframes ark-upp { from { transform: translateY(40px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .betal-ark-box { animation: none; } }
 .btn.swish.stor { font-size: 18px; padding: 16px 18px; }
+.mer-om { margin: 10px 0 4px; border-top: 1px solid var(--line); padding-top: 10px; }
+.mer-om > summary { cursor: pointer; font-weight: 700; color: var(--brand); padding: 6px 0; }
+.mer-om[open] > summary { margin-bottom: 8px; }
