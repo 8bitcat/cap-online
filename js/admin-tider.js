@@ -33,7 +33,7 @@ function veckaPlus(v, n) {
 export async function tiderLadda(tvinga = false) {
   if (st.laddat && !tvinga) return;
   const r = await api.admin.get('/admin/veckor');
-  if (r.ok) { st.nu = r.nu; st.veckor = r.veckor; st.mandag = r.mandag; st.laddat = true; if (!st.vald || st.vald < veckaPlus(st.nu, -1)) st.vald = st.nu; }
+  if (r.ok) { st.nu = r.nu; st.veckor = r.veckor; st.mandag = r.mandag; st.laddat = true; st.hamtat = Date.now(); if (!st.vald || st.vald < veckaPlus(st.nu, -1)) st.vald = st.nu; }
 }
 export const tiderGlom = () => { st.laddat = false; };
 const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen: false, slots: [] };
@@ -43,6 +43,12 @@ const stangdText = () => vecka().oppen ? '' : '. Den är stängd: tryck Öppna v
 
 export function tiderView() {
   if (!st.laddat) { tiderLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar veckor…</p></section>`; }
+  // föräldrar kan ha bokat sedan sist (t.ex. efter ⇄): hämta om i bakgrunden och rita om bara om något ändrats
+  if (Date.now() - (st.hamtat || 0) > 15000) {
+    const fore = JSON.stringify(st.veckor), om = ui.kvar();
+    st.hamtat = Date.now();
+    tiderLadda(true).then(() => { if (JSON.stringify(st.veckor) !== fore) om(); });
+  }
   if (!klienterLaddade()) klienterLadda().then(ui.kvar());
   const w = vecka();
   const v = st.vald;

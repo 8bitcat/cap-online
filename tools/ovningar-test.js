@@ -112,6 +112,23 @@ const TEL = '070-444 55 66';
   await a.click('#vaxla'); await a.waitForTimeout(800);
   koll('⇄ tillbaka till föräldern', url(a) === '/' && !!(await a.$('.greet')) && (await flikar(a))[0] === 'Hem', url(a));
 
+  // ---- ⇄ efter att Haris öppnat en vecka: föräldern ser tiderna direkt (Carl 2026-10-28) ----
+  const tok = await a.evaluate(() => JSON.parse(localStorage.getItem('caponline.v3') || '{}').admin);
+  const adm = (metod, p, data) => fetch(API + p, { method: metod, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }).then(r => r.json());
+  const veckaOm = n => { const d = new Date(Date.now() + n * 7 * 864e5); const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7) + 3); const f = new Date(Date.UTC(x.getUTCFullYear(), 0, 4)); return `${x.getUTCFullYear()}-W${String(1 + Math.round(((x - f) / 864e5 - 3 + ((f.getUTCDay() + 6) % 7)) / 7)).padStart(2, '0')}`; };
+  const vt = veckaOm(9);
+  await adm('PUT', `/admin/vecka/${vt}`, { oppen: false, slots: [{ dag: 2, start: '17:00', slut: '18:00' }, { dag: 4, start: '17:00', slut: '18:00' }], notis: false });
+  await a.goto(base + `index.html#/boka/${vt}`); await a.waitForSelector('.vecka-titel', { timeout: 10000 }); await a.waitForTimeout(600);
+  koll('stängd vecka: föräldern ser inga tider', !(await a.$('.tid')));
+  await a.click('#vaxla'); await a.waitForURL(/#\/admin\//); await a.waitForTimeout(300);
+  await a.goto(base + 'index.html#/admin/tider'); await a.waitForSelector('.vecka-titel', { timeout: 10000 });
+  for (let i = 0; i < 12 && !(await a.$eval('.vecka-titel b', e => e.textContent)).endsWith(` ${Number(vt.split('-W')[1])}`); i++) { await a.click('[data-action=tid-vecka]:last-of-type'); await a.waitForTimeout(200); }
+  if (await a.$('#oppnaNotis')) await a.uncheck('#oppnaNotis');
+  await a.click('[data-action=tid-oppen][data-oppna="1"]'); await a.waitForSelector('[data-action=tid-oppen][data-oppna="0"]', { timeout: 10000 });
+  await a.click('#vaxla'); await a.waitForSelector('.tid', { timeout: 6000 }).catch(() => {});
+  koll('⇄ tillbaka: föräldern ser den öppnade veckans tider direkt', url(a) === `/boka/${vt}` && (await a.$$('.tid')).length === 2, `${url(a)}, ${(await a.$$('.tid')).length} tider`);
+  await adm('PUT', `/admin/vecka/${vt}`, { oppen: false, slots: [], notis: false });
+
   // ---- prototyperna är borta ----
   await a.goto(base + 'index.html#/mer'); await a.waitForTimeout(800);
   const mer = await a.$eval('#view', e => e.textContent);

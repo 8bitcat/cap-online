@@ -5,7 +5,8 @@ import { loggaUt, hamtaFilmer, filmerNu } from './api.js';
 import { loginPage, pinPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
 import { serverStatus, statusNu, sparaBarn } from './api.js';
 import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar } from './admin.js';
-import { bokaInit, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu } from './boka.js';
+import { bokaInit, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu, veckorGlom } from './boka.js';
+import { tiderGlom } from './admin-tider.js';
 import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
 
@@ -1753,6 +1754,7 @@ async function boot() {
   ]);
   vaxla.addEventListener('click', () => {
     const path = location.hash.replace(/^#/, '') || '/';
+    veckorGlom(); tiderGlom(); // den andra sidan kan ha ändrat tiderna
     go(path.startsWith('/admin') ? sista.foralder : store.admin ? sista.haris : '/admin');
   });
   if (bell) bell.addEventListener('click', () => go('/notiser'));

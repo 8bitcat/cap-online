@@ -37,6 +37,8 @@ export async function hamtaMina(tvinga = false) {
   return mina;
 }
 export const minaNu = () => mina;
+// ⇄ till föräldern: hämta tiderna och bokningarna på nytt, Haris kan just ha öppnat en vecka
+export function veckorGlom() { data.hamtat = 0; mina.hamtat = 0; }
 
 // Betalraden under en bokning: Swish-knappen, "Jag har swishat", eller Betald ✓ när Haris bockat av
 function betalRad(b) {
@@ -76,6 +78,13 @@ export function bokaPage(v) {
     <p class="lead">Bokningen kräver ett konto hos Haris. Logga in med ditt mobilnummer.</p>
     <a class="btn grad" href="#/login">Logga in</a></section>`;
   if (!data.nu) { hamtaVeckor().then(ui.kvar()); return `<section class="empty"><p class="muted">Hämtar Haris tider…</p></section>`; }
+  // Carl 2026-10-28: Haris öppnade veckan, men efter ⇄ såg föräldern den gamla kopian. Hämta om i bakgrunden
+  // när kopian är äldre än 15 s, och rita om bara om något ändrats.
+  if (Date.now() - data.hamtat > 15000) {
+    const fore = JSON.stringify([data.veckor, data.betalning]), om = ui.kvar();
+    data.hamtat = Date.now();
+    hamtaVeckor(true).then(d => { if (JSON.stringify([d.veckor, d.betalning]) !== fore) om(); });
+  }
   const oppna = data.veckor.map(w => w.v);
   const nu = data.nu;
   v = v && v >= nu ? v : (oppna.find(x => x >= nu) || nu);
