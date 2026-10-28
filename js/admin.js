@@ -323,7 +323,7 @@ export async function adminSubmit(kind, f, fd) {
     const r = await api.admin.put('/admin/config/betalning', { swish: fd.get('swish'), pris: fd.get('pris') });
     // vid fel ritas inget om, så att det Haris skrivit står kvar
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
-    state.betalning = r.config;
+    state.betalning = r.config; tiderGlom();
     toast(r.config.swish && r.config.pris ? 'Sparat. Föräldrarna ser Swish-knappen nu.' : 'Sparat. Swish-knappen visas när både nummer och pris finns.');
     route(); return true;
   }

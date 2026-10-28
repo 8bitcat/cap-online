@@ -85,14 +85,19 @@ const TEL = '070-333 44 55';
   await f.click('form[data-form=wiz1] button'); await f.waitForTimeout(1500);
   await f.goto(base + 'index.html#/boka'); await f.waitForSelector('.tid', { timeout: 10000 });
   koll('priset står på bokningssidan', (await f.$eval('section p.muted.small', e => e.textContent)).includes('300 kr och betalas med Swish'));
-  const tid = await f.$('.tid:not([disabled])');
+  const tid = (await f.$$('.tid:not([disabled])')).at(-1); // den sista lediga, längre ner på sidan
   const tidInfo = await tid.evaluate(e => ({ dag: e.dataset.dag, start: e.dataset.start }));
   await tid.click();
   await f.waitForSelector('.hall', { timeout: 8000 }).catch(async () => console.log('  ingen hållning, toast:', await toast(f)));
   koll('priset står när platsen hålls', (await f.$eval('.hall', e => e.textContent)).includes('300 kr, betalas med Swish'));
+  // Carl 2026-10-28: sidan ska inte hoppa upp när man trycker på en tid
+  const syns = sel => f.$eval(sel, e => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }).catch(() => false);
+  koll('platsen som hålls syns på skärmen där man är', await syns('.hall') && (await f.evaluate(() => scrollY)) > 0, `scrollY ${await f.evaluate(() => scrollY)}`);
   await f.click('[data-action=boka-bekrafta]'); await f.waitForSelector('.nyss-bokad', { timeout: 10000 }).catch(() => {}); await f.waitForTimeout(500);
   const nyss = await f.$('.nyss-bokad');
   koll('panelen "Tiden är bokad" visas', !!nyss);
+  await f.waitForTimeout(600);
+  koll('"Tiden är bokad" syns utan att man scrollar', await syns('.nyss-bokad .btn.swish'));
   const href = await f.$eval('.nyss-bokad a.btn.swish', e => e.getAttribute('href')).catch(() => '');
   const knapp = await f.$eval('.nyss-bokad a.btn.swish', e => e.textContent).catch(() => '');
   koll('Swish-knappen', knapp === 'Betala 300 kr med Swish', knapp);

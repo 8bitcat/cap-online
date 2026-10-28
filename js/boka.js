@@ -20,6 +20,9 @@ let tick = null;
 let ui = null;
 
 export function bokaInit(deps) { ui = deps; }
+// Carl 2026-10-28: "när man trycker boka scrollas man högst upp i stället för längst ner till tiden".
+// Bokningens knappar ritar om sidan utan att hoppa upp; platsen som hålls ligger kvar längst ner på skärmen.
+function ritaKvar() { const y = window.scrollY; ui.route(); window.scrollTo(0, y); requestAnimationFrame(() => window.scrollTo(0, y)); }
 const token = () => store.session?.token;
 
 export async function hamtaVeckor(tvinga = false) {
@@ -83,7 +86,7 @@ export function bokaPage(v) {
   if (Date.now() - data.hamtat > 15000) {
     const fore = JSON.stringify([data.veckor, data.betalning]), om = ui.kvar();
     data.hamtat = Date.now();
-    hamtaVeckor(true).then(d => { if (JSON.stringify([d.veckor, d.betalning]) !== fore) om(); });
+    hamtaVeckor(true).then(d => { if (JSON.stringify([d.veckor, d.betalning]) !== fore) { const y = window.scrollY; om(); window.scrollTo(0, y); } });
   }
   const oppna = data.veckor.map(w => w.v);
   const nu = data.nu;
@@ -108,12 +111,6 @@ export function bokaPage(v) {
   const bet = data.betalning;
   const nyss = klar && mina.bokningar.find(b => b.v === klar.v && b.id === klar.slot);
   return `
-  ${nyss ? `<section class="panel brand nyss-bokad">
-    <div class="section-head"><div class="eyebrow">Tiden är bokad</div><button class="film" data-action="boka-klar-stang" aria-label="Stäng">✕</button></div>
-    <h3 style="margin:0 0 4px">${esc(DAG[nyss.dag])} ${fmtDatum(datumFor(nyss.v, nyss.dag))} · ${esc(nyss.start)}–${esc(nyss.slut)}</h3>
-    <p class="small muted" style="margin:0">${nyss.plats ? `${esc(nyss.plats)} · ` : ''}${esc(nyss.barn || barn)}${nyss.betald ? '' : bet ? '. Betala med Swish, så är allt klart.' : '. Vi ses!'}</p>
-    ${betalRad(nyss)}
-  </section>` : ''}
   <section>
     <div class="eyebrow">Träna med Haris</div>
     <h1>Boka en tid</h1>
@@ -130,6 +127,12 @@ export function bokaPage(v) {
     </div>
     ${vecka && vecka.slots.length ? dagar : `<div class="panel empty"><h3>Inga tider den här veckan</h3><p class="small muted" style="margin:0">${oppna.length ? `Öppna veckor: ${oppna.map(x => `<a href="#/boka/${x}">v. ${Number(x.split('-W')[1])}</a>`).join(', ')}.` : 'Haris har inte öppnat några tider än. Titta igen snart, eller fråga honom.'}</p></div>`}
   </section>
+  ${nyss ? `<section class="panel brand nyss-bokad">
+    <div class="section-head"><div class="eyebrow">Tiden är bokad</div><button class="film" data-action="boka-klar-stang" aria-label="Stäng">✕</button></div>
+    <h3 style="margin:0 0 4px">${esc(DAG[nyss.dag])} ${fmtDatum(datumFor(nyss.v, nyss.dag))} · ${esc(nyss.start)}–${esc(nyss.slut)}</h3>
+    <p class="small muted" style="margin:0">${nyss.plats ? `${esc(nyss.plats)} · ` : ''}${esc(nyss.barn || barn)}${nyss.betald ? '' : bet ? '. Betala med Swish, så är allt klart.' : '. Vi ses!'}</p>
+    ${betalRad(nyss)}
+  </section>` : ''}
   ${h ? `<section class="panel brand hall" data-tills="${h.tills}">
     <div class="eyebrow">Platsen hålls åt dig</div>
     <h3 style="margin:0">${esc(DAG[h.dag])} ${esc(h.start)}–${esc(h.slut)}${h.plats ? ` · ${esc(h.plats)}` : ''}</h3>
@@ -175,7 +178,7 @@ export function startHallTimer() {
     const sek = document.getElementById('hallSek'), bar = document.getElementById('hallBar');
     if (sek) sek.textContent = kvar;
     if (bar) bar.style.width = (kvar / 60 * 100) + '%';
-    if (kvar <= 0) { clearInterval(tick); hall = null; ui.toast('Tiden gick ut, platsen är släppt'); hamtaVeckor(true).then(ui.kvar()); }
+    if (kvar <= 0) { clearInterval(tick); hall = null; ui.toast('Tiden gick ut, platsen är släppt'); hamtaVeckor(true).then(() => { if (location.hash.startsWith('#/boka')) ritaKvar(); }); }
   };
   draw();
   tick = setInterval(draw, 500);
@@ -187,9 +190,9 @@ export async function bokaAction(action, el) {
   const { v, slot } = el.dataset;
   if (action === 'boka-hall') {
     const r = await api.post('/boka/hall', { v, slot }, token());
-    if (!r.ok) { toast(r.fel || 'Gick inte att hålla platsen'); await hamtaVeckor(true); route(); return true; }
+    if (!r.ok) { toast(r.fel || 'Gick inte att hålla platsen'); await hamtaVeckor(true); ritaKvar(); return true; }
     hall = { v, slot, tills: r.tills, dag: Number(el.dataset.dag), start: el.dataset.start, slut: el.dataset.slut, plats: el.dataset.plats };
-    await hamtaVeckor(true); route(); return true;
+    await hamtaVeckor(true); ritaKvar(); return true;
   }
   if (action === 'boka-bekrafta') {
     if (!hall) return true;
@@ -197,11 +200,11 @@ export async function bokaAction(action, el) {
     toast(r.ok ? 'Tiden är bokad. Vi ses!' : (r.fel || 'Gick inte att boka'));
     klar = r.ok ? { v: hall.v, slot: hall.slot } : null;
     hall = null; clearInterval(tick);
-    await Promise.all([hamtaVeckor(true), hamtaMina(true)]); route();
-    if (klar) window.scrollTo({ top: 0, behavior: 'smooth' });
+    await Promise.all([hamtaVeckor(true), hamtaMina(true)]); ritaKvar();
+    if (klar) document.querySelector('.nyss-bokad')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return true;
   }
-  if (action === 'boka-klar-stang') { klar = null; route(); return true; }
+  if (action === 'boka-klar-stang') { klar = null; ritaKvar(); return true; }
   // Carl 2026-10-28: notisen när Haris öppnar en vecka når bara telefoner med notiser på
   if (action === 'boka-notis') {
     const r = await pushSatt(true);
@@ -212,18 +215,18 @@ export async function bokaAction(action, el) {
   if (action === 'boka-swishad') {
     const r = await api.post('/boka/swishad', { v, slot, angra: !!el.dataset.angra }, token());
     toast(r.ok ? (el.dataset.angra ? 'Ångrat' : 'Tack! Haris bekräftar när pengarna kommit.') : (r.fel || 'Gick inte'));
-    await hamtaMina(true); route(); return true;
+    await hamtaMina(true); ritaKvar(); return true;
   }
   if (action === 'boka-slapp') {
     if (hall) await api.post('/boka/avboka', { v: hall.v, slot: hall.slot }, token());
     hall = null; clearInterval(tick);
-    await hamtaVeckor(true); route(); return true;
+    await hamtaVeckor(true); ritaKvar(); return true;
   }
   if (action === 'boka-avboka') {
     if (!el.dataset.armed) { el.dataset.armed = '1'; const t = el.textContent; el.textContent = 'Tryck igen för att avboka'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = t; el.classList.remove('armed'); }, 4000); return true; }
     const r = await api.post('/boka/avboka', { v, slot }, token());
     toast(r.ok ? 'Avbokad' : (r.fel || 'Gick inte'));
-    await Promise.all([hamtaVeckor(true), hamtaMina(true)]); route(); return true;
+    await Promise.all([hamtaVeckor(true), hamtaMina(true)]); ritaKvar(); return true;
   }
   return false;
 }

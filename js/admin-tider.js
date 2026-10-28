@@ -32,7 +32,8 @@ function veckaPlus(v, n) {
 
 export async function tiderLadda(tvinga = false) {
   if (st.laddat && !tvinga) return;
-  const r = await api.admin.get('/admin/veckor');
+  const [r, b] = await Promise.all([api.admin.get('/admin/veckor'), api.admin.get('/admin/config/betalning')]);
+  st.betalning = b.ok ? b.config : null;
   if (r.ok) { st.nu = r.nu; st.veckor = r.veckor; st.mandag = r.mandag; st.laddat = true; st.hamtat = Date.now(); if (!st.vald || st.vald < veckaPlus(st.nu, -1)) st.vald = st.nu; }
 }
 export const tiderGlom = () => { st.laddat = false; };
@@ -75,7 +76,10 @@ export function tiderView() {
         <button type="button" class="film" data-action="tid-bort" data-id="${x.id}" ${x.bokad ? 'disabled title="Avboka först"' : ''}>✕</button>
       </div>`).join('')}</div></div>`;
   }
+  // Carl 2026-10-28: "tiden bokad, vi ses – var är betalflödet?" Utan pris får föräldrarna ingen Swish-knapp.
+  const utanPris = st.betalning && !(st.betalning.swish && st.betalning.pris);
   return `
+  ${utanPris ? '<div class="note warn small">Inget pris per pass är satt, så föräldrarna får ingen Swish-knapp när de bokar. <a href="#/admin/mer">Sätt priset under Mer → Betalning med Swish ›</a></div>' : ''}
   <section>
     <div class="vecka-nav">
       <button class="btn secondary" data-action="tid-vecka" data-v="${veckaPlus(v, -1)}" ${v <= veckaPlus(st.nu, -1) ? 'disabled' : ''}>‹</button>

@@ -699,3 +699,6 @@ body.admin .view { max-width: 1080px; }
 .ov-bar-rad { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 8px; }
 .vecka-stangd { border-color: var(--warn); background: rgba(251, 191, 36, .06); }
 .notis-fraga { margin: 10px 0 14px; border-color: var(--brand-deep); }
+/* Platsen som hålls ligger kvar längst ner på skärmen ovanför menyn, nära tiden man tryckte på (Carl 2026-10-28) */
+.panel.hall { position: sticky; bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom, 0px) + 8px); z-index: 6; box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+.nyss-bokad { margin: 14px 0; scroll-margin-bottom: calc(var(--tabs-h) + env(safe-area-inset-bottom, 0px) + 12px); }
