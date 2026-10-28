@@ -30,7 +30,8 @@
 //     POST /admin/klient/<id>/boka      {v, slot} · POST …/avboka {v, slot}   Haris bokar åt en befintlig kund
 //   Filmer: GET /admin/filmer · POST /admin/film · PUT/DELETE /admin/film/<id>
 //   Uppladdning i delar till R2: POST /admin/upload/start {filmId|klientId, filnamn, typ} · PUT /admin/upload/part · POST /admin/upload/complete · PUT /admin/upload/poster/<id>
-//   Tider: GET /admin/veckor · PUT /admin/vecka/<v> · POST /admin/vecka/<v>/auto · POST /admin/vecka/<v>/duplicera
+//   Tider: GET /admin/veckor · PUT /admin/vecka/<v> {oppen, slots, notis} · POST /admin/vecka/<v>/auto · POST /admin/vecka/<v>/duplicera
+//     När en vecka öppnas går en pushnotis till alla föräldrar med notiser på (en gång per vecka, notis: false hoppar över)
 //     POST /admin/vecka/<v>/betald {slot, betald}   Haris bockar av (eller ångrar) en betalning
 //   Stigen: GET /config/stig · PUT /admin/config/stig
 //   Swish: GET/PUT /admin/config/betalning {swish, pris}
@@ -276,6 +277,8 @@ function mandag(v) {
   return m;
 }
 const veckaPlus = (v, n) => veckaAv(new Date(mandag(v).getTime() + n * 7 * 864e5));
+const MANAD = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const veckaSpann = v => [0, 6].map(n => { const d = new Date(mandag(v).getTime() + n * 864e5); return `${d.getUTCDate()} ${MANAD[d.getUTCMonth()]}`; }).join(' – ');
 const datumFor = (v, dag) => new Date(mandag(v).getTime() + (dag - 1) * 864e5).toISOString().slice(0, 10);
 const tidOk = t => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(t || ''));
 function renSlot(s, gammal = null) {
@@ -337,6 +340,15 @@ function swishNr(v) {
 const hamtaBetalning = async env => (await env.DB.get('config:betalning', 'json')) || { swish: '', pris: null };
 // till föräldrarna bara när både nummer och pris finns, annars visas ingen Swish-knapp
 const publikBetalning = b => (b?.swish && b?.pris ? { swish: b.swish, pris: b.pris } : null);
+// Pushnotis till alla telefoner som slagit på notiser (server/cap-push). hash = sidan appen öppnar vid tryck.
+async function pushAlla(env, title, text, hash = '') {
+  if (!env.PUSH_BASE || !env.PUSH_HEMLIG) return { ok: false, skickade: 0, fel: 'push är inte påslaget' };
+  try {
+    const r = await fetch(`${env.PUSH_BASE}/skicka`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ hemlig: env.PUSH_HEMLIG, title, text, hash }) });
+    const j = await r.json().catch(() => ({}));
+    return { ok: !!j.ok, skickade: j.skickade || 0, fel: j.fel || '' };
+  } catch (e) { return { ok: false, skickade: 0, fel: String(e?.message || e) }; }
+}
 async function sessionUser(env, req) {
   const t = bearer(req);
   const s = t && await env.DB.get(`sess:${t}`, 'json');
@@ -867,11 +879,21 @@ export default {
         const vecka = stadaHall(await hamtaVecka(env, v));
         if (!mv[2] && req.method === 'PUT') {
           const gamla = Object.fromEntries(vecka.slots.map(s => [s.id, s]));
+          const varOppen = !!vecka.oppen;
           vecka.oppen = !!d.oppen;
           const st = stadaSlots((Array.isArray(d.slots) ? d.slots : []).slice(0, 80).map(s => renSlot(s, gamla[s.id])));
           vecka.slots = st.slots;
+          // Carl 2026-10-28: "en notis som går ut när man öppnar veckan för bokning, till alla föräldrar". En gång per vecka.
+          let notis = null;
+          if (!varOppen && vecka.oppen && d.notis !== false && !vecka.notis && v >= veckaAv()) {
+            const lediga = vecka.slots.filter(s => !s.bokad && datumFor(v, s.dag) >= idag()).length;
+            if (lediga) {
+              notis = await pushAlla(env, 'Nya tider hos Haris', `${lediga} lediga ${lediga === 1 ? 'tid' : 'tider'} vecka ${Number(v.split('-W')[1])} (${veckaSpann(v)}). Tryck här för att boka.`, `/boka/${v}`);
+              if (notis.ok) vecka.notis = nu();
+            }
+          }
           await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
-          return svar({ ok: true, vecka, kastade: st.kastade });
+          return svar({ ok: true, vecka, kastade: st.kastade, notis });
         }
         if (mv[2] === '/auto' && req.method === 'POST') {
           const dagar = (Array.isArray(d.dagar) ? d.dagar : [1, 2, 3, 4, 5]).map(Number).filter(x => x >= 1 && x <= 7);

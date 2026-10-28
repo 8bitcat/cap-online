@@ -75,6 +75,18 @@ export async function pushSatt(on) {
   } catch (e) { return { ok: false, fel: String(e?.message || e) }; }
 }
 
+// Tryck på en notis: appen öppnar sidan notisen pekar på, t.ex. #/boka/2026-W45 när Haris öppnat en vecka
+// (Carl 2026-10-28). Lyssnaren kopplas vid start, så att det fungerar även när notisen startar appen.
+export async function pushLyssna() {
+  const P = pushP(); if (!P) return;
+  try {
+    await P.addListener('pushNotificationActionPerformed', a => {
+      const h = a?.notification?.data?.hash;
+      if (typeof h === 'string' && /^\/[\w/-]{1,60}$/.test(h)) location.hash = h;
+    });
+  } catch { /* ok */ }
+}
+
 // Återställ påminnelserna när profilen ändrats (annan frekvens eller annat namn).
 export async function paminnUppdatera() {
   if (store.notiser.paminn && localP()) await paminnSatt(true);

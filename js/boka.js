@@ -6,6 +6,7 @@
 import { store } from './store.js';
 import { api } from './api.js';
 import { swishLank, visaSwish, bokningsMeddelande, kr } from './swish.js';
+import { notisStod, pushSatt } from './notiser.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DAG = ['', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
@@ -107,6 +108,11 @@ export function bokaPage(v) {
   <section>
     <div class="eyebrow">Träna med Haris</div>
     <h1>Boka en tid</h1>
+    ${notisStod() && !store.notiser.push && !store.notiser.bokaNej ? `<div class="panel notis-fraga">
+      <b>🔔 Få en notis när Haris öppnar nya tider</b>
+      <p class="small muted" style="margin:2px 0 10px">Då ser du direkt när det går att boka.</p>
+      <div class="btn-row two" style="margin:0"><button class="btn grad" data-action="boka-notis">Slå på notiser</button><button class="btn secondary" data-action="boka-notis-nej">Inte nu</button></div>
+    </div>` : ''}
     <p class="muted small">Tryck på en ledig tid så hålls den i 60 sekunder åt dig. Bekräfta innan tiden går ut. Röda tider är redan bokade.${bet ? ` Ett pass kostar ${esc(kr(bet.pris))} och betalas med Swish.` : ''}</p>
     <div class="vecka-nav">
       <a class="btn secondary ${kanBak ? '' : 'disabled'}" href="#/boka/${foreg}" ${kanBak ? '' : 'aria-disabled="true" tabindex="-1"'}>‹</a>
@@ -187,6 +193,13 @@ export async function bokaAction(action, el) {
     return true;
   }
   if (action === 'boka-klar-stang') { klar = null; route(); return true; }
+  // Carl 2026-10-28: notisen när Haris öppnar en vecka når bara telefoner med notiser på
+  if (action === 'boka-notis') {
+    const r = await pushSatt(true);
+    toast(r.ok ? 'Klart! Du får en notis när Haris öppnar nya tider.' : r.fel === 'nekad' ? 'Tillåt notiser för CAP i Inställningar' : `Gick inte: ${r.fel}`);
+    route(); return true;
+  }
+  if (action === 'boka-notis-nej') { store.notiser = { ...store.notiser, bokaNej: true }; route(); return true; }
   if (action === 'boka-swishad') {
     const r = await api.post('/boka/swishad', { v, slot, angra: !!el.dataset.angra }, token());
     toast(r.ok ? (el.dataset.angra ? 'Ångrat' : 'Tack! Haris bekräftar när pengarna kommit.') : (r.fel || 'Gick inte'));

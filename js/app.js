@@ -1,6 +1,6 @@
 import { store, today, weekIndex } from './store.js';
 import { VERSION } from './version.js';
-import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush } from './notiser.js';
+import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush, pushLyssna } from './notiser.js';
 import { loggaUt, hamtaFilmer, filmerNu } from './api.js';
 import { loginPage, pinPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
 import { serverStatus, statusNu, sparaBarn } from './api.js';
@@ -1760,6 +1760,7 @@ async function boot() {
   // annars första sidan med Förälder och Admin
   if (!location.hash || location.hash === '#/' || location.hash === '#') location.replace(store.session ? '#/' : '#/valkommen');
   kollaNyVersion();
+  pushLyssna();
   // sms på/av och länken till appen styr inloggningssidan
   serverStatus().then(() => { if (/^#\/(login|app|valkommen|mer)/.test(location.hash)) route(); });
   // håll sessionen vid liv (servern förlänger den), och släpp den bara om servern säger att den inte finns
@@ -1785,7 +1786,7 @@ async function boot() {
   utvecklingInit({ toast, route, go, kvar, content: C });
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
   api.get('/config/stig').then(r => { if (r.ok && r.config) { tillampaStigConfig(r.config); const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/stig')) route(); } });
-  document.addEventListener('cap:notiser', e => { toast(e.detail?.ok ? 'Telefonen får nyheter från Haris' : 'Kunde inte registrera telefonen'); if (/bibliotek|spelarkort|notiser/.test(location.hash)) route(); });
+  document.addEventListener('cap:notiser', e => { toast(e.detail?.ok ? 'Telefonen får nyheter från Haris' : 'Kunde inte registrera telefonen'); if (/bibliotek|spelarkort|notiser|boka/.test(location.hash)) route(); });
   document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); });
   window.addEventListener('hashchange', route);
   route();

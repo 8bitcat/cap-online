@@ -698,3 +698,4 @@ body.admin .view { max-width: 1080px; }
 }
 .ov-bar-rad { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 8px; }
 .vecka-stangd { border-color: var(--warn); background: rgba(251, 191, 36, .06); }
+.notis-fraga { margin: 10px 0 14px; border-color: var(--brand-deep); }

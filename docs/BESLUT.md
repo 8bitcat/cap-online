@@ -3,6 +3,22 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-28 – notis till föräldrarna när en vecka öppnas
+
+- **Notisen** (Carl: "en notis i appen som går ut när man öppnar veckan för
+  bokning, så det går ut till alla föräldrar"). När Haris trycker Öppna veckan
+  för bokning skickar API:t en pushnotis via cap-push: "Nya tider hos Haris –
+  12 lediga tider vecka 45 (2 nov – 8 nov). Tryck här för att boka." Ett tryck
+  öppnar appen på den veckans bokning (`hash` i notisen, `pushLyssna()` i appen).
+- **En gång per vecka** (`vecka.notis`). Stängs och öppnas veckan igen går ingen
+  ny notis, så ett misstag skickar inte två. Rutan "Skicka en notis till alla
+  föräldrar med appen" är ikryssad och kan kryssas ur, t.ex. när Haris öppnar
+  flera veckor på en gång. Ingen notis för veckor som har varit eller när inga
+  lediga tider finns kvar.
+- **Når bara telefoner med notiser på.** Föräldern slår på dem på bokningssidan
+  (ny ruta "Få en notis när Haris öppnar nya tider", bara i appen) eller under
+  🔔. Notiser kräver iOS-appen; webben får inga.
+
 ## 2026-10-28 – ⇄ förälder/Haris, inga prototyper, övningsbanken i admin
 
 - **⇄ uppe vid klockan** (Carl: "en pil som betyder växla … menyn där nere ska

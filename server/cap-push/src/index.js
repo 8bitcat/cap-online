@@ -4,7 +4,8 @@
 //
 //   POST /registrera   {token, namn}            telefonens pushkod + barnets namn (bara för räkning)
 //   POST /avregistrera {token}
-//   POST /skicka       {hemlig, text, title?}   nyhet till alla telefoner (kräver ADMIN_HEMLIG)
+//   POST /skicka       {hemlig, text, title?, hash?}   nyhet till alla telefoner (kräver ADMIN_HEMLIG); hash = sidan
+//                      appen öppnar när man trycker på notisen, t.ex. /boka/2026-W45
 //   GET  /                                      {ok, telefoner}
 //
 // KV (bindningen CAP): tok:<pushkod> med metadata {namn, t}. Inget annat sparas.
@@ -30,7 +31,7 @@ async function apnsJwt(env) {
   jwt = `${huvud}.${kropp}.${b64u(sig)}`; jwtT = now;
   return jwt;
 }
-async function skicka(env, token, text, title) {
+async function skicka(env, token, text, title, extra = {}) {
   const host = env.APNS_HOST || 'https://api.push.apple.com';
   const r = await fetch(`${host}/3/device/${token}`, {
     method: 'POST',
@@ -38,7 +39,7 @@ async function skicka(env, token, text, title) {
       authorization: `bearer ${await apnsJwt(env)}`, 'apns-topic': env.TOPIC, 'apns-push-type': 'alert', 'apns-priority': '10',
       'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400), 'content-type': 'application/json',
     },
-    body: JSON.stringify({ aps: { alert: { title, body: text }, sound: 'default' } }),
+    body: JSON.stringify({ aps: { alert: { title, body: text }, sound: 'default' }, ...extra }),
   });
   if (r.status !== 200) {
     const fel = await r.json().catch(() => ({}));
@@ -91,8 +92,9 @@ export default {
       if (!env.ADMIN_HEMLIG || String(d.hemlig || '') !== env.ADMIN_HEMLIG) return svar({ ok: false, fel: 'fel lösen' }, 403);
       const text = ren(d.text, 180), title = ren(d.title, 40) || 'CAP';
       if (!text) return svar({ ok: false, fel: 'tom text' }, 400);
+      const hash = /^\/[\w/-]{1,60}$/.test(String(d.hash || '')) ? d.hash : '';
       const till = await allaTelefoner(env);
-      const jobb = Promise.all(till.map((t) => skicka(env, t.token, text, title).catch((e) => ({ status: 0, reason: String(e) }))));
+      const jobb = Promise.all(till.map((t) => skicka(env, t.token, text, title, hash ? { hash } : {}).catch((e) => ({ status: 0, reason: String(e) }))));
       if (d.vanta) { const res = await jobb; return svar({ ok: true, skickade: till.length, svar: res }); }
       ctx.waitUntil(jobb);
       return svar({ ok: true, skickade: till.length });
