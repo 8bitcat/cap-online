@@ -75,8 +75,8 @@ const TEL = '070-333 44 55';
   await a.click('[data-action=tid-vecka]:last-of-type'); await a.waitForTimeout(400);
   const vecka = await a.$eval('.vecka-titel b', e => e.textContent);
   if (!(await a.$('.slotrad'))) { await a.click('form[data-form=tid-auto] button[type=submit]'); await a.waitForSelector('.slotrad', { timeout: 10000 }); }
-  if (!(await a.$eval('[data-action=tid-oppen]', e => e.checked))) { await a.click('[data-action=tid-oppen]'); await vantaToast(a, 'öppen för bokning'); }
-  koll('nästa vecka öppen med tider', (await a.$$('.slotrad')).length > 0, `${vecka}, ${(await a.$$('.slotrad')).length} tider`);
+  if (await a.$('[data-action=tid-oppen][data-oppna="1"]')) { await a.click('[data-action=tid-oppen][data-oppna="1"]'); await vantaToast(a, 'öppen för bokning'); }
+  koll('nästa vecka öppen med tider', (await a.$$('.slotrad')).length > 0 && !!(await a.$('[data-action=tid-oppen][data-oppna="0"]')), `${vecka}, ${(await a.$$('.slotrad')).length} tider`);
 
   // ---- föräldern: loggar in, barnets namn, bokar ----
   const f = await nyFlik('förälder', devices['iPhone 13']);

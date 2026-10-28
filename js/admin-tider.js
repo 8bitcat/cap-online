@@ -37,6 +37,7 @@ export async function tiderLadda(tvinga = false) {
 }
 export const tiderGlom = () => { st.laddat = false; };
 const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen: false, slots: [] };
+const stangdText = () => vecka().oppen ? '' : '. Den är stängd: tryck Öppna veckan för bokning så kan föräldrarna boka.';
 
 export function tiderView() {
   if (!st.laddat) { tiderLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar veckor…</p></section>`; }
@@ -73,9 +74,14 @@ export function tiderView() {
       <div class="vecka-titel"><b>Vecka ${Number(v.split('-W')[1])}</b><div class="small muted">${fmtDatum(m)} – ${fmtDatum(s)}${v === st.nu ? ' · denna vecka' : ''}</div></div>
       <button class="btn secondary" data-action="tid-vecka" data-v="${veckaPlus(v, 1)}">›</button>
     </div>
-    <div class="panel ${w.oppen ? 'brand' : ''}" style="margin-top:12px">
-      <label class="toggle" style="border:0;padding:0"><input type="checkbox" data-action="tid-oppen" ${w.oppen ? 'checked' : ''}><span><b>${w.oppen ? 'Öppen för bokning' : 'Stängd'}</b><small>${w.slots.length} tider · ${bokade} bokade. Bara öppna veckor syns för föräldrarna.</small></span></label>
-    </div>
+    ${w.oppen ? `<div class="panel brand" style="margin-top:12px">
+      <div class="section-head" style="align-items:center"><div><b style="color:var(--ok)">✓ Öppen för bokning</b><div class="small muted">${w.slots.length} tider · ${bokade} bokade. Föräldrarna ser tiderna under Med Haris.</div></div>
+      <button class="film" data-action="tid-oppen" data-oppna="0">Stäng veckan</button></div>
+    </div>` : `<div class="panel vecka-stangd" style="margin-top:12px">
+      <b>Veckan är stängd</b>
+      <div class="small muted" style="margin:2px 0 ${w.slots.length ? '10px' : '0'}">${w.slots.length ? `${w.slots.length} tider, men föräldrarna ser dem inte förrän veckan är öppen.` : 'Lägg till tider här under och öppna sedan veckan.'}</div>
+      ${w.slots.length ? '<button class="btn grad block" data-action="tid-oppen" data-oppna="1">Öppna veckan för bokning</button>' : ''}
+    </div>`}
   </section>
   <section class="panel">
     <h3>Autosätt tider</h3>
@@ -131,8 +137,9 @@ export async function tiderAction(action, el) {
   const { toast, route } = ui;
   const w = vecka();
   if (action === 'tid-vecka') { st.vald = el.dataset.v; route(); return true; }
-  if (action === 'tid-oppen') { const r = await sparaVecka(lasSlots(), el.checked); toast(r.ok ? (el.checked ? 'Veckan är öppen för bokning' : 'Veckan är stängd') : `Gick inte: ${r.fel}`); route(); return true; }
-  if (action === 'tid-spara') { const r = await sparaVecka(lasSlots(), w.oppen); toast(r.ok ? 'Veckan är sparad' : `Gick inte: ${r.fel}`); route(); return true; }
+  // Carl 2026-10-28: "veckan är sparad men jag får inga tider" – en sparad vecka är inte öppen, det sägs nu tydligt
+  if (action === 'tid-oppen') { const oppna = el.dataset.oppna === '1'; const r = await sparaVecka(lasSlots(), oppna); toast(r.ok ? (oppna ? 'Veckan är öppen för bokning. Föräldrarna ser tiderna nu.' : 'Veckan är stängd') : `Gick inte: ${r.fel}`); route(); return true; }
+  if (action === 'tid-spara') { const r = await sparaVecka(lasSlots(), w.oppen); toast(r.ok ? `Veckan är sparad${stangdText()}` : `Gick inte: ${r.fel}`); route(); return true; }
   if (action === 'tid-ny') {
     // öppnar formuläret med ett förslag: nästa lediga timme efter sista tiden, annars måndag 17
     if (st.nyTid) { st.nyTid = null; route(); return true; }
@@ -187,14 +194,14 @@ export async function tiderSubmit(kind, f, fd) {
     const krock = w.slots.find(x => x.dag === ny.dag && min(ny.start) < min(x.slut) && min(ny.slut) > min(x.start));
     if (krock) { toast(`Krockar med ${krock.start}–${krock.slut} samma dag`); return true; }
     const r = await sparaVecka([...lasSlots(), ny], w.oppen);
-    if (r.ok) { st.nyTid = null; toast(`Tillagd: ${DAG[ny.dag]}dag ${ny.start}–${ny.slut}`); } else toast(`Gick inte: ${r.fel}`);
+    if (r.ok) { st.nyTid = null; toast(`Tillagd: ${DAG[ny.dag]}dag ${ny.start}–${ny.slut}${stangdText()}`); } else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }
   if (kind !== 'tid-auto') return false;
   const dagar = fd.getAll('dagar').map(Number);
   if (!dagar.length) { toast('Välj minst en dag'); return true; }
   const r = await api.admin.post(`/admin/vecka/${st.vald}/auto`, { dagar, start: fd.get('start'), slut: fd.get('slut'), langd: Number(fd.get('langd')), plats: fd.get('plats') });
-  if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); toast(`${r.vecka.slots.length} tider i veckan`); }
+  if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); toast(`${r.vecka.slots.length} tider i veckan${stangdText()}`); }
   else toast(`Gick inte: ${r.fel}`);
   route(); return true;
 }

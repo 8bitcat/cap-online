@@ -697,3 +697,4 @@ body.admin .view { max-width: 1080px; }
   box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
 }
 .ov-bar-rad { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 8px; }
+.vecka-stangd { border-color: var(--warn); background: rgba(251, 191, 36, .06); }
