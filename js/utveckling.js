@@ -20,7 +20,7 @@ export function utvecklingPage() {
     <p class="lead">Här syns nivån Haris satt, bedömningarna över tid och filmerna från passen. Det kräver ett konto hos Haris.</p>
     <a class="btn grad" href="#/login">Logga in</a></section>`;
   const m = minaNu();
-  if (!m.hamtat) { hamtaMina().then(() => ui.route()); return `<section class="empty"><p class="muted">Hämtar…</p></section>`; }
+  if (!m.hamtat) { hamtaMina().then(ui.kvar()); return `<section class="empty"><p class="muted">Hämtar…</p></section>`; }
   // hämta om i bakgrunden om kopian är gammal, så nivå och bedömningar hänger med
   hamtaMina().then(ny => { if (ny.hamtat !== m.hamtat && location.hash.replace(/^#/, '') === '/utveckling') ui.route(); });
   const k = m.klient;

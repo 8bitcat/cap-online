@@ -59,10 +59,10 @@ function smsRakna(r) { if (r && r.smsTak !== undefined) { st.smsIdag = r.smsIdag
 export function klientGlom() { st.vald = null; st.laddat = false; }
 
 export function klienterView(id, lage) {
-  if (!st.laddat) { klienterLadda().then(() => ui.route()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar klienterna…</p></section>`; }
+  if (!st.laddat) { klienterLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar klienterna…</p></section>`; }
   if (id === 'ny') return kundForm(null);
   if (id) {
-    if (st.vald?.id !== id) { klientLadda(id).then(() => ui.route()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar klienten…</p></section>`; }
+    if (st.vald?.id !== id) { klientLadda(id).then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar klienten…</p></section>`; }
     if (st.vald.saknas) return `<section><a class="back" href="#/admin/klienter">‹ Klienter</a><p class="muted">Klienten hittades inte.</p></section>`;
     if (lage === 'redigera') return kundForm(st.vald.klient);
     if (lage === 'boka') return bokaVy();
@@ -292,7 +292,7 @@ function veckaPlus(v, n) {
 async function veckorLadda() { const r = await api.admin.get('/admin/veckor'); if (r.ok) { st.veckor = r.veckor; st.nu = r.nu; if (!st.veckaVald || st.veckaVald < r.nu) st.veckaVald = r.nu; } }
 function bokaVy() {
   const d = st.vald, k = d.klient;
-  if (!st.veckor) { veckorLadda().then(() => ui.route()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar tiderna…</p></section>`; }
+  if (!st.veckor) { veckorLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar tiderna…</p></section>`; }
   const v = st.veckaVald, w = st.veckor.find(x => x.v === v) || { v, oppen: false, slots: [] };
   const idagD = new Date(new Date().toDateString());
   let dagar = '';

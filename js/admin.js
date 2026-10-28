@@ -6,6 +6,8 @@ import { swishLank, visaSwish, kr } from './swish.js';
 import { passInit, passView, passAction, passSubmit, passStopur, passStoppa, passFilVald, passGlom } from './admin-pass.js';
 import { stigAdminInit, stigAdminView, stigAdminAction } from './admin-stig.js';
 import { klienterInit, klienterView, klienterAction, klienterSubmit, klienterAfterRender, klienterLadda, klientGlom } from './admin-klienter.js';
+import { ovningarInit, ovningarView, ovningarAction, ovningarAfterRender } from './admin-ovningar.js';
+import { kopplaKlipp } from './ovningsbank.js';
 import { sattR2 } from './media.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -16,12 +18,12 @@ const fmtT = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2
 let TAGS = null;          // data/taggar.json
 let state = { flik: 'klienter', filmer: [], r2: false, sms: false, redigerar: null, laddat: false };
 let ui = null;            // { toast, route, go, content }
-const FLIKAR = [['klienter', 'Klienter'], ['tider', 'Tider'], ['filmer', 'Filmer'], ['stigen', 'Stigen'], ['mer', 'Mer']];
+const FLIKAR = [['klienter', 'Klienter'], ['tider', 'Tider'], ['ovningar', 'Övningar'], ['filmer', 'Filmer'], ['stigen', 'Stigen'], ['mer', 'Mer']];
 
 export async function adminInit(deps) {
   // när ett pass sparas/tas bort ska klientsidan hämtas om nästa gång
   ui = { ...deps, klientAndrad: () => { klientGlom(); }, passAndrad: () => { passGlom(); }, tiderAndrad: () => { tiderGlom(); } };
-  tiderInit(ui); passInit(ui); stigAdminInit(ui, deps.content); klienterInit(ui);
+  tiderInit(ui); passInit(ui); stigAdminInit(ui, deps.content); klienterInit(ui); ovningarInit(ui);
   if (!TAGS) TAGS = await (await fetch('data/taggar.json', { cache: 'no-cache' })).json();
 }
 export const taggar = () => TAGS;
@@ -33,6 +35,8 @@ export function adminAfterRender(view) {
   const pf = view.querySelector('#passfilm'); if (pf) pf.addEventListener('change', () => passFilVald(pf));
   if (view.querySelector('.stopur #stopurKnapp') || view.querySelector('#recTid')) passStopur();
   klienterAfterRender(view);
+  ovningarAfterRender(view);
+  kopplaKlipp(view);
 }
 export function adminStop() { passStoppa(); }
 
@@ -55,9 +59,10 @@ export function adminPage(flik = 'klienter', id, lage) {
   if (flik === 'klient') flik = 'klienter';
   if (!FLIKAR.some(([k]) => k === flik) && flik !== 'pass') flik = 'klienter';
   state.flik = flik;
-  const rubrik = { klienter: 'Klienter', tider: 'Tider att boka', pass: 'Alla pass', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
+  const rubrik = { klienter: 'Klienter', tider: 'Tider att boka', ovningar: 'Övningsbanken', pass: 'Alla pass', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
   const inre = flik === 'klienter' ? klienterView(id, lage)
     : flik === 'tider' ? tiderView()
+    : flik === 'ovningar' ? ovningarView()
     : flik === 'pass' ? passView(id, lage)
     : flik === 'filmer' ? filmerFlik()
     : flik === 'stigen' ? stigAdminView()
@@ -260,6 +265,7 @@ export async function adminAction(action, el, e) {
   if (action.startsWith('pass-')) return passAction(action, el, e);
   if (action.startsWith('stig-')) return stigAdminAction(action, el, e);
   if (action.startsWith('klient-')) return klienterAction(action, el, e);
+  if (action.startsWith('ov-')) return ovningarAction(action, el, e);
   if (action === 'admin-ut') { e.preventDefault(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.go('/admin'); return true; }
   if (action === 'admin-ny') { state.redigerar = tomFilm(); route(); return true; }
   if (action === 'admin-redigera') { const f = state.filmer.find(x => x.id === el.dataset.id); state.redigerar = JSON.parse(JSON.stringify(f)); route(); return true; }

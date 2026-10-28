@@ -357,6 +357,7 @@ function renBlock(b) {
     film: b.film && typeof b.film === 'object' ? { namn: ren(b.film.namn, 60), url: ren(b.film.url, 400), poster: ren(b.film.poster, 400), t: ren(b.film.t, 30), filmId: ren(b.film.filmId, 40) } : null,
     media: (Array.isArray(b.media) ? b.media : []).slice(0, 12).map(m => ({ id: ren(m.id, 24), typ: m.typ === 'audio' ? 'audio' : 'video', url: ren(m.url, 400), poster: ren(m.poster, 400), namn: ren(m.namn, 80), t: ren(m.t, 30), lokal: !!m.lokal })),
     kommentar: ren(b.kommentar, 600), klar: !!b.klar,
+    ovningId: ren(b.ovningId, 40), // övningen i övningsbanken blocket kom från (filmklippet i kör-läget)
   };
   if (typ === 'bedomning') {
     ut.varv = Math.max(1, Math.min(10, Math.round(+b.varv || 3)));

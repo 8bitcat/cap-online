@@ -3,6 +3,30 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-28 – ⇄ förälder/Haris, inga prototyper, övningsbanken i admin
+
+- **⇄ uppe vid klockan** (Carl: "en pil som betyder växla … menyn där nere ska
+  ändras till Haris meny"). Knappen syns för den som är inloggad som Haris på
+  telefonen, och alltid i admin. Den byter till Haris vy (adminmenyn längst ner)
+  eller tillbaka till föräldravyn, och varje sida minns var man var. En förälder
+  utan admin ser ingen växling. Första gången: Mer → Admin (för Haris).
+- **Prototyperna är borta** (Carl: "det som är nu är så det ska vara, det sätter
+  vi nu som föräldravyn"). Valet av spår, PROTOTYP-märket och "byt prototyp" är
+  borttagna; gamla `#/prototyper` går till Mer. De gamla startsidorna är
+  raderade, sidorna som appen fortfarande länkar till (bibliotek, guide,
+  spelarkort) är kvar.
+- **Övningsbanken i admin** (Carl: "så att Haris kan se den i appen och planera
+  upp ett pass"). Ny flik Övningar: samma 59 övningar som Excel-filen
+  (`python tools/ovningsbank.py --json` → `data/ovningsbank.json`), sök,
+  filter (fas, typ, nivå, med film) och filmklippet ur Haris film. Haris väljer
+  övningar → Planera pass åt en klient → passet får samtal före, övningarna och
+  samtal efter. Från ett pass: "+ Ur övningsbanken" lägger till i det passet.
+  Blocket minns övningen (`ovningId`) och kör-läget visar filmklippet.
+  **(antagande)** Tidtagningar blir tidtagningsblock och konbanan
+  bedömningsblock. Egna övningar i appen finns inte än, de läggs i Excel-filen.
+- **Bakgrundshämtningar ritar bara om sidan man är kvar på** (`kvar()` i
+  app.js). Annars kunde ett svar som kom efter ⇄ tömma förälderns formulär.
+
 ## 2026-10-28 – appen heter CAP
 
 - **Bara "CAP"** (Haris via Carl: "det ska bara stå CAP i stället för CAP

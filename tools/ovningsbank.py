@@ -2,6 +2,7 @@
 
     python tools/ovningsbank.py                 # skriver docs/Övningsbanken.xlsx
     python tools/ovningsbank.py annan/sökväg.xlsx
+    python tools/ovningsbank.py --json          # skriver data/ovningsbank.json (Admin → Övningar i appen)
 
 Hämtar allt ur data/content.json (CAP-passets 19 moment, stigens block och
 tidtagningar, utbildningsvägens planerade övningar, nivåproven, avsluten i
@@ -566,10 +567,37 @@ def blad_lasmig(wb, c, antal, antal_kunskap):
     ws.sheet_view.showGridLines = False
 
 
+def till_json(c, rader):
+    """Övningsbanken i appen (Admin → Övningar, Carl 2026-10-28): samma rader som Excel-filen, i kortform."""
+    sess = {s["title"]: s for s in c["sessions"]}
+    ut = []
+    for r in rader:
+        s = sess.get(r["film"])
+        ut.append({
+            "id": r["id"], "namn": r["namn"], "desc": r["desc"], "typ": r["typ"],
+            "tid": r["tid"], "maltid": r["maltid"], "fas": r["fas"], "omrade": r["omrade"],
+            "fardighet": [x for x in r["fardighet"].split(", ") if x],
+            "niva": int(r["niva"].split()[0]) if r["niva"] else None,
+            "film": {"namn": s["title"], "url": s["video"]["local"], "poster": s["video"]["poster"],
+                     "start": r["start"], "slut": r["slut"]} if s else None,
+            "position": r["position"], "yta": r["yta"],
+            "utr": [u for u, k in UTR.items() if r.get(k) == "x"],
+            "sallskap": [n for n, k in (("Ensam", "s_ensam"), ("Med förälder", "s_foralder"), ("Med kompis", "s_kompis")) if r.get(k) == "x"],
+            "kalla": r["kalla"],
+        })
+    return ut
+
+
 def main():
     sys.stdout.reconfigure(encoding="utf-8")
-    ut = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "Övningsbanken.xlsx"
     c, t = las()
+    if sys.argv[1:] == ["--json"]:
+        ut = ROOT / "data" / "ovningsbank.json"
+        rader = till_json(c, ovningar(c))
+        ut.write_text(json.dumps({"ovningar": rader}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+        print(f"skrev {ut}: {len(rader)} övningar, {sum(1 for r in rader if r['film'])} med film")
+        return
+    ut = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "Övningsbanken.xlsx"
     rader = ovningar(c)
     wb = Workbook()
     ws_ov, tagg_kol = blad_ovningar(wb, c, t, rader)

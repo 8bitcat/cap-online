@@ -74,7 +74,7 @@ export function bokaPage(v) {
   <section class="hero" style="padding-top:30px"><div class="eyebrow">Träna med Haris</div><h1>Boka en tid</h1>
     <p class="lead">Bokningen kräver ett konto hos Haris. Logga in med ditt mobilnummer.</p>
     <a class="btn grad" href="#/login">Logga in</a></section>`;
-  if (!data.nu) { hamtaVeckor().then(() => ui.route()); return `<section class="empty"><p class="muted">Hämtar Haris tider…</p></section>`; }
+  if (!data.nu) { hamtaVeckor().then(ui.kvar()); return `<section class="empty"><p class="muted">Hämtar Haris tider…</p></section>`; }
   const oppna = data.veckor.map(w => w.v);
   const nu = data.nu;
   v = v && v >= nu ? v : (oppna.find(x => x >= nu) || nu);
@@ -160,7 +160,7 @@ export function startHallTimer() {
     const sek = document.getElementById('hallSek'), bar = document.getElementById('hallBar');
     if (sek) sek.textContent = kvar;
     if (bar) bar.style.width = (kvar / 60 * 100) + '%';
-    if (kvar <= 0) { clearInterval(tick); hall = null; ui.toast('Tiden gick ut, platsen är släppt'); hamtaVeckor(true).then(() => ui.route()); }
+    if (kvar <= 0) { clearInterval(tick); hall = null; ui.toast('Tiden gick ut, platsen är släppt'); hamtaVeckor(true).then(ui.kvar()); }
   };
   draw();
   tick = setInterval(draw, 500);
@@ -212,7 +212,7 @@ export function medHarisPage(id) {
   if (!p) {
     if (medHarisPage._forsokt === id) return `<a class="back" href="#/boka">‹ Tillbaka</a><section class="empty"><p class="muted">Passet hittades inte. Haris kanske inte delat det än.</p></section>`;
     medHarisPage._forsokt = id;
-    hamtaMina(true).then(() => ui.route()); return `<a class="back" href="#/boka">‹ Tillbaka</a><section class="empty"><p class="muted">Hämtar passet…</p></section>`;
+    hamtaMina(true).then(ui.kvar()); return `<a class="back" href="#/boka">‹ Tillbaka</a><section class="empty"><p class="muted">Hämtar passet…</p></section>`;
   }
   medHarisPage._forsokt = null;
   const fmtSek = s => `${Number(s).toLocaleString('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;

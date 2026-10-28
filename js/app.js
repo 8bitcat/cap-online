@@ -11,7 +11,7 @@ import { api } from './api.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
-const badge = document.getElementById('proto-badge');
+const vaxla = document.getElementById('vaxla');
 const bell = document.getElementById('notis-knapp');
 let C = null;           // innehållet från data/content.json
 let MODS = [];          // alla utbildningsmoduler, plattade
@@ -74,13 +74,6 @@ function program() {
   };
 }
 
-const PROTOS = {
-  app: { n: 0, name: 'CAP' },
-  bibliotek: { n: 1, name: 'Träna mitt barn' },
-  spelare: { n: 2, name: 'Spelarkortet' },
-  utbildning: { n: 3, name: 'Utbildningsvägen' },
-  stig: { n: 4, name: 'Träningsstigen' },
-};
 const ICON = {
   home: '<path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   book: '<path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/>',
@@ -95,12 +88,10 @@ const ICON = {
 };
 const TABS = {
   app: [['/', 'Hem', ICON.home], ['/stig', 'Träna själv', ICON.compass], ['/boka', 'Med Haris', ICON.cal], ['/mer', 'Mer', ICON.dots]],
-  admin: [['/admin/klienter', 'Klienter', ICON.card], ['/admin/tider', 'Tider', ICON.cal], ['/admin/filmer', 'Filmer', ICON.film], ['/admin/stigen', 'Stigen', ICON.compass], ['/admin/mer', 'Mer', ICON.dots]],
-  bibliotek: [['/', 'Hem', ICON.home], ['/bibliotek', 'Bibliotek', ICON.book], ['/valj', 'Välj', ICON.compass], ['/foralder', 'Förälder', ICON.heart]],
-  spelare: [['/', 'Hem', ICON.home], ['/planera', 'Planera', ICON.brain], ['/spelarkort', 'Spelarkort', ICON.card], ['/bibliotek', 'Bibliotek', ICON.book]],
-  utbildning: [['/', 'Hem', ICON.home], ['/utbildning', 'Utbildning', ICON.cap], ['/spelarkort', 'Spelarkort', ICON.card], ['/bibliotek', 'Bibliotek', ICON.book]],
-  stig: [['/', 'Stigen', ICON.compass], ['/spelarkort', 'Spelarkort', ICON.card], ['/bibliotek', 'Bibliotek', ICON.book], ['/foralder', 'Förälder', ICON.heart]],
+  admin: [['/admin/klienter', 'Klienter', ICON.card], ['/admin/tider', 'Tider', ICON.cal], ['/admin/ovningar', 'Övningar', ICON.book], ['/admin/filmer', 'Filmer', ICON.film], ['/admin/stigen', 'Stigen', ICON.compass], ['/admin/mer', 'Mer', ICON.dots]],
 };
+// ⇄ uppe vid klockan växlar mellan föräldravyn och Haris admin (Carl 2026-10-28). Varje sida minns var man var.
+const sista = { foralder: '/', haris: '/admin/klienter' };
 
 function fmtLen(sec) {
   if (!sec) return '';
@@ -119,6 +110,9 @@ function toast(msg) {
   toast._h = setTimeout(() => t.classList.remove('show'), 2600);
 }
 function go(hash) { location.hash = hash; }
+// För vyer som hämtar i bakgrunden: ritar om bara om man fortfarande är kvar på samma sida. Annars kunde ett svar
+// som kom efter ⇄ rita om förälderns formulär och tömma det (Carl 2026-10-28).
+function kvar() { const h = location.hash; return () => { if (location.hash === h) route(); }; }
 
 /* ---------- Router ---------- */
 
@@ -143,7 +137,7 @@ const routes = [
   [/^\/mer$/, merPage],
   [/^\/film\/([a-z0-9]+)$/, id => filmPage(id)],
   [/^\/filmer$/, filmerPage],
-  [/^\/prototyper$/, prototyper],
+  [/^\/prototyper$/, () => go('/mer')],
   [/^\/start\/(\d)$/, start],
   [/^\/profil$/, () => go('/start/1')],
   [/^\/pass\/([\w-]+)\/kor$/, id => run('pass', id)],
@@ -177,8 +171,11 @@ function route() {
   const path = location.hash.replace(/^#/, '') || '/';
   const oppen = /^\/(valkommen|login|k\/|admin)/.test(path);
   if (!oppen && !store.session && !store.guest) return go('/valkommen');
-  if (!oppen && !store.proto) store.proto = 'app';
-  if (store.proto !== 'bibliotek' && !store.profile && path === '/') return go('/start/1');
+  // Carl 2026-10-28: prototyperna är borttagna, appen som den är nu är föräldravyn
+  if (store.proto !== 'app') store.proto = 'app';
+  if (!store.profile && path === '/') return go('/start/1');
+  if (path.startsWith('/admin')) { if (store.admin && path !== '/admin') sista.haris = path; }
+  else if (!/^\/(valkommen|login|k\/|start)/.test(path)) sista.foralder = path;
   for (const [re, fn] of routes) {
     const m = path.match(re);
     if (m) {
@@ -196,26 +193,27 @@ function route() {
 function renderTabs() {
   const path = location.hash.replace(/^#/, '') || '/';
   const admin = path.startsWith('/admin');
-  const tabs = admin ? (store.admin ? TABS.admin : null) : /^\/(valkommen|login|k\/|pin)/.test(path) ? null : TABS[store.proto];
+  const tabs = admin ? (store.admin ? TABS.admin : null) : /^\/(valkommen|login|k\/|pin)/.test(path) ? null : TABS.app;
   document.body.classList.toggle('no-tabs', !tabs);
   document.body.classList.toggle('admin', admin && !!store.admin);
-  if (!tabs) { nav.innerHTML = ''; badge.hidden = true; if (bell) bell.hidden = true; return; }
+  // växlingen syns för den som är inloggad som Haris på telefonen, och alltid i admin (vägen tillbaka)
+  vaxla.hidden = !(store.admin || admin) || path.startsWith('/k/');
+  vaxla.querySelector('span').textContent = admin ? 'Förälder' : 'Haris';
+  vaxla.title = admin ? 'Växla till föräldravyn' : 'Växla till Haris vy';
+  vaxla.setAttribute('aria-label', vaxla.title);
+  vaxla.classList.toggle('i-admin', admin);
+  if (!tabs) { nav.innerHTML = ''; if (bell) bell.hidden = true; return; }
   nav.innerHTML = tabs.map(([href, label, icon]) =>
     `<a href="#${href}" data-tab="${href}"><svg viewBox="0 0 24 24">${icon}</svg><span>${label}</span></a>`).join('');
-  const P = PROTOS[store.proto] || PROTOS.app;
-  badge.hidden = admin ? false : P.n === 0;
-  badge.textContent = admin ? 'ADMIN' : `PROTOTYP ${P.n}`;
-  badge.title = admin ? 'Adminläge' : `${P.name}. Tryck för att byta prototyp.`;
   if (bell) { bell.hidden = admin; bell.classList.toggle('on', store.notiser.paminn || store.notiser.push); }
 }
 
 function activeTab(path) {
   if (path.startsWith('/admin')) { if (/^\/admin\/(klient|pass)/.test(path)) return '/admin/klienter'; const t = TABS.admin.map(x => x[0]).filter(h => path.startsWith(h))[0]; return t || '/admin/klienter'; }
   const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek', '/med-haris': '/boka', '/utveckling': '/' };
-  if (store.proto === 'app') Object.assign(alias, { '/spelarkort': '/mer', '/bibliotek': '/mer', '/foralder': '/mer', '/notiser': '/mer', '/prototyper': '/mer', '/pin': '/mer', '/app': '/mer', '/pass': '/stig', '/passet': '/stig', '/film': '/stig', '/planera': '/stig', '/plan': '/stig' });
-  else alias['/stig'] = '/';
+  Object.assign(alias, { '/spelarkort': '/mer', '/bibliotek': '/mer', '/foralder': '/mer', '/notiser': '/mer', '/pin': '/mer', '/app': '/mer', '/pass': '/stig', '/passet': '/stig', '/film': '/stig', '/planera': '/stig', '/plan': '/stig' });
   for (const k in alias) if (path.startsWith(k)) return alias[k];
-  const tabs = TABS[store.proto] || [];
+  const tabs = TABS.app;
   const hit = tabs.map(t => t[0]).filter(h => h !== '/' && path.startsWith(h)).sort((a, b) => b.length - a.length)[0];
   return hit || '/';
 }
@@ -559,42 +557,6 @@ function moduleCard(m) {
   </div></a>`;
 }
 
-/* ---------- Prototypval ---------- */
-
-function prototyper() {
-  const cards = [
-    ['bibliotek', 'Träna mitt barn', 'Biblioteket med Haris fem pass, Hjälp mig välja och Föräldraguiden. Produkt för produkt enligt konceptets V1.',
-      ['Färdiga pass med film och moment', 'Logga pass och be Haris om nästa steg', 'Föräldraguiden']],
-    ['spelare', 'Spelarkortet', 'Föräldern beskriver barnet, appen planerar dagens pass och barnet samlar XP, nivåer och märken.',
-      ['Startguide: namn, ålder, position, fot', 'Planera ett pass på 20 till 60 minuter', 'Spelarkort med betyg, märken och svit']],
-    ['utbildning', 'Utbildningsvägen', 'En hel utbildning i fem nivåer: träning, allmän fotbollskunskap och det som är särskilt för positionen. Nivåproven bedöms av Haris.',
-      ['Fem nivåer från Bollkompis till Matchvinnare', 'Allmänt plus Målvakt, Back, Mittfältare, Anfallare', 'Kunskapsquiz och förhandsvisning av progression']],
-    ['stig', 'Träningsstigen', 'En stig nedåt som låses upp steg för steg. Barnet väljer vilken spelare det vill bli, och stigen har filmer, frågetecken, tidtagning som låses i appen, filmer till Haris och grindar mellan etapperna.',
-      ['Summering högst upp: etapp, framsteg, bästa tider', 'Klockor: appen tar tiden och låser resultatet', 'Grindar: skicka film till Haris för att komma vidare']],
-  ];
-  return `
-  <section class="hero">
-    <img class="hero-logo" src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
-    <div class="eyebrow">CAP · prototyper</div>
-    <h1>Välj spår</h1>
-    <p class="lead">Fyra tidigare spår, kvar för jämförelse. De delar innehåll och det som sparas på den här enheten. Själva appen når du via Hem.</p>
-  </section>
-  <section class="protos">
-    ${cards.map(([id, title, desc, points]) => `
-    <div class="proto ${store.proto === id ? 'current' : ''}">
-      <div class="proto-n">${PROTOS[id].n}</div>
-      <div class="proto-body">
-        <h2>${esc(title)}</h2>
-        <p class="muted">${esc(desc)}</p>
-        <ul class="checks">${points.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
-        <button class="btn ${store.proto === id ? 'secondary' : 'grad'} block" data-action="proto" data-proto="${id}">${store.proto === id ? 'Fortsätt här' : 'Öppna prototypen'}</button>
-      </div>
-    </div>`).join('')}
-  </section>
-  <p class="small muted" style="text-align:center">Allt sparas bara i den här webbläsaren. <a data-action="reset" href="#/prototyper">Nollställ</a> om du vill börja om från tomt.</p>
-  <div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP v${VERSION}</div>`;
-}
-
 /* ---------- Startguiden ---------- */
 
 function start(step) {
@@ -623,7 +585,6 @@ function start(step) {
         <select id="fodd" name="fodd" required><option value="" ${foddVald ? '' : 'selected'} disabled>Välj år</option>${fodda.map(y => `<option value="${y}" ${String(foddVald) === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></div>
       <button class="btn grad block" type="submit">${store.profile ? 'Spara' : 'Kom igång ›'}</button>
     </form>
-    ${store.session ? '' : '<p class="small" style="margin-top:14px"><a href="#/prototyper">‹ Byt prototyp</a></p>'}
   </section>`;
   if (step === 2) return `
   <section class="wiz">
@@ -662,13 +623,7 @@ function start(step) {
 
 /* ---------- Hem ---------- */
 
-function home() {
-  if (store.proto === 'app') return appHome();
-  if (store.proto === 'bibliotek' || !store.profile) return homeLibrary();
-  if (store.proto === 'utbildning') return homeUtbildning();
-  if (store.proto === 'stig') return stigHome();
-  return homePlayer();
-}
+function home() { return appHome(); }
 
 /* ---------- Appen: välkommen, startsida, mer ---------- */
 
@@ -742,119 +697,10 @@ function merPage() {
     ${rad('/start/1', '✏️', 'Ändra barnets namn och födelseår', 'Position, drömspelare och mål finns på spelarkortet')}
     ${store.session?.user?.klientId && !statusNu().sms ? rad('/pin', '🔑', 'Egen inloggningskod', 'Valfritt: logga in med mobilnummer och kod på en ny telefon') : ''}
     ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP på telefonens hemskärm')}
-    ${rad('/prototyper', '🧪', 'Prototyperna', 'De fyra tidigare spåren, för jämförelse')}
   </section>
   <p class="small muted" style="text-align:center;margin-top:24px">${kontoRad()}</p>
+  ${store.admin ? '' : '<p class="small muted" style="text-align:center"><a href="#/admin">Admin</a> · för Haris. Sedan växlar du med ⇄ uppe till höger.</p>'}
   ${footer()}`;
-}
-
-function homeLibrary() {
-  const b = C.brand;
-  return `
-  <section class="hero">
-    <img class="hero-logo" src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
-    <h1>Träna ditt barn i fotboll</h1>
-    <p class="lead">${esc(b.tagline)}</p>
-    <div class="hero-img">
-      <img src="assets/posters/passningar.jpg" alt="" onerror="this.src='assets/hero-gym.jpg'">
-      <div class="caption">Färdiga pass för barn ${esc(b.ages)}. Boll, koner och en förälder räcker.</div>
-    </div>
-    <div class="pillars">
-      ${C.pillars.map(p => `<a class="pillar" href="#/pelare/${p.id}"><i></i><b>${esc(p.name)}</b><span>${esc(p.short)}</span></a>`).join('')}
-    </div>
-  </section>
-  ${passSections()}
-  <section class="cards">
-    <a class="card" href="#/valj"><div class="card-body">
-      <div class="eyebrow">Osäker på var ni ska börja?</div>
-      <h3>${esc(C.choose.title)}</h3>
-      <p class="desc">Svara på några frågor om ditt barn så föreslår vi ett upplägg. Haris läser också svaren.</p>
-    </div></a>
-    <a class="card" href="#/foralder"><div class="card-body">
-      <div class="eyebrow">För dig som förälder</div>
-      <h3>${esc(C.guide.title)}</h3>
-      <p class="desc">${esc(C.guide.intro)}</p>
-    </div></a>
-  </section>
-  ${footer()}`;
-}
-
-function homePlayer() {
-  const p = store.profile;
-  const L = level();
-  const last = store.logs().slice(-1)[0];
-  const plans = store.plans().slice(-1)[0];
-  return `
-  <section class="greet">
-    <div class="eyebrow">Nivå ${L.n} · ${esc(L.name)}</div>
-    <h1>Hej ${esc(p.name)}!</h1>
-    ${playerCard(p, 'compact')}
-    ${xpBar()}
-  </section>
-  <section class="btn-row two">
-    <a class="btn grad" href="#/planera">🧠 Planera dagens pass</a>
-    ${plans ? `<a class="btn secondary" href="#/plan/${plans.id}">Senaste planen: ${esc(plans.minutes)} min</a>` : `<a class="btn secondary" href="#/spelarkort">Spelarkortet</a>`}
-  </section>
-  ${last ? `<section class="panel">
-    <div class="section-head"><h3>Senast tränat</h3><span class="small muted">${fmtDate(last.date)}</span></div>
-    <p class="small muted" style="margin:0">${esc(itemOf(last.kind || 'pass', last.sessionId)?.title)} · ${esc(ratingLabel(last.rating))}${last.note ? ` · ${esc(last.note)}` : ''}</p>
-  </section>` : `<section class="panel brand"><h3>Första passet väntar</h3><p class="small muted" style="margin:0">Låt appen planera ett pass på den tid ni har, kör det och logga. Då börjar XP och märkena ticka.</p></section>`}
-  ${passSections()}
-  <section class="cards">
-    <a class="card" href="#/foralder"><div class="card-body"><div class="eyebrow">För dig som förälder</div><h3>${esc(C.guide.title)}</h3><p class="desc">${esc(C.guide.intro)}</p></div></a>
-    <a class="card" href="#/start/1"><div class="card-body"><div class="eyebrow">Profil</div><h3>Ändra ${esc(p.name)}s uppgifter</h3><p class="desc">Position ${esc(position(p.position).name.toLowerCase())}, ${esc(p.experience.toLowerCase())}, ${esc(p.freq)} pass i veckan.</p></div></a>
-  </section>
-  ${footer()}`;
-}
-
-function homeUtbildning() {
-  const p = store.profile;
-  const L = level();
-  const nm = nextModule(p.position);
-  const total = C.curriculum.levels.flatMap(x => modulesFor(x, p.position));
-  const done = total.filter(moduleDone).length;
-  return `
-  <section class="greet">
-    <div class="eyebrow">Nivå ${L.n} · ${esc(L.name)}</div>
-    <h1>Hej ${esc(p.name)}!</h1>
-    ${playerCard(p, 'compact')}
-    ${xpBar()}
-  </section>
-  <section class="panel brand">
-    <div class="section-head"><h3>Utbildningsvägen</h3><span class="small muted">${done} av ${total.length} moduler</span></div>
-    <div class="progress"><i style="width:${Math.round(done / total.length * 100)}%"></i></div>
-    <p class="small muted" style="margin:10px 0 0">${esc(C.curriculum.intro)}</p>
-  </section>
-  ${nm ? `<section><div class="section-head"><h2>Nästa steg</h2><a class="small" href="#/utbildning">Hela vägen ›</a></div>${moduleCard(nm)}</section>`
-       : `<section class="panel"><h3>Allt klart på öppnade nivåer</h3><p class="small muted" style="margin:0">Skicka in nivåprovet så låser Haris upp nästa nivå.</p></section>`}
-  <section class="btn-row two">
-    <a class="btn grad" href="#/utbildning">Visa utbildningsvägen</a>
-    <a class="btn secondary" href="#/planera">Planera dagens pass</a>
-  </section>
-  <section class="cards">
-    <a class="card" href="#/foralder"><div class="card-body"><div class="eyebrow">För dig som förälder</div><h3>${esc(C.guide.title)}</h3><p class="desc">${esc(C.guide.intro)}</p></div></a>
-    <a class="card" href="#/start/1"><div class="card-body"><div class="eyebrow">Profil</div><h3>Ändra ${esc(p.name)}s uppgifter</h3><p class="desc">Position ${esc(position(p.position).name.toLowerCase())}, ${esc(p.experience.toLowerCase())}.</p></div></a>
-  </section>
-  ${footer()}`;
-}
-
-function passSections() {
-  const P = program();
-  const nya = filmerForBarnet().slice(0, 4);
-  return `
-  <section>
-    <div class="section-head"><h2>Färdiga pass</h2><span class="small muted">CAP planerar, ni genomför</span></div>
-    ${programCard(P)}
-  </section>
-  ${nya.length ? `<section>
-    <div class="section-head"><h2>Nya filmer från Haris</h2><a class="small" href="#/filmer">Alla ${filmerNu().length} ›</a></div>
-    <div class="cards">${nya.map(filmCard).join('')}</div>
-  </section>` : ''}
-  <section>
-    <div class="section-head"><h2>Träna något specifikt</h2><span class="small muted">${C.sessions.length} delar</span></div>
-    <p class="muted small">Delarna ur passet var för sig, med film och moment.</p>
-    <div class="cards">${C.sessions.map(sessionCard).join('')}</div>
-  </section>`;
 }
 
 /* ---------- Filmer från servern (adminsidan) ---------- */
@@ -956,7 +802,7 @@ function programPage() {
 }
 
 function footer() {
-  return `<div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP v${VERSION} · <a href="#/prototyper">byt prototyp</a></div>`;
+  return `<div class="footer"><img src="assets/cap-logo.png" alt="">${esc(C.brand.company)} · CAP v${VERSION}</div>`;
 }
 
 /* ---------- Pass ---------- */
@@ -1756,15 +1602,14 @@ async function onAction(e) {
   const el = e.currentTarget;
   const { action, id } = el.dataset;
   const paAdmin = location.hash.replace(/^#/, '').startsWith('/admin');
-  if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient)-/.test(action))) { await adminAction(action, el, e); return; }
+  if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov)-/.test(action))) { await adminAction(action, el, e); return; }
   if (action.startsWith('boka-')) { await bokaAction(action, el); return; }
   if (action === 'gast') { e.preventDefault(); store.guest = true; store.proto = 'app'; toast('Du provar utan konto'); go('/'); return; }
   if (action === 'sms-ny' || action === 'sms-andra') { const path = location.hash.replace(/^#/, '') || '/'; await kontoAction(action, el, { toast, render: html => { view.innerHTML = html; afterRender(path); } }); return; }
   if (action === 'app-installera') { const ev = window.__capInstall; if (ev) { ev.prompt(); const r = await ev.userChoice.catch(() => ({})); window.__capInstall = null; toast(r.outcome === 'accepted' ? 'CAP installeras' : 'Du kan installera senare under Mer'); route(); } return; }
   if (action === 'logga-ut') { e.preventDefault(); await loggaUt(); store.guest = false; toast('Utloggad'); go('/login'); return; }
   if (action === 'filmer-alla') { e.preventDefault(); location.hash = location.hash.includes('alla') ? '#/filmer' : '#/filmer?alla'; route(); return; }
-  if (action === 'proto') { store.proto = el.dataset.proto; go('/'); route(); }
-  else if (action === 'add') { const b = snapshot(); store.add(id); celebrate(b, 'Tillagt i ditt bibliotek'); route(); }
+  if (action === 'add') { const b = snapshot(); store.add(id); celebrate(b, 'Tillagt i ditt bibliotek'); route(); }
   else if (action === 'remove') {
     e.preventDefault();
     if (armed(el, 'Tryck igen för att ta bort. Loggade pass finns kvar.')) { store.remove(id); route(); }
@@ -1906,7 +1751,10 @@ async function boot() {
     ...L.general.map((m, i) => ({ ...m, level: L.n, track: 'general', index: i })),
     ...Object.entries(L.positions).flatMap(([pos, ms]) => ms.map((m, i) => ({ ...m, level: L.n, track: pos, index: i }))),
   ]);
-  badge.addEventListener('click', () => go('/prototyper'));
+  vaxla.addEventListener('click', () => {
+    const path = location.hash.replace(/^#/, '') || '/';
+    go(path.startsWith('/admin') ? sista.foralder : store.admin ? sista.haris : '/admin');
+  });
   if (bell) bell.addEventListener('click', () => go('/notiser'));
   // Kallstart utan adress: inloggad förälder hamnar direkt på startsidan (man förblir inloggad, Carl 2026-10-25),
   // annars första sidan med Förälder och Admin
@@ -1932,9 +1780,9 @@ async function boot() {
     }
   } catch { /* äldre bygge utan App-pluginet */ }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) kollaNyVersion(); });
-  await adminInit({ toast, route, go, content: C, onAction, stigUppdaterad: tillampaStigConfig });
-  bokaInit({ toast, route, go, onAction });
-  utvecklingInit({ toast, route, go, content: C });
+  await adminInit({ toast, route, go, kvar, content: C, onAction, stigUppdaterad: tillampaStigConfig });
+  bokaInit({ toast, route, go, kvar, onAction });
+  utvecklingInit({ toast, route, go, kvar, content: C });
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
   api.get('/config/stig').then(r => { if (r.ok && r.config) { tillampaStigConfig(r.config); const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/stig')) route(); } });
   document.addEventListener('cap:notiser', e => { toast(e.detail?.ok ? 'Telefonen får nyheter från Haris' : 'Kunde inte registrera telefonen'); if (/bibliotek|spelarkort|notiser/.test(location.hash)) route(); });

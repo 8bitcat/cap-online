@@ -39,8 +39,8 @@ export const tiderGlom = () => { st.laddat = false; };
 const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen: false, slots: [] };
 
 export function tiderView() {
-  if (!st.laddat) { tiderLadda().then(() => ui.route()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar veckor…</p></section>`; }
-  if (!klienterLaddade()) klienterLadda().then(() => ui.route());
+  if (!st.laddat) { tiderLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar veckor…</p></section>`; }
+  if (!klienterLaddade()) klienterLadda().then(ui.kvar());
   const w = vecka();
   const v = st.vald;
   const m = mandag(v), s = datumFor(v, 7);

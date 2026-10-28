@@ -3,6 +3,7 @@
 // in som ljud direkt från appen. Passet delas med föräldern. Filmer kan bli delar i Träna själv.
 import { api } from './api.js';
 import { sparaInspelning, startaLjud, kanSpelaInLjud, lokalUrl, r2Pa, sattR2 } from './media.js';
+import { sattMal, ovning, bankNu, hamtaBank, klippHtml } from './ovningsbank.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -39,8 +40,16 @@ function mall(barn) {
   ];
 }
 
+// Från övningsbanken: ett nytt pass med de valda övningarna mellan samtalen före och efter, eller fler block i
+// passet som redigeras. Passet sparas först när Haris trycker Spara.
+export function passMedOvningar({ uid, barn, block }) {
+  const m = mall(barn);
+  st.redigerar = { titel: 'Pass med Haris', datum: new Date().toISOString().slice(0, 10), uid, barn, block: [m[0], ...block, m.at(-1)], delad: false, anteckning: '' };
+}
+export function passLaggTill(block) { if (st.redigerar) st.redigerar.block.push(...block); }
+
 export function passView(id, lage) {
-  if (!st.laddat) { passLadda().then(() => ui.route()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar pass…</p></section>`; }
+  if (!st.laddat) { passLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar pass…</p></section>`; }
   if (id === 'ny') {
     const k = lage ? klient(lage) : null;
     const forslag = { titel: 'Pass med Haris', datum: new Date().toISOString().slice(0, 10), uid: k?.id || '', barn: k?.barn || '', block: mall(k?.barn), delad: false, anteckning: '' };
@@ -93,10 +102,11 @@ function passForm(p) {
           ${b.tider?.length ? `<div class="small">⏱ ${b.tider.map(t => fmtSek(t.sek)).join(', ')}</div>` : ''}
           ${b.resultat ? `<div class="small">📊 medel <b>${fmtSek(b.resultat.medel)}</b> (${b.resultat.varv.map(fmtSek).join(', ')})</div>` : ''}
           ${b.media?.length ? `<div class="small">${b.media.map(m => `${m.typ === 'audio' ? '🎙' : '🎥'} ${esc(m.namn || m.typ)}`).join(' · ')}</div>` : b.film ? `<div class="small">🎥 ${esc(b.film.namn || 'film')}</div>` : ''}
+          ${b.ovningId ? `<div class="small muted">📚 Ur övningsbanken${ovning(b.ovningId)?.film ? ', filmklippet visas när ni kör passet' : ''}</div>` : ''}
         </div>
         <div style="display:grid;gap:4px"><button type="button" class="film" data-action="pass-upp" data-i="${i}">↑</button><button type="button" class="film" data-action="pass-ner" data-i="${i}">↓</button><button type="button" class="film" data-action="pass-bort" data-i="${i}">✕</button></div>
       </div>`).join('')}</div>
-      <div class="chips" style="margin-top:10px">${Object.entries(TYP).map(([k, [ic, n]]) => `<button type="button" class="chip" data-action="pass-nytt-block" data-typ="${k}">+ ${ic} ${n}</button>`).join('')}</div>
+      <div class="chips" style="margin-top:10px"><button type="button" class="chip brand" data-action="pass-bank">+ 📚 Ur övningsbanken</button>${Object.entries(TYP).map(([k, [ic, n]]) => `<button type="button" class="chip" data-action="pass-nytt-block" data-typ="${k}">+ ${ic} ${n}</button>`).join('')}</div>
       <div class="field" style="margin-top:14px"><label for="pant">Anteckning till föräldern</label><textarea id="pant" name="anteckning" placeholder="Det här såg jag i dag, det här tränar ni på hemma…">${esc(p.anteckning || '')}</textarea></div>
       <label class="toggle"><input type="checkbox" name="delad" ${p.delad ? 'checked' : ''}><span><b>Delat med föräldern</b><small>Passet med tider, bedömningar, filmer, ljud och anteckning syns i förälderns app under Träna med Haris och Utveckling.</small></span></label>
       <div class="btn-row two" style="margin-top:12px">
@@ -155,7 +165,9 @@ function passKor(p) {
       <div class="btn-row two"><button class="btn secondary" data-action="pass-varv-bort" data-block="${b.id}" ${varv.length ? '' : 'disabled'}>Ta bort sista</button><button class="btn grad" data-action="pass-bed-las" data-block="${b.id}" ${varv.length ? '' : 'disabled'}>Lås bedömningen</button></div>
     </div>`;
   } else if (b.typ === 'ovning' || b.typ === 'text') {
-    kropp = `<div class="panel"><p class="small muted" style="margin:0">${esc(b.desc || 'Kör övningen och bocka av när ni är klara.')}</p></div>`;
+    if (b.ovningId && !bankNu()) hamtaBank().then(ui.kvar());
+    const o = b.ovningId && ovning(b.ovningId);
+    kropp = `<div class="panel"><p class="small muted" style="margin:0">${esc(b.desc || 'Kör övningen och bocka av när ni är klara.')}</p>${o?.film ? `<div style="margin-top:10px">${klippHtml(o)}</div>` : ''}</div>`;
   }
   return `
   <a class="back" href="#/admin/pass/${p.id}">‹ ${esc(p.titel)}</a>
@@ -249,6 +261,11 @@ export async function passFilVald(input) {
 export async function passAction(action, el, e) {
   const { toast, route, go } = ui;
   if (action === 'pass-nytt-block') { const p = lasForm(); const t = el.dataset.typ; p.block.push({ typ: t, titel: t === 'bedomning' ? 'Konbana' : TYP[t][1], desc: '', minuter: 5, mal: t === 'tid' ? 25 : 0, varv: 3 }); st.redigerar = p; route(); return true; }
+  if (action === 'pass-bank') {
+    const p = lasForm(); st.redigerar = p;
+    sattMal({ passId: p.id || null, uid: p.uid, titel: p.titel, barn: klient(p.uid)?.barn || p.barn });
+    go('/admin/ovningar'); return true;
+  }
   if (action === 'pass-bort') { const p = lasForm(); p.block.splice(+el.dataset.i, 1); st.redigerar = p; route(); return true; }
   if (action === 'pass-upp' || action === 'pass-ner') { const p = lasForm(); const i = +el.dataset.i, j = action === 'pass-upp' ? i - 1 : i + 1; if (p.block[j]) [p.block[i], p.block[j]] = [p.block[j], p.block[i]]; st.redigerar = p; route(); return true; }
   if (action === 'pass-radera') {

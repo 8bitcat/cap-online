@@ -23,7 +23,7 @@ export async function stigAdminLadda(tvinga = false) {
 }
 
 export function stigAdminView() {
-  if (!st.laddat) { stigAdminLadda().then(() => ui.route()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar stigen…</p></section>`; }
+  if (!st.laddat) { stigAdminLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar stigen…</p></section>`; }
   const cfg = st.cfg;
   const e = cfg.etapper.find(x => x.n === st.etapp) || cfg.etapper[0];
   const filmer = filmerNu();
