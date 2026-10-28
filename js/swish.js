@@ -43,9 +43,16 @@ export function bokningsMeddelande(b, efternamn = '') {
 
 export const kr = n => `${Number(n).toLocaleString('sv-SE')} kr`;
 
+// Meddelandet för ett paket: "CAP Alva Lind paket 10 pass"
+export function paketMeddelande(p, barn = '', efternamn = '') {
+  const namn = [barn, efternamn].filter(Boolean).join(' ');
+  return swishMeddelande(`CAP ${namn} ${/paket/i.test(p.namn) ? '' : 'paket '}${p.namn}`);
+}
+
 // För Haris: Swish Företag säger inget till appen. Haris ser betalningen i sin Swish (meddelandet ovan) och bockar
 // av den i admin. "Swishad" betyder att föräldern tryckt "Jag har swishat".
 export function betalStatus(b) {
+  if (b.paket) return `<span class="small"><span class="i-paket">Ingår i paket</span></span>`;
   const pris = b.pris ? `${kr(b.pris)} · ` : '';
   if (b.betald) return `<span class="small">${pris}<span class="betald">Betald ✓</span></span>`;
   if (b.swishad) return `<span class="small">${pris}<span class="swishad">Swishad enligt föräldern</span>, kolla din Swish</span>`;

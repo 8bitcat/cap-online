@@ -3,6 +3,29 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-10-28 – priser och paket
+
+- **Priserna** (Carl): 850 kr per pass, 10 pass 6 900 kr (690 kr/pass), 20 pass
+  12 900 kr (645 kr/pass). Carl skrev "129000" och rättade till 12 900. Satta
+  live i `config:betalning` (`paket: [{id, namn, antal, pris}]`), syns för
+  Haris under Admin → Mer → Priser och Swish där han kan ändra dem.
+- **Ingen öppen vecka utan pris** (Carl: "man ska inte kunna öppna en vecka om
+  inte pris är satt"). Servern svarar 409, och rutan för en stängd vecka i Tider
+  har fältet Pris per pass och knappen Spara priset och öppna veckan.
+- **Paket på barnet** (Carl 2026-10-27: "en person köper ett paket, alltså 10
+  pass, så man kan lägga det på barnet"). Paketet ligger på klienten
+  (`klient.paket`), en bokning som dras från det har `bokad.paket`, och använda
+  pass räknas ur bokningarna. Föräldern köper under Med Haris (två tryck) och
+  får en Swish-knapp med "CAP Ida Berg paket 10 pass"; Haris lägger på paket på
+  klientens sida (mall eller eget pris, "Redan betalt") och bockar av betalningen
+  där. "Dra från paketet" och "Betala styckvis i stället" flyttar en tid.
+- **Reglerna från provet** (artefakten CbBWc8ss9oc48nVZjWXoSp) gäller, alla
+  på, **(antagande)** eftersom Carl gav priserna utan att välja: föräldern kan
+  köpa själv; passen går att boka innan paketet är betalt (som enstaka pass);
+  kommande obetalda bokningar flyttas in i ett nytt paket; en avbokning ger
+  tillbaka passet. Ett obetalt köp i taget, och ett köp kan ångras tills det är
+  swishat. Ingen giltighetstid.
+
 ## 2026-10-28 – notis till föräldrarna när en vecka öppnas
 
 - **Notisen** (Carl: "en notis i appen som går ut när man öppnar veckan för

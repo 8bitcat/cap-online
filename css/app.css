@@ -708,3 +708,18 @@ body.admin .view { max-width: 1080px; }
 .paket-rad input[name=ppris] { width: 110px; }
 .paket-rad .per { grid-column: 1 / -1; }
 @media (max-width: 520px) { .paket-rad { grid-template-columns: 1fr 1fr auto; } .paket-rad input[name=pnamn] { grid-column: 1 / -1; } }
+/* Paket på barnet (Carl 2026-10-28): kort med prickar för passen, köp-rutor */
+.i-paket { color: var(--brand); font-weight: 700; }
+.paket-kort { border: 1px solid var(--brand-deep); background: var(--surface); border-radius: var(--radius); padding: 14px; margin: 10px 0; }
+.paket-kort.obetalt { border-color: var(--warn); }
+.pk-rad { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pk-rad b { font-size: 17px; }
+.pk-kvar { font-weight: 700; color: var(--brand); font-variant-numeric: tabular-nums; }
+.hal { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0; }
+.hal i { width: 13px; height: 13px; border-radius: 50%; background: var(--brand); }
+.hal i.anv { background: transparent; box-shadow: inset 0 0 0 1.5px var(--faint); }
+.kop-lista { display: grid; gap: 8px; }
+.kop { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; }
+.kop .btn { grid-column: 1 / -1; margin-top: 6px; }
+.kop-pris { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; }
+.paket-kort .betalrad .btn.swish { flex: 1 1 220px; }
