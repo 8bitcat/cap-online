@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CAP</title>
+  <meta name="description" content="Träna ditt barn i fotboll med färdiga pass från Complete Athletic Performance.">
+  <meta name="theme-color" content="#000912">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CAP">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/cap-ball-270.png">
+  <link rel="apple-touch-icon" href="assets/cap-ball-270.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,400&display=swap">
+  <link rel="stylesheet" href="css/app.css?v=34b2e5f">
+</head>
+<body>
+  <header class="top">
+    <a href="#/" class="top-logo" aria-label="CAP – hem">
+      <img src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
+    </a>
+    <span class="top-right">
+      <button id="vaxla" class="top-vaxla" type="button" hidden aria-label="Växla till Haris vy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h15m-4-4 4 4-4 4M20 16H5m4-4-4 4 4 4"/></svg><span>Haris</span></button>
+      <button id="notis-knapp" class="top-bell" type="button" hidden aria-label="Notiser" title="Notiser">🔔</button>
+    </span>
+  </header>
+
+  <main id="view" class="view" aria-live="polite">
+    <noscript><p class="pad">CAP behöver JavaScript för att fungera.</p></noscript>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <nav class="tabs" aria-label="Huvudmeny"></nav>
+
+  <script type="module" src="js/app.js?v=34b2e5f"></script>
+</body>
+</html>
