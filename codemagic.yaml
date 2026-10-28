@@ -1,4 +1,4 @@
-# CAP Online som iOS-app för TestFlight: Codemagic bygger app/ (Capacitor) på en Mac i molnet och
+# CAP som iOS-app för TestFlight: Codemagic bygger app/ (Capacitor) på en Mac i molnet och
 # laddar upp bygget till App Store Connect. Samma upplägg som Pixelcity (snabbfilen/codemagic.yaml).
 # Appen laddar prototypen från https://8bitcat.github.io/cap-online/ (server.url), så innehållet
 # uppdateras med tools/deploy-pages.py. Nytt bygge här behövs bara när det nativa ändras
@@ -20,7 +20,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: se.completeathletic.caponline
       vars:
-        APP_STORE_APPLE_ID: 6825529179     # CAP Online i App Store Connect (App Information → Apple ID)
+        APP_STORE_APPLE_ID: 6825529179     # CAP i App Store Connect (App Information → Apple ID)
         XCODE_PROJECT: App.xcodeproj
         XCODE_SCHEME: App
       node: 22
@@ -37,7 +37,7 @@ workflows:
           VERSION=$(node -p "require('./app/package.json').appVersion")
           LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
           BUILD=$((LATEST + 1))
-          echo "CAP Online $VERSION (bygge $BUILD)"
+          echo "CAP $VERSION (bygge $BUILD)"
           sed -i '' -E "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $VERSION;/; s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $BUILD;/" app/ios/App/App.xcodeproj/project.pbxproj
       - name: Bygg ipa
         script: |

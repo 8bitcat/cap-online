@@ -36,9 +36,8 @@ bekräftat är markerade **(antagande)**.
   och notisernas rubrik.
 - **Kvar som förut**: adresser och tekniska namn (8bitcat.github.io/cap-online,
   bundle-id se.completeathletic.caponline, länkschemat caponline://,
-  lagringsnycklarna caponline.v3). Appen i App Store Connect heter fortfarande
-  "CAP Online" (tools/asc.py letar efter det namnet). Namnet där byts i
-  App Store Connect inför App Store-släppet, och "CAP" kan vara upptaget där.
+  lagringsnycklarna caponline.v3). Carl bytte namnet i App Store Connect till
+  "CAP" samma dag (App Information → Name, svenska).
 - **Hemskärmsnamnet i iPhone-appen** byts först med nästa bygge i Codemagic
   (bygge 3). Webben och texterna i appen byts direkt.
 

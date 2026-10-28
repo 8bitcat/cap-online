@@ -1,4 +1,4 @@
-"""App Store Connect API för CAP Online: de steg som går att göra utan att klicka.
+"""App Store Connect API för CAP: de steg som går att göra utan att klicka.
 
 Nyckeln läses från C:/Users/palss/.secrets/asc-8bitcat.json:
     {"key_id": "94H7H2CY53", "issuer_id": "xxxxxxxx-....", "p8": "C:/Users/palss/.secrets/AuthKey_94H7H2CY53.p8"}
@@ -7,8 +7,8 @@ Skriv aldrig ut nyckeln eller token.
     python tools/asc.py check                 # fungerar nyckeln? listar appar och roll
     python tools/asc.py bundle-id             # registrerar se.completeathletic.caponline (om det saknas)
     python tools/asc.py profile               # App Store-profil med befintligt distributionscertifikat → app/signing/
-    python tools/asc.py app                   # hittar appen CAP Online (måste skapas i webben först) och skriver Apple ID i codemagic.yaml
-    python tools/asc.py invite                # bjuder in Haris (Developer, bara CAP Online)
+    python tools/asc.py app                   # hittar appen CAP (måste skapas i webben först) och skriver Apple ID i codemagic.yaml
+    python tools/asc.py invite                # bjuder in Haris (Developer, bara CAP)
     python tools/asc.py group                 # intern TestFlight-grupp "CAP-teamet" + lägger till Haris
     python tools/asc.py builds                # senaste byggen i TestFlight
 """
@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SECRET = Path("C:/Users/palss/.secrets/asc-8bitcat.json")
 API = "https://api.appstoreconnect.apple.com/v1"
 BUNDLE_ID = "se.completeathletic.caponline"
-APP_NAME = "CAP Online"
+APP_NAME = "CAP"
 HARIS = {"email": "Haris.skenderovic@outlook.com", "firstName": "Haris", "lastName": "Skenderovic"}
 GROUP = "CAP-teamet"
 
