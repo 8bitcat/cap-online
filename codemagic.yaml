@@ -15,7 +15,7 @@ workflows:
     instance_type: mac_mini_m2
     integrations:
       app_store_connect: Codemagic        # API-nyckelns namn i Codemagic (Integrations → Developer Portal)
-    environment:
+    environment: &miljo
       ios_signing:
         distribution_type: app_store
         bundle_identifier: se.completeathletic.caponline
@@ -25,7 +25,7 @@ workflows:
         XCODE_SCHEME: App
       node: 22
       xcode: latest
-    scripts:
+    scripts: &steg
       - name: Installera
         script: cd app && npm ci
       - name: Prototypen in i appen
@@ -47,7 +47,7 @@ workflows:
             grep -h -E "error:|Provisioning profile|doesn't (include|support|match)" /tmp/xcodebuild_logs/*.log | sort -u | head -40
             exit 1
           }
-    artifacts:
+    artifacts: &filer
       - app/ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
@@ -58,3 +58,25 @@ workflows:
         # slå då på submit_to_testflight och ange beta_groups.
         submit_to_testflight: false
         submit_to_app_store: false
+
+  # App Store (2026-11-13): samma bygge som ovan, men skickas direkt till Apples granskning för
+  # App Store. Kör den först när version 1.0.0 är ifylld i App Store Connect (texter, skärmbilder,
+  # App Privacy, inloggning för granskaren) – se docs/APPSTORE.md. Annars avvisar Apple inlämningen.
+  #   Starta: Codemagic → cap-online → Start new build → ios-appstore
+  # release_type MANUAL: appen släpps inte förrän Carl trycker "Release this version" efter godkännandet.
+  ios-appstore:
+    name: iOS → App Store (granskning)
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: Codemagic
+    environment: *miljo
+    scripts: *steg
+    artifacts: *filer
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: true
+        release_type: MANUAL
+        copyright: 2026 Complete Athletic Performance

@@ -10,3 +10,6 @@ Thumbs.db
 
 # wrangler dev (lokala tester)
 .wrangler/
+
+# App Store-skärmbilder (tools/skarmbilder.js), laddas upp i App Store Connect
+docs/appstore/

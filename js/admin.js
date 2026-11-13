@@ -9,6 +9,7 @@ import { klienterInit, klienterView, klienterAction, klienterSubmit, klienterAft
 import { ovningarInit, ovningarView, ovningarAction, ovningarAfterRender } from './admin-ovningar.js';
 import { kopplaKlipp } from './ovningsbank.js';
 import { sattR2 } from './media.js';
+import { pushAdminAv, pushSatt, notisStod } from './notiser.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
@@ -83,6 +84,7 @@ function merFlik() {
     <a class="card" href="#/admin/pass"><div class="card-body"><div class="eyebrow">Pass</div><h3>Alla pass</h3><p class="desc">Passen för alla klienter i en lista. Nya pass planeras från klientens sida.</p></div></a>
   </section>
   ${betalningPanel()}
+  ${notiserPanel()}
   ${nyhetFlik()}
   <section class="panel">
     <h3>Tjänster</h3>
@@ -135,6 +137,46 @@ function betalningPanel() {
       <div class="btn-row two" style="margin-top:10px"><button type="button" class="btn secondary" data-action="admin-paket-ny">+ Lägg till paket</button><button class="btn grad" type="submit">Spara priserna</button></div>
     </form>
     ${klar ? `<p class="small" style="margin:10px 0 0"><a href="${esc(swishLank(b.swish, b.pris, 'CAP test'))}">Prova länken på mobilen ›</a> <span class="muted">Öppnar Swish med ${esc(kr(b.pris))} och "CAP test", betala inte.</span></p>` : ''}
+  </section>`;
+}
+
+// Notiser (Carl 2026-11-13): "appen ska kunna skicka notiser när Haris gör olika saker, såsom att han öppnat en vecka".
+// Haris väljer vilka som går ut. Allt hamnar ändå under 🔔 i förälderns app; reglagen gäller pushnotisen.
+const NOTIS_VAL = [
+  ['vecka', 'Nya tider', 'När du öppnar en vecka (till alla föräldrar)'],
+  ['bokning', 'Bokningar', 'När du bokar eller avbokar en tid åt ett barn'],
+  ['pass', 'Pass, paket och pott', 'När du lägger in pass eller pengar, eller ändrar priset'],
+  ['betald', 'Betalningar', 'När du bockar av att en betalning kommit'],
+  ['utveckling', 'Utveckling', 'Nya bedömningar, filmer och delade pass'],
+  ['haris', 'Till dig', 'När en förälder bokar, avbokar, swishar eller köper ett paket'],
+];
+function bytPanel(id, rita) {
+  const el = document.getElementById(id);
+  if (!el || location.hash !== '#/admin/mer') return;
+  const t = document.createElement('div'); t.innerHTML = rita();
+  const ny = t.firstElementChild; if (!ny) return;
+  el.replaceWith(ny);
+  ny.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', ui.onAction));
+  ny.querySelectorAll('form[data-form]').forEach(f => f.addEventListener('submit', ui.onSubmit));
+}
+function notiserPanel() {
+  if (!state.notiser && !state.notiserHamtar) {
+    state.notiserHamtar = true;
+    // bara panelen ritas om när den hämtats, annars tömdes det Haris höll på att skriva i prisrutan
+    api.admin.get('/admin/notiser').then(r => { state.notiser = r.ok ? r : { config: {}, telefoner: null }; }).finally(() => { state.notiserHamtar = false; bytPanel('notiser', notiserPanel); });
+  }
+  const n = state.notiser;
+  if (!n) return `<section class="panel" id="notiser"><h3>Notiser</h3><p class="small muted" style="margin:0">Hämtar…</p></section>`;
+  const t = n.telefoner, harDenna = store.notiser.push && String(store.notiser.kopplad || '').endsWith('|h');
+  return `
+  <section class="panel" id="notiser">
+    <h3>Notiser</h3>
+    <p class="small muted" style="margin-top:0">${t ? `${t.telefoner} ${t.telefoner === 1 ? 'telefon har' : 'telefoner har'} notiser på, ${t.inloggade} ${t.inloggade === 1 ? 'kopplad' : 'kopplade'} till ett barn${t.haris ? ` och ${t.haris} till dig` : ''}.` : 'Notisservern svarar inte just nu.'} Appen frågar föräldrarna om notiser när de loggar in.</p>
+    <form data-form="admin-notiser">
+      ${NOTIS_VAL.map(([k, rub, txt]) => `<label class="toggle"><input type="checkbox" name="${k}" ${n.config?.[k] !== false ? 'checked' : ''}><span><b>${rub}</b><small>${txt}</small></span></label>`).join('')}
+      <button class="btn secondary" type="submit" style="margin-top:8px">Spara</button>
+    </form>
+    ${notisStod() ? `<p class="small" style="margin:12px 0 0">${harDenna ? '✓ Den här telefonen får dina notiser om bokningar och betalningar.' : '<button class="btn secondary block" data-action="admin-notis-denna">Få notiser om bokningar på den här telefonen</button>'}</p>` : ''}
   </section>`;
 }
 
@@ -281,7 +323,13 @@ export async function adminAction(action, el, e) {
   if (action.startsWith('stig-')) return stigAdminAction(action, el, e);
   if (action.startsWith('klient-')) return klienterAction(action, el, e);
   if (action.startsWith('ov-')) return ovningarAction(action, el, e);
-  if (action === 'admin-ut') { e.preventDefault(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.go('/admin'); return true; }
+  if (action === 'admin-ut') { e.preventDefault(); await pushAdminAv(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.go('/admin'); return true; }
+  if (action === 'admin-notis-denna') {
+    const r = await pushSatt(true);
+    ui.toast(r.ok ? 'Telefonen kopplas till dig…' : r.fel === 'nekad' ? 'Tillåt notiser för CAP i Inställningar' : `Gick inte: ${r.fel}`);
+    setTimeout(() => { state.notiser = null; ui.route(); }, 2500);
+    return true;
+  }
   if (action === 'admin-paket-ny') {
     const lista = el.closest('form')?.querySelector('.paket-rader'); if (!lista) return true;
     lista.insertAdjacentHTML('beforeend', paketRad());
@@ -352,6 +400,12 @@ export async function adminSubmit(kind, f, fd) {
     state.betalning = r.config; tiderGlom();
     toast(r.config.swish && r.config.pris ? `Sparat: ${kr(r.config.pris)} per pass${r.config.paket.length ? ` och ${r.config.paket.length} ${r.config.paket.length === 1 ? 'paket' : 'paket'}` : ''}.` : 'Sparat. Veckor kan öppnas när både Swish-nummer och pris finns.');
     route(); return true;
+  }
+  if (kind === 'admin-notiser') {
+    const body = Object.fromEntries(NOTIS_VAL.map(([k]) => [k, fd.get(k) === 'on']));
+    const r = await api.admin.put('/admin/notiser', body);
+    if (r.ok) { state.notiser = { ...(state.notiser || {}), config: r.config }; ui.toast('Notisinställningarna är sparade'); } else ui.toast(`Gick inte: ${r.fel}`);
+    ui.route(); return true;
   }
   if (kind === 'admin-smstest') {
     const r = await api.admin.post('/admin/smstest', { telefon: fd.get('telefon') });

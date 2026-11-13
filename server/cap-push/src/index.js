@@ -3,12 +3,16 @@
 // även när appen är stängd. Samma APNs-upplägg som Pixelcity (snabbfilen/server/kbk-push).
 //
 //   POST /registrera   {token, namn}            telefonens pushkod + barnets namn (bara för räkning)
+//                      {hemlig, token, kid, admin}  via cap-api: kopplar telefonen till ett konto (kid = klientens id,
+//                      null kopplar loss) och/eller Haris (admin). Utan hemlig behålls en tidigare koppling.
 //   POST /avregistrera {token}
-//   POST /skicka       {hemlig, text, title?, hash?}   nyhet till alla telefoner (kräver ADMIN_HEMLIG); hash = sidan
-//                      appen öppnar när man trycker på notisen, t.ex. /boka/2026-W45
-//   GET  /                                      {ok, telefoner}
+//   POST /skicka       {hemlig, text, title?, hash?, till?, admin?, foraldrar?}   (kräver ADMIN_HEMLIG); hash = sidan
+//                      appen öppnar när man trycker på notisen, t.ex. /boka/2026-W45. till = [kid, …] bara de
+//                      kontona, admin = bara Haris telefoner, foraldrar = alla utom telefoner som bara är Haris.
+//   GET  /                                      {ok, telefoner, inloggade, haris}
 //
-// KV (bindningen CAP): tok:<pushkod> med metadata {namn, t}. Inget annat sparas.
+// KV (bindningen CAP): tok:<pushkod> med metadata {namn, t, kid, admin}. Inget annat sparas.
+// Carl 2026-11-13: "vi har olika login på telefonerna" – notisen ska gå till rätt förälder.
 // Hemligheter: APNS_KEY (Apples .p8) och ADMIN_HEMLIG. Variabler: APNS_KEY_ID, TEAM_ID, TOPIC, APNS_HOST (bara test).
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
@@ -62,7 +66,10 @@ export default {
   async fetch(req, env, ctx) {
     if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
     const url = new URL(req.url);
-    if (req.method === 'GET' && url.pathname === '/') return svar({ ok: true, app: 'CAP', telefoner: (await allaTelefoner(env)).length });
+    if (req.method === 'GET' && url.pathname === '/') {
+      const alla = await allaTelefoner(env);
+      return svar({ ok: true, app: 'CAP', telefoner: alla.length, inloggade: alla.filter(t => t.kid).length, haris: alla.filter(t => t.admin).length });
+    }
     if (req.method !== 'POST') return svar({ ok: false, fel: 'bara POST' }, 405);
     let d = {};
     try { d = await req.json(); } catch { return svar({ ok: false, fel: 'trasig JSON' }, 400); }
@@ -70,7 +77,13 @@ export default {
     if (url.pathname === '/registrera') {
       const token = String(d.token || '').toLowerCase();
       if (!TOKEN_RE.test(token)) return svar({ ok: false, fel: 'ogiltig pushkod' }, 400);
-      await env.CAP.put(`tok:${token}`, '1', { metadata: { namn: ren(d.namn), t: Date.now() } });
+      const { metadata: gammal } = await env.CAP.getWithMetadata(`tok:${token}`);
+      const meta = { namn: ren(d.namn) || gammal?.namn || '', t: Date.now(), kid: gammal?.kid || null, admin: !!gammal?.admin };
+      if (env.ADMIN_HEMLIG && String(d.hemlig || '') === env.ADMIN_HEMLIG) {
+        if ('kid' in d) meta.kid = d.kid ? ren(d.kid, 24) : null;
+        if ('admin' in d) meta.admin = !!d.admin;
+      }
+      await env.CAP.put(`tok:${token}`, '1', { metadata: meta });
       return svar({ ok: true });
     }
     if (url.pathname === '/avregistrera') {
@@ -93,7 +106,8 @@ export default {
       const text = ren(d.text, 180), title = ren(d.title, 40) || 'CAP';
       if (!text) return svar({ ok: false, fel: 'tom text' }, 400);
       const hash = /^\/[\w/-]{1,60}$/.test(String(d.hash || '')) ? d.hash : '';
-      const till = await allaTelefoner(env);
+      const kids = Array.isArray(d.till) ? new Set(d.till.map(x => ren(x, 24))) : null;
+      const till = (await allaTelefoner(env)).filter(t => kids ? kids.has(t.kid) : d.admin ? t.admin : d.foraldrar ? !(t.admin && !t.kid) : true);
       const jobb = Promise.all(till.map((t) => skicka(env, t.token, text, title, hash ? { hash } : {}).catch((e) => ({ status: 0, reason: String(e) }))));
       if (d.vanta) { const res = await jobb; return svar({ ok: true, skickade: till.length, svar: res }); }
       ctx.waitUntil(jobb);

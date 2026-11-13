@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Integritetspolicy · CAP</title>
+<meta name="theme-color" content="#000912">
+<link rel="icon" href="assets/cap-ball-270.png">
+<style>
+  :root { color-scheme: dark; --bg: #000912; --kort: #0b1420; --linje: #243040; --text: #fdfdfd; --mjuk: #9aa5b1; --teal: #00d4cb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  .tillbaka { display: inline-block; margin: 0 0 14px; color: var(--teal); text-decoration: none; font-weight: 700; font-size: 15px; }
+  .eb { font-size: 12px; font-weight: 800; letter-spacing: .2em; color: var(--teal); }
+  h1 { font-size: 30px; line-height: 1.2; margin: 6px 0 4px; }
+  h2 { font-size: 19px; margin: 32px 0 8px; }
+  p, li { color: #d7dde3; }
+  .datum { color: var(--mjuk); font-size: 14px; margin: 0 0 24px; }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  a { color: var(--teal); }
+  .kort { background: var(--kort); border: 1px solid var(--linje); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+  .kort p { margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 6px; border-bottom: 1px solid var(--linje); }
+  th { color: var(--mjuk); font-weight: 600; font-size: 13px; }
+  footer { margin-top: 40px; color: var(--mjuk); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="tillbaka" href="./#/mer">‹ Tillbaka till appen</a>
+  <div class="eb">CAP</div>
+  <h1>Integritetspolicy</h1>
+  <p class="datum">Senast uppdaterad 13 november 2026</p>
+
+  <p>CAP är appen för familjerna som tränar med Haris på Complete Athletic Performance. I appen bokar och betalar
+  ni träningspass, följer barnets utveckling och tränar själva med Haris filmer. Här står vilka uppgifter appen
+  sparar, varför vi sparar dem och vad ni kan göra med dem.</p>
+
+  <h2>Vem ansvarar för uppgifterna?</h2>
+  <div class="kort"><p><b>Complete Athletic Performance</b>, Haris Skenderovic<br>
+  <!-- KONTAKT: fyll i organisationsnummer och e-post när Carl gett dem (docs/APPSTORE.md) -->
+  Kontakt: hör av er till Haris direkt, med sms eller på träningen.</p></div>
+  <p>Complete Athletic Performance är personuppgiftsansvarig. Appen byggs och drivs tekniskt av 8bitcat på uppdrag av
+  Complete Athletic Performance och får bara använda uppgifterna för att appen ska fungera.</p>
+
+  <h2>Vilka uppgifter sparas?</h2>
+  <table>
+    <tr><th>Uppgift</th><th>Varför</th></tr>
+    <tr><td>Förälderns namn, mobilnummer och e-post (om ni lämnat den)</td><td>För att logga in, skicka inloggningslänken och kunna nå er om ett pass.</td></tr>
+    <tr><td>Barnets förnamn, efternamn, födelseår, position och lag</td><td>För att Haris ska veta vem som tränar och kunna lägga upp rätt pass.</td></tr>
+    <tr><td>Nivå, bedömningar och tider (till exempel konbanan), Haris anteckningar och planerade pass</td><td>För att ni och Haris ska kunna följa barnets utveckling över tid.</td></tr>
+    <tr><td>Filmer och ljud som Haris spelar in under passen</td><td>För att visa moment och framsteg. De delas bara med er familj.</td></tr>
+    <tr><td>Bokningar, avbokningar och betalningsstatus (belopp, att ni har swishat och att Haris har tagit emot betalningen)</td><td>För att boka tider och hålla ordning på vad som är betalt.</td></tr>
+    <tr><td>Pass, paket och pott: saldo och historik (när pass eller pengar lagts in, dragits eller lämnats tillbaka)</td><td>För att ni och Haris ska se hur många pass eller hur mycket pengar som finns kvar.</td></tr>
+    <tr><td>Pushkod för notiser</td><td>För att telefonen ska kunna få notiser, till exempel när Haris öppnar nya tider. Bara om ni tillåter notiser.</td></tr>
+    <tr><td>När ni senast loggade in, och om det var i appen eller webbläsaren</td><td>För att Haris ska se att inloggningen har fungerat.</td></tr>
+  </table>
+  <p>Betalningen sker i Swish-appen. CAP ser aldrig kortuppgifter, bankuppgifter eller ert Swish-konto. Appen öppnar bara
+  Swish med Haris nummer, beloppet och ett meddelande ifyllt.</p>
+  <p>En del sparas bara på telefonen, inte hos oss: barnets profil i appen, framstegen på träningsstigen och
+  inställningarna för påminnelser.</p>
+
+  <h2>Var sparas uppgifterna?</h2>
+  <p>Uppgifterna sparas hos Cloudflare, som driver appens server och lagring. Cloudflare har servrar i EU och i andra
+  länder och följer EU:s standardavtalsklausuler när uppgifter behandlas utanför EU. Själva appen (sidorna och
+  träningsfilmerna) hämtas från GitHub Pages, där inga personuppgifter sparas. Notiser till iPhone går via Apples
+  pushtjänst. Om inloggning med sms används skickas sms:en via den svenska sms-tjänsten 46elks.</p>
+
+  <h2>Delas uppgifterna med någon?</h2>
+  <p>Nej. Vi säljer inte uppgifter, visar ingen reklam och spårar er inte i andra appar eller på webbplatser. Andra
+  familjer ser aldrig ert namn, era bokningar eller barnets uppgifter.</p>
+
+  <h2>Hur länge sparas de?</h2>
+  <p>Så länge barnet tränar hos Haris och kontot finns. När ni raderar kontot tas förälderns och barnets uppgifter,
+  bedömningar, filmer och kommande bokningar bort. Uppgifter om betalningar kan Haris behöva spara i sin bokföring så
+  länge bokföringslagen kräver.</p>
+
+  <h2>Era rättigheter</h2>
+  <ul>
+    <li><b>Radera kontot i appen:</b> Mer → <b>Radera mitt konto</b>. Det går också att be Haris om det.</li>
+    <li>Få veta vilka uppgifter vi har om er och barnet, och få en kopia.</li>
+    <li>Rätta uppgifter som är fel. Det mesta går att ändra i appen, resten ändrar Haris.</li>
+    <li>Invända mot hur uppgifterna används.</li>
+    <li>Klaga hos Integritetsskyddsmyndigheten (<a href="https://www.imy.se">imy.se</a>) om ni tycker att vi hanterar uppgifterna fel.</li>
+  </ul>
+  <p>Vi behandlar uppgifterna för att kunna ge den träning ni bokat (avtal) och för att följa barnets utveckling, vilket är
+  syftet med träningen (berättigat intresse). Barnens uppgifter lämnas av föräldern.</p>
+
+  <h2>Kontakt</h2>
+  <p>Frågor om uppgifterna, eller vill ni få ut eller radera dem? Hör av er till Haris direkt, med sms eller på träningen.
+  Hjälp med appen finns på <a href="support.html">supportsidan</a>.</p>
+
+  <footer>CAP · Complete Athletic Performance</footer>
+</main>
+</body>
+</html>

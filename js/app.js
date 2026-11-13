@@ -1,7 +1,8 @@
 import { store, today, weekIndex } from './store.js';
 import { VERSION } from './version.js';
-import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush, pushLyssna } from './notiser.js';
+import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush, pushLyssna, pushAuto } from './notiser.js';
 import { loggaUt, hamtaFilmer, filmerNu } from './api.js';
+import { kr } from './swish.js';
 import { loginPage, pinPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
 import { serverStatus, statusNu, sparaBarn } from './api.js';
 import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar } from './admin.js';
@@ -163,6 +164,7 @@ const routes = [
   [/^\/foralder\/([\w-]+)$/, guideChapter],
   [/^\/nasta-steg$/, nextStep],
   [/^\/notiser$/, notiserPage],
+  [/^\/radera$/, raderaPage],
   [/^\/stig$/, stigHome],
   [/^\/stig\/([\w-]+)$/, stigNode],
 ];
@@ -186,6 +188,7 @@ function route() {
       view.innerHTML = html;
       window.scrollTo(0, 0);
       afterRender(path);
+      pushAuto();
       return;
     }
   }
@@ -208,7 +211,11 @@ function renderTabs() {
   if (!tabs) { nav.innerHTML = ''; if (bell) bell.hidden = true; return; }
   nav.innerHTML = tabs.map(([href, label, icon]) =>
     `<a href="#${href}" data-tab="${href}"><svg viewBox="0 0 24 24">${icon}</svg><span>${label}</span></a>`).join('');
-  if (bell) { bell.hidden = admin; bell.classList.toggle('on', store.notiser.paminn || store.notiser.push); }
+  if (bell) {
+    bell.hidden = admin; bell.classList.toggle('on', store.notiser.paminn || store.notiser.push);
+    const sett = store.notiser.sett || 0;
+    bell.classList.toggle('ny', (minaNu().klient?.notiser || []).some(n => Date.parse(n.t) > sett));
+  }
 }
 
 function activeTab(path) {
@@ -692,7 +699,7 @@ function merPage() {
   <section><div class="eyebrow">Mer</div><h1>${p ? esc(p.name) : 'Mer'}</h1></section>
   <section class="cards">
     ${store.session?.user?.klientId ? rad('/utveckling', '📈', 'Utveckling', 'Nivå hos Haris, bedömningar över tid, filmer och ljud från passen') : ''}
-    ${(() => { const m = minaNu(); const kvar = (m.paket || []).reduce((n, p) => n + p.kvar, 0); return m.klient && ((m.paket || []).length || (m.klient.passLogg || []).length) ? rad('/mina-pass', '🎟', `Mina pass: ${kvar} kvar`, 'Paket, inlagda pass och historik') : ''; })()}
+    ${(() => { const m = minaNu(); const kvar = (m.paket || []).reduce((n, p) => n + p.kvar, 0) + (m.pott?.passKvar || 0); return m.klient && ((m.paket || []).length || m.pott || (m.klient.passLogg || []).length) ? rad('/mina-pass', '🎟', m.pott ? `Mina pass: ${kr(m.pott.saldo)} i potten` : `Mina pass: ${kvar} kvar`, m.pott ? `Räcker till ${m.pott.passKvar} pass · potten, paket och historik` : 'Paket, inlagda pass och historik') : ''; })()}
     ${rad('/spelarkort', '🪪', 'Spelarkortet', 'Betyg, XP, märken och svit')}
     ${rad('/bibliotek', '📚', 'Biblioteket', 'Passen, loggade pass och planerade pass')}
     ${rad('/filmer', '🎬', 'Filmer från Haris', 'Alla publicerade filmer med taggar')}
@@ -703,6 +710,7 @@ function merPage() {
     ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP på telefonens hemskärm')}
   </section>
   <p class="small muted" style="text-align:center;margin-top:24px">${kontoRad()}</p>
+  <p class="small" style="text-align:center;margin-top:8px"><a href="support.html">Hjälp och kontakt</a> · <a href="integritet.html">Integritet</a>${store.session ? ' · <a href="#/radera">Radera mitt konto</a>' : ''}</p>
   ${footer()}`;
 }
 
@@ -1093,35 +1101,53 @@ function notisPanel() {
   </section>`;
 }
 
+// Notiser (Carl 2026-11-13): appen frågar om lov efter inloggningen och kopplar telefonen till kontot. Här slår man
+// av och på, och ser det senaste Haris skickat (det sparas på kontot, så det syns även utan notiser på).
 function notiserPage() {
   const n = store.notiser, p = store.profile, stod = notisStod();
-  const webb = !stod && 'Notification' in window;
+  const m = minaNu(), lista = (m.klient?.notiser || []).slice().reverse();
+  if (store.session?.token && !m.hamtat) hamtaMina().then(kvar());
+  store.notiser = { ...n, sett: Date.now() };
+  const fmt = iso => { const d = new Date(iso); return isNaN(d) ? '' : `${d.getDate()} ${['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'][d.getMonth()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   return `
-  <a class="back" href="#/bibliotek">‹ Tillbaka</a>
+  <a class="back" href="#/mer">‹ Mer</a>
   <section>
-    <div class="eyebrow">Inställningar</div>
-    <h1>Notiser</h1>
+    <div class="eyebrow">Notiser</div>
+    <h1>Från Haris</h1>
     <p class="muted">${stod
-      ? 'Telefonen kan påminna er om träningsdagarna och berätta när Haris lagt upp något nytt, även när appen är stängd.'
-      : 'Du kör prototypen i webbläsaren. Riktiga notiser kommer i iOS-appen. Här kan du ändå prova hur en notis ser ut.'}</p>
+      ? 'Telefonen säger till när Haris öppnar nya tider, bokar eller avbokar åt er, lägger in pass eller pengar, tar emot en betalning eller lägger upp en bedömning eller film.'
+      : 'Notiserna kommer i iPhone-appen. Här i webbläsaren ser du ändå det senaste Haris skickat.'}</p>
   </section>
   <section class="panel">
-    <h3>Vad vill ni få?</h3>
-    <label class="toggle"><input type="checkbox" data-action="notis-paminn" ${n.paminn ? 'checked' : ''} ${stod ? '' : 'disabled'}><span><b>Påminnelser om träning</b><small>${esc(paminnDagar(p?.freq).join(', '))} kl 17, utifrån ${esc(p?.freq || '2')} pass i veckan. Ändra frekvensen i profilen.</small></span></label>
-    <label class="toggle"><input type="checkbox" data-action="notis-push" ${n.push ? 'checked' : ''} ${stod ? '' : 'disabled'}><span><b>Nyheter från Haris</b><small>Nya pass och filmer, och svar på Nästa steg.${n.push && n.token ? ` Telefonen är registrerad (…${esc(n.token.slice(-6))}).` : ''}</small></span></label>
-    ${stod ? '' : '<p class="small muted" style="margin:8px 0 0">Reglagen går att slå på i appen.</p>'}
+    <label class="toggle"><input type="checkbox" data-action="notis-push" ${n.push ? 'checked' : ''} ${stod ? '' : 'disabled'}><span><b>Notiser från Haris</b><small>${n.push && n.token ? (n.kopplad && store.session ? `På, för ${esc(store.session.user?.barn || p?.name || 'ert konto')}.` : 'På.') : 'Av.'}</small></span></label>
+    <label class="toggle"><input type="checkbox" data-action="notis-paminn" ${n.paminn ? 'checked' : ''} ${stod ? '' : 'disabled'}><span><b>Påminnelser om träning</b><small>${esc(paminnDagar(p?.freq).join(', '))} kl 17, utifrån ${esc(p?.freq || '2')} pass i veckan.</small></span></label>
   </section>
-  <section class="panel">
-    <h3>Testa</h3>
-    <div class="btn-row two">
-      <button class="btn grad" data-action="notis-testa" ${stod || webb ? '' : 'disabled'}>Testnotis om 5 sekunder</button>
-      <button class="btn secondary" data-action="notis-testpush" ${stod && n.token ? '' : 'disabled'}>Testpush till den här telefonen</button>
+  <section>
+    <h2>Senaste</h2>
+    ${lista.length ? `<ul class="list notis-lista">${lista.slice(0, 40).map(x => `<li class="row"><a class="grow" href="#${esc(x.hash || '/boka')}"><b>${esc(x.title)}</b><div class="small">${esc(x.text)}</div><div class="small muted">${fmt(x.t)}</div></a></li>`).join('')}</ul>`
+      : '<p class="small muted">Inget än. När Haris bokar åt er, lägger in pass eller öppnar nya tider syns det här.</p>'}
+  </section>
+  ${store.admin ? `<details class="panel"><summary><b>Testa notiserna (för Haris)</b></summary>
+    <div class="btn-row two" style="margin-top:10px">
+      <button class="btn secondary" data-action="notis-testa">Testnotis om 5 sekunder</button>
+      <button class="btn secondary" data-action="notis-testpush" ${stod && n.token ? '' : 'disabled'}>Testpush till telefonen</button>
     </div>
-    <p class="small muted" style="margin:0">Lägg appen i bakgrunden efter att du tryckt, så ser du notisen som Haris och föräldrarna ser den. Testpushen går via CAP:s server och kräver att Nyheter från Haris är på.</p>
-  </section>
-  <section class="panel">
-    <h3>Så skickar Haris en nyhet</h3>
-    <p class="small muted" style="margin:0">Från datorn: <code>python tools\\notis.py "Nytt pass ute!"</code>. Den går till alla telefoner som slagit på Nyheter från Haris. En knapp för Haris i appen kommer med hans adminvy.</p>
+  </details>` : ''}`;
+}
+
+// Radera mitt konto (App Store kräver att det går att göra i appen)
+function raderaPage() {
+  if (!store.session) return go('/mer');
+  const m = minaNu(), pott = m.pott, kvarPass = (m.paket || []).reduce((n, x) => n + x.kvar, 0);
+  return `
+  <a class="back" href="#/mer">‹ Mer</a>
+  <section>
+    <div class="eyebrow">Konto</div>
+    <h1>Radera mitt konto</h1>
+    <p>Då tas kontot bort hos Haris: ${esc(store.session.user?.barn || 'barnets')} uppgifter, nivå och bedömningar, filmer och ljud från passen, delade pass och kommande bokningar. Det går inte att ångra.</p>
+    ${pott?.saldo || kvarPass ? `<div class="note">Ni har ${[pott?.saldo ? `${kr(pott.saldo)} kvar i potten` : '', kvarPass ? `${kvarPass} pass kvar` : ''].filter(Boolean).join(' och ')}. Prata med Haris om pengarna innan du raderar.</div>` : ''}
+    <p class="small muted">Vill ni bara sluta få notiser räcker det att stänga av dem under Notiser. Mer om vad som sparas står i <a href="integritet.html">integritetspolicyn</a>.</p>
+    <button class="btn danger block" data-action="konto-radera">Radera mitt konto</button>
   </section>`;
 }
 
@@ -1611,6 +1637,16 @@ async function onAction(e) {
   if (action === 'sms-ny' || action === 'sms-andra') { const path = location.hash.replace(/^#/, '') || '/'; await kontoAction(action, el, { toast, render: html => { view.innerHTML = html; afterRender(path); } }); return; }
   if (action === 'app-installera') { const ev = window.__capInstall; if (ev) { ev.prompt(); const r = await ev.userChoice.catch(() => ({})); window.__capInstall = null; toast(r.outcome === 'accepted' ? 'CAP installeras' : 'Du kan installera senare under Mer'); route(); } return; }
   if (action === 'logga-ut') { e.preventDefault(); await loggaUt(); store.guest = false; toast('Utloggad'); go('/login'); return; }
+  if (action === 'konto-radera') {
+    e.preventDefault();
+    if (!armed(el, 'Tryck igen för att radera kontot för gott')) return;
+    el.disabled = true;
+    const r = await api.post('/mina/radera', { pushToken: store.notiser.token || undefined }, store.session?.token);
+    if (!r.ok) { el.disabled = false; toast(r.fel || 'Gick inte att radera'); return; }
+    store.session = null; store.guest = false;
+    store.notiser = { ...store.notiser, kopplad: null };
+    toast('Kontot är raderat'); go('/valkommen'); return;
+  }
   if (action === 'filmer-alla') { e.preventDefault(); location.hash = location.hash.includes('alla') ? '#/filmer' : '#/filmer?alla'; route(); return; }
   if (action === 'add') { const b = snapshot(); store.add(id); celebrate(b, 'Tillagt i ditt bibliotek'); route(); }
   else if (action === 'remove') {
@@ -1785,13 +1821,13 @@ async function boot() {
     }
   } catch { /* äldre bygge utan App-pluginet */ }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) kollaNyVersion(); });
-  await adminInit({ toast, route, go, kvar, content: C, onAction, stigUppdaterad: tillampaStigConfig });
+  await adminInit({ toast, route, go, kvar, content: C, onAction, onSubmit, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, kvar, onAction });
   utvecklingInit({ toast, route, go, kvar, content: C });
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
   api.get('/config/stig').then(r => { if (r.ok && r.config) { tillampaStigConfig(r.config); const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/stig')) route(); } });
-  document.addEventListener('cap:notiser', e => { toast(e.detail?.ok ? 'Telefonen får nyheter från Haris' : 'Kunde inte registrera telefonen'); if (/bibliotek|spelarkort|notiser|boka/.test(location.hash)) route(); });
-  document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); });
+  document.addEventListener('cap:notiser', e => { if (/notiser/.test(location.hash)) { toast(e.detail?.ok ? 'Telefonen får notiser från Haris' : 'Kunde inte registrera telefonen'); route(); } });
+  document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); veckorGlom(); const om = kvar(); hamtaMina(true).then(om); });
   window.addEventListener('hashchange', route);
   route();
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.ai$/.test(location.hostname)) {

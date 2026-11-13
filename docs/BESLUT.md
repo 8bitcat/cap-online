@@ -3,6 +3,43 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-11-13 – v1.0.0: pott med pengar, notiser till rätt telefon, redo för App Store
+
+- **Pott (eget avtal).** Carl: "lägga in en pott. Först lägger man en pott med pengar, sen ska det dras av ifrån
+  den varje gång ett pass körs. Det ska finnas historik hos klienten och Haris." Haris sätter in och drar av belopp
+  på klientsidan (panelen Pott). En bokning kan betalas ur potten (`bokad.pott`, priset låst vid bokningen).
+  Beloppet dras när passet har körts (sluttiden passerad, svensk tid) och är reserverat dessförinnan. Det dras inte
+  vid bokningen.
+- **Pass kvar = det lediga beloppet delat med barnets pris just nu.** Carl: "om ett pass är 500 kr och man satt in
+  20 000 kr … när vi är på 15 500 kr och ändrar priset uppåt ska det visas att det blir färre pass kvar." Redan
+  bokade pass behåller sitt pris **(antagande)**. Testat exakt så i `tools/pott-test.js`: 9 × 500 ger 15 500 kr,
+  och 600 kr ger 25 pass.
+- **Ordning vid bokning:** paketet först, sedan potten, sist Swish. Föräldern väljer själv när fler än ett sätt
+  finns. Potten får inte gå under ett pass vid bokning. Haris kan ändå dra av så att den går under noll
+  **(antagande)**.
+- **En insättning tar över kommande obetalda bokningar**, samma regel som paketen **(antagande)**. Ett nytt paket tar
+  inte över bokningar som redan betalas ur potten.
+- **Historik med saldo efter varje rad.** Ett pass räknas som draget när det har körts, eller när Haris lagt in ett
+  redan kört pass i efterhand, beroende på vad som kom sist. Felskrivna rader kan tas bort (✕).
+- **Notiser till rätt telefon.** Carl: "vi har olika login på telefonerna" + "skicka notiser när Haris gör olika
+  saker". Telefonen kopplas till kontot som är inloggat (cap-api `/mina/push` → cap-push med `kid`) och till Haris
+  om adminvyn är inloggad (`admin`). Appen frågar om lov en gång efter inloggningen. Ett byte av konto kopplar om
+  telefonen, och en utloggning kopplar loss den. Det går notiser när Haris öppnar en vecka (till alla föräldrar,
+  inte Haris), bokar eller avbokar åt barnet, lägger in pass, paket eller pengar, ändrar priset, tar emot en
+  betalning eller lägger upp en bedömning, film eller ett delat pass. Haris får en notis när en förälder bokar,
+  avbokar, swishar, köper paket eller raderar sitt konto. Varje typ kan stängas av under Admin → Mer → Notiser.
+  Notiserna sparas också på kontot och syns under 🔔, även när push är av.
+- **Skicka notis om lediga tider igen:** en knapp på en öppen vecka under Tider (förut gick notisen bara ut en gång).
+  En stängd vecka utan tider tas bort helt och räknas som ny.
+- **App Store-förberedelser:** "Radera mitt konto" under Mer (riktlinje 5.1.1(v)), integritet.html och support.html,
+  appen bara för iPhone (inga iPad-bilder), Codemagic-flödet `ios-appstore`, texterna i `docs/APPSTORE.md` och
+  skärmbilder i 6,9 tum med påhittad demodata (`tools/skarmbilder.js` → `docs/appstore/`, utanför git).
+  Testknapparna på notissidan visas bara för Haris. Kontaktmejl och organisationsnummer saknas än: sidorna säger
+  "hör av er till Haris direkt" tills Carl ger dem.
+- **Rättat på vägen:** klientsidans och bokningssidans bakgrundshämtningar kunde skriva över en ändring som nyss
+  gjorts. Nu kastas svaret om något ändrades under tiden. Notispanelen under Mer ritar bara om sig själv, så att
+  prisrutan inte töms medan Haris skriver.
+
 ## 2026-10-28 – pass på barnet: utanför appen, eget pris, val vid bokning, historik
 
 - **⇄ syns alltid** (Haris var bara inloggad som Haris i Chrome och hittade

@@ -461,6 +461,8 @@ a.chip.on:hover { color: var(--brand-ink); }
   background: transparent; border: 1px solid var(--line); color: var(--text); filter: grayscale(1); opacity: .7;
 }
 .top-bell.on { filter: none; opacity: 1; border-color: var(--brand-deep); }
+.top-bell { position: relative; }
+.top-bell.ny::after { content: ''; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--bg, #000912); }
 /* ⇄ växlar mellan föräldravyn och Haris admin (Carl 2026-10-28) */
 .top-vaxla {
   display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 8px; border-radius: 6px; cursor: pointer;
@@ -753,3 +755,14 @@ body.admin .view { max-width: 1080px; }
 .rad-form label { flex: 1 1 140px; display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .pass-historik { margin-top: 12px; }
 .pass-historik > summary { cursor: pointer; font-weight: 700; color: var(--brand); }
+
+/* Potten (Carl 2026-11-13) och notislistan */
+.pott-pass { margin: 4px 0 6px; font-size: 15px; }
+.pott-pass b { font-size: 22px; color: var(--brand); font-variant-numeric: tabular-nums; }
+.pott-logg .logg-antal { white-space: nowrap; }
+.pott-logg .logg-text small { white-space: nowrap; }
+.notis-lista .row a { color: var(--text); text-decoration: none; display: block; }
+.btn.danger { background: transparent; border: 1px solid var(--danger, var(--warn)); color: var(--danger, var(--warn)); }
+.btn.danger.armed { background: var(--danger, var(--warn)); color: #fff; }
+.pott-form { margin-top: 10px; }
+.pott-snabb { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }

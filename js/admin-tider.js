@@ -88,8 +88,9 @@ export function tiderView() {
       <button class="btn secondary" data-action="tid-vecka" data-v="${veckaPlus(v, 1)}">›</button>
     </div>
     ${w.oppen ? `<div class="panel brand" style="margin-top:12px">
-      <div class="section-head" style="align-items:center"><div><b style="color:var(--ok)">✓ Öppen för bokning</b><div class="small muted">${w.slots.length} tider · ${bokade} bokade. Föräldrarna ser tiderna under Med Haris.${w.notis ? ` Notisen gick ut ${esc(fmtTid(w.notis))}.` : ''}</div></div>
+      <div class="section-head" style="align-items:center"><div><b style="color:var(--ok)">✓ Öppen för bokning</b><div class="small muted">${w.slots.length} tider · ${bokade} bokade. Föräldrarna ser tiderna under Med Haris.${w.notis ? ` Senaste notisen gick ut ${esc(fmtTid(w.notis))}${w.notisAntal != null ? ` till ${w.notisAntal} ${w.notisAntal === 1 ? 'telefon' : 'telefoner'}` : ''}.` : ''}</div></div>
       <button class="film" data-action="tid-oppen" data-oppna="0">Stäng veckan</button></div>
+      ${v >= st.nu && w.slots.length > bokade ? `<button class="btn secondary block" data-action="tid-notis" style="margin-top:10px">🔔 ${w.notis ? 'Skicka en ny notis om lediga tider' : 'Skicka notis om lediga tider'}</button>` : ''}
     </div>` : `<div class="panel vecka-stangd" style="margin-top:12px">
       <b>Veckan är stängd</b>
       <div class="small muted" style="margin:2px 0 ${w.slots.length ? '10px' : '0'}">${w.slots.length ? `${w.slots.length} tider, men föräldrarna ser dem inte förrän veckan är öppen.` : 'Lägg till tider här under och öppna sedan veckan.'}</div>
@@ -99,7 +100,7 @@ export function tiderView() {
       ${st.betalning?.swish ? '' : '<div class="field" style="margin:0 0 8px"><label for="oppnaSwish">Swish-nummer</label><input type="text" id="oppnaSwish" inputmode="numeric" placeholder="123 456 78 90"></div>'}
       <button class="btn grad block" data-action="tid-oppen" data-oppna="1">Spara priset och öppna veckan</button>
       <p class="small muted" style="margin:8px 0 0">En vecka går inte att öppna utan pris, så att föräldrarna alltid kan betala med Swish när de bokat.</p>`}
-      ${w.notis ? `<p class="small muted" style="margin:8px 0 0">Notisen om veckan gick ut ${esc(fmtTid(w.notis))} och skickas inte igen.</p>` : v < st.nu ? '' : '<label class="check" style="margin:10px 0 0"><input type="checkbox" id="oppnaNotis" checked><span>Skicka en notis till alla föräldrar med appen</span></label>'}` : ''}
+      ${w.notis ? `<p class="small muted" style="margin:8px 0 0">Notisen om veckan gick ut ${esc(fmtTid(w.notis))}. När veckan är öppen kan du skicka en ny.</p>` : v < st.nu ? '' : '<label class="check" style="margin:10px 0 0"><input type="checkbox" id="oppnaNotis" checked><span>Skicka en notis till alla föräldrar med appen</span></label>'}` : ''}
     </div>`}
   </section>
   <section class="panel">
@@ -171,6 +172,17 @@ export async function tiderAction(action, el) {
     }
     const r = await sparaVecka(lasSlots(), oppna, { notis: !!document.getElementById('oppnaNotis')?.checked });
     toast(!r.ok ? `Gick inte: ${r.fel}` : !oppna ? 'Veckan är stängd' : `Veckan är öppen för bokning.${notisText(r.notis)}`);
+    route(); return true;
+  }
+  // Carl 2026-11-13: "skicka notis att det finns tider släppta" – även igen, t.ex. när Haris lagt till tider
+  if (action === 'tid-notis') {
+    if (!el.dataset.armed) { const t = el.textContent; el.dataset.armed = '1'; el.textContent = 'Tryck igen för att skicka till alla föräldrar'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = t; el.classList.remove('armed'); }, 4000); return true; }
+    el.disabled = true;
+    const sp = await sparaVecka(lasSlots(), w.oppen);
+    if (!sp.ok) { toast(`Gick inte: ${sp.fel}`); route(); return true; }
+    const r = await api.admin.post(`/admin/vecka/${st.vald}/notis`, {});
+    if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; }
+    toast(r.ok ? `Notisen är skickad.${notisText(r.notis)}` : `Gick inte: ${r.fel}`);
     route(); return true;
   }
   if (action === 'tid-spara') { const r = await sparaVecka(lasSlots(), w.oppen); toast(r.ok ? `Veckan är sparad${stangdText()}` : `Gick inte: ${r.fel}`); route(); return true; }

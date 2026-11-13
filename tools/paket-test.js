@@ -55,7 +55,7 @@ const TEL = '070-555 66 77';
   const boka = async (i) => {
     await (await f.$$('.tid:not([disabled]):not(.min)'))[i].click(); await f.waitForSelector('.hall', { timeout: 8000 });
     const hall = await text(f, '.hall');
-    await f.click('[data-action=boka-bekrafta]'); await f.waitForSelector('.nyss-bokad', { timeout: 10000 }); await f.waitForTimeout(400);
+    await f.click('[data-action=boka-bekrafta]'); await f.waitForSelector('.hall', { state: 'detached', timeout: 10000 }); await f.waitForSelector('.nyss-bokad', { timeout: 10000 }); await f.waitForTimeout(400);
     return hall;
   };
   await boka(0);
@@ -105,7 +105,7 @@ const TEL = '070-555 66 77';
   koll('två tider ingår i paket, en med Swish', (await rader()).length === 3 && (await rader()).filter(r => r.includes('Ingår i paket')).length === 2, (await rader()).join(' || ').slice(0, 240));
   await a.click('li.row.bokning [data-action=klient-tidpaket]'); await vantaToast(a, 'styckvis'); await a.waitForFunction(() => document.querySelector('li.row.bokning')?.textContent.includes('Dra från paketet'), null, { timeout: 8000 }).catch(() => {});
   koll('Betala styckvis i stället', (await rader())[0].includes('850 kr') && (await rader())[0].includes('Dra från paketet') && (await panel()).includes('9 av 10 kvar'), (await rader())[0]);
-  await a.click('li.row.bokning [data-action=klient-tidpaket][data-paket="1"]'); await vantaToast(a, 'dras från paketet'); await a.waitForFunction(() => !document.querySelector('li.row.bokning')?.textContent.includes('Dra från paketet'), null, { timeout: 8000 }).catch(() => {});
+  await a.click('li.row.bokning [data-action=klient-tidpaket][data-satt="paket"]'); await vantaToast(a, 'dras från paketet'); await a.waitForFunction(() => !document.querySelector('li.row.bokning')?.textContent.includes('Dra från paketet'), null, { timeout: 8000 }).catch(() => {});
   koll('Dra från paketet', (await rader())[0].includes('Ingår i paket') && (await panel()).includes('8 av 10 kvar'));
   // Haris lägger på 20 pass, redan betalt
   await a.selectOption('form[data-form=klient-paket] select[name=mall]', { label: '20 pass · 12 900 kr' });

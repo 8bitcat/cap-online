@@ -75,8 +75,9 @@ export async function serverStatus(tvinga = false) {
 export const statusNu = () => status || { sms: false, appLank: '', r2: false, okant: true };
 export async function loggaUt() {
   const s = store.session;
-  if (s?.token) api.post('/auth/ut', {}, s.token);
+  if (s?.token) api.post('/auth/ut', { pushToken: store.notiser.token || undefined }, s.token);
   store.session = null;
+  if (store.notiser.kopplad) store.notiser = { ...store.notiser, kopplad: null };
 }
 
 // Publicerade filmer från servern, med en kopia i localStorage så att de syns offline.

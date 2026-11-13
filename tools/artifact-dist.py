@@ -46,6 +46,10 @@ def build(out, pages=False, stamp=None):
     if pages:
         for name in ("index.html", "manifest.json", "sw.js"):
             shutil.copy(ROOT / name, out / name)
+        # integritetspolicy och support: adresserna står i App Store Connect (docs/APPSTORE.md)
+        for name in ("integritet.html", "support.html"):
+            if (ROOT / name).exists():
+                shutil.copy(ROOT / name, out / name)
         (out / ".nojekyll").write_text("")
     else:
         shutil.copy(ROOT / "artifact.html", out / "index.html")

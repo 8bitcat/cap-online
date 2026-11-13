@@ -53,6 +53,7 @@ export function paketMeddelande(p, barn = '', efternamn = '') {
 // av den i admin. "Swishad" betyder att föräldern tryckt "Jag har swishat".
 export function betalStatus(b) {
   if (b.paket) return `<span class="small"><span class="i-paket">Ingår i paket</span></span>`;
+  if (b.pott) return `<span class="small">${b.pris ? `${kr(b.pris)} · ` : ''}<span class="i-paket">Ur potten</span></span>`;
   const pris = b.pris ? `${kr(b.pris)} · ` : '';
   if (b.betald) return `<span class="small">${pris}<span class="betald">Betald ✓</span></span>`;
   if (b.swishad) return `<span class="small">${pris}<span class="swishad">Swishad enligt föräldern</span>, kolla din Swish</span>`;

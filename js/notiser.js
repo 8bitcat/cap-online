@@ -1,6 +1,7 @@
 // Notiser (Carl 2026-10-21): påminnelser om träningsdagar (lokala notiser) och nyheter från Haris
 // (push via server/cap-push). Fungerar bara i iOS-appen, där Capacitor finns; på webben visas det inte.
 import { store } from './store.js';
+import { api } from './api.js';
 
 const SERVER = 'https://cap-push.8bitcat.io';
 const cap = () => { try { const C = window.Capacitor; return C?.isNativePlatform?.() ? C : null; } catch { return null; } };
@@ -42,37 +43,76 @@ export async function paminnSatt(on) {
   } catch (e) { return { ok: false, fel: String(e?.message || e) }; }
 }
 
-// Nyheter från Haris: telefonens pushkod registreras hos servern.
+// Notiser från Haris: telefonens pushkod registreras hos servern och kopplas till kontot som är inloggat
+// (Carl 2026-11-13: "vi har olika login på telefonerna"). Då kan notisen om en bokning, pass eller betalning gå till
+// rätt förälder. Är Haris adminvy inloggad på telefonen kopplas den också till Haris (nya bokningar, swishar).
+const kontoNyckel = () => `${store.session?.user?.uid || ''}|${store.admin ? 'h' : ''}`;
+async function registrera(value) {
+  const tok = store.session?.token;
+  let r = tok ? await api.post('/mina/push', { token: value }, tok) : null;
+  if (!r?.ok) r = await post('/registrera', { token: value, namn: store.profile?.name || '' });
+  if (store.admin) await api.post('/admin/push', { token: value }, store.admin);
+  store.notiser = { ...store.notiser, push: !!r?.ok, token: r?.ok ? value : null, kopplad: r?.ok ? kontoNyckel() : null, regT: Date.now() };
+  document.dispatchEvent(new CustomEvent('cap:notiser', { detail: { ok: !!r?.ok } }));
+}
 let lyssnar = false;
+async function lyssna(P) {
+  if (lyssnar) return;
+  lyssnar = true;
+  await P.addListener('registration', ({ value } = {}) => { if (value) registrera(value); });
+  await P.addListener('registrationError', () => {
+    store.notiser = { ...store.notiser, push: false, token: null };
+    document.dispatchEvent(new CustomEvent('cap:notiser', { detail: { ok: false } }));
+  });
+  await P.addListener('pushNotificationReceived', n => document.dispatchEvent(new CustomEvent('cap:push', { detail: n })));
+}
 export async function pushSatt(on) {
   const P = pushP();
   if (!P) return { ok: false, fel: 'bara i appen' };
   try {
     if (!on) {
-      if (store.notiser.token) await post('/avregistrera', { token: store.notiser.token });
-      store.notiser = { ...store.notiser, push: false, token: null };
+      const t = store.notiser.token;
+      if (t) { if (store.session?.token) await api.post('/mina/push', { token: t, av: true }, store.session.token); else await post('/avregistrera', { token: t }); }
+      store.notiser = { ...store.notiser, push: false, token: null, kopplad: null, av: true };
       return { ok: true };
     }
+    store.notiser = { ...store.notiser, av: false };
     let perm = await P.checkPermissions();
     if (perm.receive !== 'granted' && perm.receive !== 'denied') perm = await P.requestPermissions();
     if (perm.receive !== 'granted') return { ok: false, fel: 'nekad' };
-    if (!lyssnar) {
-      lyssnar = true;
-      await P.addListener('registration', async ({ value } = {}) => {
-        if (!value) return;
-        const r = await post('/registrera', { token: value, namn: store.profile?.name || '' });
-        store.notiser = { ...store.notiser, push: !!r?.ok, token: r?.ok ? value : null };
-        document.dispatchEvent(new CustomEvent('cap:notiser', { detail: { ok: !!r?.ok } }));
-      });
-      await P.addListener('registrationError', () => {
-        store.notiser = { ...store.notiser, push: false, token: null };
-        document.dispatchEvent(new CustomEvent('cap:notiser', { detail: { ok: false } }));
-      });
-      await P.addListener('pushNotificationReceived', n => document.dispatchEvent(new CustomEvent('cap:push', { detail: n })));
-    }
+    await lyssna(P);
     await P.register();
     return { ok: true, vantar: true };
   } catch (e) { return { ok: false, fel: String(e?.message || e) }; }
+}
+// Körs vid varje sidbyte: när någon loggat in (förälder eller Haris) frågar appen en gång om notiser, och kopplar
+// telefonen till kontot. Byter man konto på telefonen kopplas den om. En gång per dygn registreras den på nytt,
+// ifall servern har tappat pushkoden.
+let pagar = false;
+export async function pushAuto() {
+  const P = pushP();
+  if (!P || pagar || store.notiser.av) return;
+  if (!store.session?.token && !store.admin) return; // fråga inte på välkomstsidan
+  const n = store.notiser;
+  if (n.push && n.token && n.kopplad === kontoNyckel() && Date.now() - (n.regT || 0) < 864e5) return;
+  pagar = true;
+  try {
+    let perm = await P.checkPermissions();
+    if (perm.receive !== 'granted') {
+      if (perm.receive === 'denied' || n.fragat) return;
+      store.notiser = { ...store.notiser, fragat: true };
+      perm = await P.requestPermissions();
+      if (perm.receive !== 'granted') return;
+    }
+    await lyssna(P);
+    await P.register();
+  } catch { /* ok */ } finally { pagar = false; }
+}
+// Haris loggar ut ur adminvyn: telefonen ska inte längre få notiser om föräldrarnas bokningar
+export async function pushAdminAv() {
+  const t = store.notiser.token;
+  if (t && store.admin) await api.post('/admin/push', { token: t, av: true }, store.admin);
+  if (store.notiser.kopplad) store.notiser = { ...store.notiser, kopplad: null };
 }
 
 // Tryck på en notis: appen öppnar sidan notisen pekar på, t.ex. #/boka/2026-W45 när Haris öppnat en vecka

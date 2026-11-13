@@ -5,6 +5,8 @@
 // meddelande ifyllt. Föräldern kan trycka "Jag har swishat", och Haris bockar av betalningen i admin.
 // Paket (Carl 2026-10-28): föräldern köper t.ex. 10 pass i appen och betalar med Swish. Så länge paketet har pass
 // kvar dras bokningarna från det, och en avbokning ger tillbaka passet.
+// Pott (Carl 2026-11-13): Haris sätter in pengar på barnet (eget avtal). Varje bokning kan betalas ur potten; beloppet
+// dras när passet körts. Pass kvar = potten delad med barnets pris just nu.
 import { store } from './store.js';
 import { api } from './api.js';
 import { swishLank, visaSwish, bokningsMeddelande, paketMeddelande, kr } from './swish.js';
@@ -28,18 +30,25 @@ export function bokaInit(deps) { ui = deps; }
 function ritaKvar() { const y = window.scrollY; ui.route(); window.scrollTo(0, y); requestAnimationFrame(() => window.scrollTo(0, y)); }
 const token = () => store.session?.token;
 
-export async function hamtaVeckor(tvinga = false) {
+// bakgrund: svaret kastas om föräldern hann boka, avboka eller köpa under tiden (annars skrev den gamla kopian
+// över bokningen, t.ex. "9 pass kvar" fast det var 8)
+let andrad = 0;
+export async function hamtaVeckor(tvinga = false, bakgrund = false) {
   if (!token()) return data;
   if (!tvinga && Date.now() - data.hamtat < 15000) return data;
+  const start = Date.now();
   const r = await api.get('/veckor', token());
-  if (r.ok) data = { nu: r.nu, veckor: r.veckor, betalning: r.betalning || null, paket: r.paket || [], hamtat: Date.now() };
+  if (bakgrund && andrad >= start) return data;
+  if (r.ok) data = { nu: r.nu, veckor: r.veckor, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
   return data;
 }
-export async function hamtaMina(tvinga = false) {
+export async function hamtaMina(tvinga = false, bakgrund = false) {
   if (!token()) return mina;
   if (!tvinga && Date.now() - mina.hamtat < 15000) return mina;
+  const start = Date.now();
   const r = await api.get('/mina', token());
-  if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], betalning: r.betalning || null, paket: r.paket || [], hamtat: Date.now() };
+  if (bakgrund && andrad >= start) return mina;
+  if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
   return mina;
 }
 export const minaNu = () => mina;
@@ -48,11 +57,14 @@ export function veckorGlom() { data.hamtat = 0; mina.hamtat = 0; }
 
 // Paketet som bokningarna dras från just nu (det första med pass kvar)
 const aktivtPaket = () => (data.paket || []).find(p => p.kvar > 0) || null;
+// Potten om den räcker till ett pass till
+const pottRacker = () => { const p = data.pott, pris = data.betalning?.pris || p?.pris; return p && pris && p.ledigt >= pris ? p : null; };
 const barnNamn = () => [mina.klient?.barn || store.profile?.name, mina.klient?.efternamn || store.profile?.efternamn];
 
 // Betalraden under en bokning: Swish-knappen, "Jag har swishat", eller Betald ✓ när Haris bockat av
 function betalRad(b) {
   if (b.paket) { const p = [...(mina.paket || []), ...(data.paket || [])].find(x => x.id === b.paket); return `<div class="betalrad"><span class="i-paket">Ingår i paketet${p ? ` ${esc(p.namn)}` : ''}</span></div>`; }
+  if (b.pott) return `<div class="betalrad"><span class="i-paket">Ur potten${b.pris ? ` · ${esc(kr(b.pris))}` : ''}</span></div>`;
   const bet = mina.betalning || data.betalning;
   if (b.betald) return `<div class="betalrad"><span class="betald">Betald ✓</span></div>`;
   if (!bet) return '';
@@ -94,7 +106,7 @@ export function bokaPage(v) {
   if (Date.now() - data.hamtat > 15000) {
     const fore = JSON.stringify([data.veckor, data.betalning]), om = ui.kvar();
     data.hamtat = Date.now();
-    hamtaVeckor(true).then(d => { if (JSON.stringify([d.veckor, d.betalning]) !== fore) { const y = window.scrollY; om(); window.scrollTo(0, y); } });
+    hamtaVeckor(true, true).then(d => { if (JSON.stringify([d.veckor, d.betalning]) !== fore) { const y = window.scrollY; om(); window.scrollTo(0, y); } });
   }
   const oppna = data.veckor.map(w => w.v);
   const nu = data.nu;
@@ -127,8 +139,9 @@ export function bokaPage(v) {
       <p class="small muted" style="margin:2px 0 10px">Då ser du direkt när det går att boka.</p>
       <div class="btn-row two" style="margin:0"><button class="btn grad" data-action="boka-notis">Slå på notiser</button><button class="btn secondary" data-action="boka-notis-nej">Inte nu</button></div>
     </div>` : ''}
+    ${data.pott ? `<a class="saldo-ruta" href="#/mina-pass"><span><b>${esc(kr(data.pott.saldo))}</b> i potten · ${data.pott.passKvar} pass kvar</span><span class="small">Historik ›</span></a>` : ''}
     ${(data.paket || []).length ? `<a class="saldo-ruta" href="#/mina-pass"><span><b>${(data.paket || []).reduce((n, p) => n + p.kvar, 0)}</b> pass kvar</span><span class="small">Mina pass och historik ›</span></a>` : ''}
-    <p class="muted small">Tryck på en ledig tid så hålls den i 60 sekunder åt dig. Bekräfta innan tiden går ut. Röda tider är redan bokade.${aktivtPaket() ? ' När du bokar väljer du om du använder ett av dina pass eller swishar för passet.' : bet ? ` Ett pass kostar ${esc(kr(bet.pris))} och betalas med Swish.${bet.paket?.length ? ' Paket med fler pass finns längre ner.' : ''}` : ''}</p>
+    <p class="muted small">Tryck på en ledig tid så hålls den i 60 sekunder åt dig. Bekräfta innan tiden går ut. Röda tider är redan bokade.${aktivtPaket() || pottRacker() ? ` När du bokar väljer du om passet ${aktivtPaket() ? 'tas från dina pass' : 'betalas ur potten'} eller med Swish.` : bet ? ` Ett pass kostar ${esc(kr(bet.pris))} och betalas med Swish.${bet.paket?.length ? ' Paket med fler pass finns längre ner.' : ''}` : ''}</p>
     <div class="vecka-nav">
       <a class="btn secondary ${kanBak ? '' : 'disabled'}" href="#/boka/${foreg}" ${kanBak ? '' : 'aria-disabled="true" tabindex="-1"'}>‹</a>
       <div class="vecka-titel"><b>Vecka ${Number(v.split('-W')[1])}</b><div class="small muted">${fmtDatum(m)} – ${fmtDatum(s)}${v === nu ? ' · denna vecka' : ''}</div></div>
@@ -139,17 +152,18 @@ export function bokaPage(v) {
   ${nyss ? `<section class="panel brand nyss-bokad">
     <div class="section-head"><div class="eyebrow">Tiden är bokad</div><button class="film" data-action="boka-klar-stang" aria-label="Stäng">✕</button></div>
     <h3 style="margin:0 0 4px">${esc(DAG[nyss.dag])} ${fmtDatum(datumFor(nyss.v, nyss.dag))} · ${esc(nyss.start)}–${esc(nyss.slut)}</h3>
-    <p class="small muted" style="margin:0">${nyss.plats ? `${esc(nyss.plats)} · ` : ''}${esc(nyss.barn || barn)}${nyss.paket ? `. Passet dras från paketet${(data.paket || []).find(p => p.id === nyss.paket) ? `, ${(data.paket || []).find(p => p.id === nyss.paket).kvar} kvar` : ''}. Vi ses!` : nyss.betald ? '' : bet ? '. Betala med Swish, så är allt klart.' : '. Vi ses!'}</p>
+    <p class="small muted" style="margin:0">${nyss.plats ? `${esc(nyss.plats)} · ` : ''}${esc(nyss.barn || barn)}${nyss.paket ? `. Passet dras från paketet${(data.paket || []).find(p => p.id === nyss.paket) ? `, ${(data.paket || []).find(p => p.id === nyss.paket).kvar} kvar` : ''}. Vi ses!` : nyss.pott ? `. ${esc(kr(nyss.pris || 0))} dras ur potten när passet körts${data.pott ? `, sedan räcker den till ${data.pott.passKvar} pass` : ''}. Vi ses!` : nyss.betald ? '' : bet ? '. Betala med Swish, så är allt klart.' : '. Vi ses!'}</p>
     ${betalRad(nyss)}
   </section>` : ''}
   ${h ? `<section class="panel brand hall" data-tills="${h.tills}">
     <div class="eyebrow">Platsen hålls åt dig</div>
     <h3 style="margin:0">${esc(DAG[h.dag])} ${esc(h.start)}–${esc(h.slut)}${h.plats ? ` · ${esc(h.plats)}` : ''}</h3>
-    <div class="xp-row" style="margin-top:8px"><span class="small muted">Bekräfta inom <b id="hallSek">60</b> s${aktivtPaket() ? ' · välj hur passet betalas' : bet ? ` · ${esc(kr(bet.pris))}, betalas med Swish efter bokningen` : ''}</span></div>
+    <div class="xp-row" style="margin-top:8px"><span class="small muted">Bekräfta inom <b id="hallSek">60</b> s${aktivtPaket() || pottRacker() ? ' · välj hur passet betalas' : bet ? ` · ${esc(kr(bet.pris))}, betalas med Swish efter bokningen` : ''}</span></div>
     <div class="progress" style="margin-top:6px"><i id="hallBar" style="width:100%"></i></div>
-    ${aktivtPaket() ? `<div class="val-knappar">
-      <button class="btn grad" data-action="boka-bekrafta" data-betalning="paket">Använd ett av dina pass (${aktivtPaket().kvar} kvar)</button>
-      ${bet ? `<button class="btn secondary" data-action="boka-bekrafta" data-betalning="swish">Swisha ${esc(kr(bet.pris))} i stället, spara passen</button>` : ''}
+    ${aktivtPaket() || pottRacker() ? `<div class="val-knappar">
+      ${aktivtPaket() ? `<button class="btn grad" data-action="boka-bekrafta" data-betalning="paket">Använd ett av dina pass (${aktivtPaket().kvar} kvar)</button>` : ''}
+      ${pottRacker() ? `<button class="btn ${aktivtPaket() ? 'secondary' : 'grad'}" data-action="boka-bekrafta" data-betalning="pott">Betala ${esc(kr(bet?.pris || pottRacker().pris))} ur potten (${esc(kr(pottRacker().ledigt))} kvar)</button>` : ''}
+      ${bet ? `<button class="btn secondary" data-action="boka-bekrafta" data-betalning="swish">Swisha ${esc(kr(bet.pris))} i stället${aktivtPaket() ? ', spara passen' : ', spara potten'}</button>` : ''}
       <button class="film" data-action="boka-slapp">Ångra</button>
     </div>` : `<div class="btn-row two"><button class="btn grad" data-action="boka-bekrafta">Boka för ${esc(barn || 'oss')}</button><button class="btn secondary" data-action="boka-slapp">Ångra</button></div>`}
   </section>` : ''}
@@ -171,12 +185,13 @@ export async function fyllMina(el) {
   const m = await hamtaMina();
   const idag = new Date().toISOString().slice(0, 10);
   // kommande tider, plus tidigare som inte är betalda än
-  const bok = m.bokningar.filter(b => !b.datum || b.datum >= idag || (m.betalning && !b.betald && !b.paket)).map(b => `<li class="row bokning"><span class="grow"><b>${esc(DAG[b.dag])} ${fmtDatum(datumFor(b.v, b.dag))}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])}${b.barn ? ` · ${esc(b.barn)}` : ''}${b.av === 'haris' ? ' · bokad av Haris' : ''}</div>${betalRad(b)}</span>${b.datum >= idag ? `<button class="film" data-action="boka-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button>` : ''}</li>`).join('');
+  const bok = m.bokningar.filter(b => !b.datum || b.datum >= idag || (m.betalning && !b.betald && !b.paket && !b.pott)).map(b => `<li class="row bokning"><span class="grow"><b>${esc(DAG[b.dag])} ${fmtDatum(datumFor(b.v, b.dag))}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])}${b.barn ? ` · ${esc(b.barn)}` : ''}${b.av === 'haris' ? ' · bokad av Haris' : ''}</div>${betalRad(b)}</span>${b.datum >= idag ? `<button class="film" data-action="boka-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button>` : ''}</li>`).join('');
   const planer = m.planer.map(p => `<a class="card" href="#/med-haris/${p.id}"><div class="card-body"><div class="eyebrow">${esc(p.datum)}</div><h3>${esc(p.titel)}</h3><p class="desc">${p.block.length} moment · ${p.block.filter(b => b.resultat || b.tider?.length).length} ${p.block.filter(b => b.resultat).length ? 'bedömningar' : 'tidtagningar'} · ${p.block.reduce((n, b) => n + (b.media?.length || 0) + (b.film ? 1 : 0), 0)} inspelningar</p></div></a>`).join('');
   const paket = (m.paket || []).filter(p => p.kvar > 0 || !p.betald).reverse();
   el.innerHTML = `
-    ${paket.length ? `<h2>Ditt paket</h2>${paket.map(paketKort).join('')}` : ''}
-    <h2 ${paket.length ? 'style="margin-top:22px"' : ''}>Mina bokningar</h2>
+    ${m.pott ? `<h2>Din pott</h2>${pottKort(m.pott)}` : ''}
+    ${paket.length ? `<h2 ${m.pott ? 'style="margin-top:22px"' : ''}>Ditt paket</h2>${paket.map(paketKort).join('')}` : ''}
+    <h2 ${paket.length || m.pott ? 'style="margin-top:22px"' : ''}>Mina bokningar</h2>
     ${bok ? `<ul class="list">${bok}</ul>` : '<p class="muted small">Inga bokade tider än.</p>'}
     ${kopPaket(m)}
     <h2 style="margin-top:22px">Pass med Haris</h2>
@@ -191,7 +206,7 @@ export async function fyllMina(el) {
 function betalArk() {
   const b = betala && mina.bokningar.find(x => x.v === betala.v && x.id === betala.slot);
   const bet = mina.betalning || data.betalning;
-  if (!b || b.paket || b.betald || b.swishad || !bet) return '';
+  if (!b || b.paket || b.pott || b.betald || b.swishad || !bet) return '';
   const pris = b.pris || bet.pris;
   const msg = bokningsMeddelande(b, mina.klient?.efternamn || store.profile?.efternamn || '');
   return `<div class="betal-ark" role="dialog" aria-modal="true" aria-labelledby="betalArkRubrik">
@@ -229,6 +244,19 @@ function paketKort(p) {
     <div class="betalrad">${rad}</div>
   </div>`;
 }
+// Potten: saldot, hur många pass den räcker till på dagens pris, och det som är bokat men inte kört än
+export function pottKort(p, { lank = true } = {}) {
+  const pris = p.pris;
+  return `<div class="paket-kort pott-kort ${p.ledigt < (pris || 0) ? 'obetalt' : ''}">
+    <div class="pk-rad"><b>Potten</b><span class="pk-kvar">${esc(kr(p.saldo))}</span></div>
+    <div class="pott-pass"><b>${p.passKvar}</b> ${p.passKvar === 1 ? 'pass' : 'pass'} kvar${pris ? ` à ${esc(kr(pris))}` : ''}</div>
+    <div class="small muted">${p.bokade?.length ? `${esc(kr(p.bokat))} är bokat för ${p.bokade.length} ${p.bokade.length === 1 ? 'kommande pass' : 'kommande pass'} och dras när ${p.bokade.length === 1 ? 'passet' : 'passen'} körts. ` : ''}${p.antalKorda ? `${p.antalKorda} ${p.antalKorda === 1 ? 'pass' : 'pass'} har dragits hittills.` : 'Varje pass dras från potten när det körts.'}</div>
+    ${p.ledigt < (pris || 0) ? `<div class="small" style="color:var(--warn);margin-top:6px">Potten räcker inte till ett pass till. Prata med Haris, eller betala nästa pass med Swish.</div>` : ''}
+    ${lank ? '<a class="small" href="#/mina-pass" style="display:inline-block;margin-top:6px">Historik ›</a>' : ''}
+  </div>`;
+}
+const fmtNar = n => { const [d, t] = String(n || '').split('T'); const [, mm, dd] = (d || '').split('-').map(Number); return mm ? `${dd} ${MAN[mm - 1]} ${t || ''}`.trim() : ''; };
+export const pottLista = rader => `<ul class="logg pott-logg">${rader.map(r => `<li><span class="logg-dat">${fmtNar(r.nar)}</span><span class="logg-text">${esc(r.text)}<small class="muted"> · saldo ${esc(kr(r.saldo))}</small></span><span class="logg-antal ${r.belopp > 0 ? 'plus' : 'minus'}">${r.belopp > 0 ? '+' : '−'}${esc(kr(Math.abs(r.belopp)))}</span></li>`).join('')}</ul>`;
 // Paketen Haris säljer, med pris per pass jämfört med enstaka pass
 function kopPaket(m) {
   const bet = m.betalning, mallar = bet?.paket || [];
@@ -259,6 +287,10 @@ export function startHallTimer() {
 export function stoppaHallTimer() { clearInterval(tick); }
 
 export async function bokaAction(action, el) {
+  andrad = Date.now();
+  try { return await bokaActionNu(action, el); } finally { andrad = Date.now(); }
+}
+async function bokaActionNu(action, el) {
   const { toast, route } = ui;
   const { v, slot } = el.dataset;
   if (action === 'boka-hall') {
@@ -276,9 +308,9 @@ export async function bokaAction(action, el) {
     const b = klar && mina.bokningar.find(x => x.v === klar.v && x.id === klar.slot);
     const pk = b?.paket && (data.paket || []).find(x => x.id === b.paket);
     // ska passet betalas kommer rutan Betala passet upp direkt, annars ett kort besked
-    betala = b && !b.paket && !b.betald && (mina.betalning || data.betalning) ? klar : null;
+    betala = b && !b.paket && !b.pott && !b.betald && (mina.betalning || data.betalning) ? klar : null;
     if (!r.ok) toast(r.fel || 'Gick inte att boka');
-    else if (!betala) toast(pk ? `Tiden är bokad. Passet dras från paketet, ${pk.kvar} kvar.` : 'Tiden är bokad. Vi ses!');
+    else if (!betala) toast(pk ? `Tiden är bokad. Passet dras från paketet, ${pk.kvar} kvar.` : b?.pott ? `Tiden är bokad. ${kr(b.pris || 0)} dras ur potten när passet körts.` : 'Tiden är bokad. Vi ses!');
     ritaKvar();
     if (klar && !betala) document.querySelector('.nyss-bokad')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return true;
@@ -341,16 +373,18 @@ const loggLista = rader => `<ul class="logg">${rader.map(r => `<li><span class="
 export function minaPassPage() {
   if (!token()) return `<section class="empty"><p class="muted">Logga in för att se dina pass.</p><a class="btn grad" href="#/login">Logga in</a></section>`;
   if (!mina.hamtat) { hamtaMina().then(ui.kvar()); return `<section class="empty"><p class="muted">Hämtar dina pass…</p></section>`; }
-  if (Date.now() - mina.hamtat > 15000) { const om = ui.kvar(); hamtaMina(true).then(om); }
-  const k = mina.klient, paket = mina.paket || [], logg = (k?.passLogg || []).slice().reverse();
-  const kvar = paket.reduce((n, p) => n + p.kvar, 0);
+  if (Date.now() - mina.hamtat > 15000) { const om = ui.kvar(); hamtaMina(true, true).then(om); }
+  const k = mina.klient, paket = mina.paket || [], logg = (k?.passLogg || []).slice().reverse(), pott = mina.pott;
+  const kvar = paket.reduce((n, p) => n + p.kvar, 0) + (pott?.passKvar || 0);
   return `
   <a class="back" href="#/boka">‹ Med Haris</a>
   <section>
     <div class="eyebrow">Mina pass${k?.barn ? ` · ${esc(k.barn)}` : ''}</div>
-    <h1>${kvar} ${kvar === 1 ? 'pass' : 'pass'} kvar</h1>
-    <p class="small muted">${mina.betalning?.pris ? `Ett pass kostar ${esc(kr(mina.betalning.pris))}${k?.pris ? ' (ditt pris hos Haris)' : ''}. ` : ''}Här ser du passen som Haris lagt in eller som du köpt, och varje bokning och avbokning.</p>
+    <h1>${pott && !paket.length ? `${esc(kr(pott.saldo))} i potten` : `${kvar} ${kvar === 1 ? 'pass' : 'pass'} kvar`}</h1>
+    <p class="small muted">${mina.betalning?.pris ? `Ett pass kostar ${esc(kr(mina.betalning.pris))}${k?.pris ? ' (ditt pris hos Haris)' : ''}. ` : ''}${pott ? `Potten räcker till ${pott.passKvar} ${pott.passKvar === 1 ? 'pass' : 'pass'} på det priset. ` : ''}Här ser du passen som Haris lagt in eller som du köpt, och varje bokning och avbokning.</p>
   </section>
+  ${pott ? `<section>${pottKort(pott, { lank: false })}</section>
+  <section><h2>Potten</h2>${pott.bokade?.length ? `<p class="small muted" style="margin:0 0 4px">Bokat, dras när passet körts: ${pott.bokade.map(b => `${esc(b.text.replace(/^Pass /, ''))} (${esc(kr(-b.belopp))})`).join(' · ')}</p>` : ''}${pott.historik?.length ? pottLista(pott.historik) : '<p class="small muted">Inget har dragits än.</p>'}</section>` : ''}
   ${paket.length ? `<section>${paket.slice().reverse().map(paketKort).join('')}</section>` : ''}
   <section><h2>Historik</h2>${logg.length ? loggLista(logg) : '<p class="small muted">Inget har hänt än. När Haris lägger in pass eller du bokar syns det här.</p>'}</section>`;
 }
