@@ -76,7 +76,7 @@ fotboll,träning,boka,pass,tränare,barn,ungdom,övningar,teknik,bollkontroll,ut
 | Marketing URL | (tomt, eller `https://completeathletic.se`) |
 | Privacy Policy URL (under App Privacy) | `https://8bitcat.github.io/cap-online/integritet.html` |
 | Copyright | `2026 Complete Athletic Performance` |
-| Version | **`1.0`** (måste vara exakt samma som bygget: `appVersion` i app/package.json är `1.0` sedan `release.py 1.0.0`) |
+| Version | **`1.1`** (måste vara exakt samma som bygget: `appVersion` i app/package.json, `1.1` sedan `release.py 1.1.0`. Släpps en ny webbversion före bygget följer den med) |
 
 **Skärmbilder:** iPhone 6,9" – **1320 × 2868** (stående), 3–10 st. Appen är bara för iPhone (TARGETED_DEVICE_FAMILY = 1
 från och med nästa bygge), så inga iPad-bilder behövs. Förslag på ordning: 1) Startsidan, 2) Boka (veckan med lediga tider),
@@ -170,7 +170,7 @@ The app is built and published by Carl Pålsson (8bitcat) on behalf of Complete 
 3. **App Information:** Subtitle, kategorier, Content Rights, Age Rating (avsnitt 1 och 4).
 4. **Pricing and Availability:** Free, Sverige.
 5. **App Privacy:** Privacy Policy URL + enkäten enligt avsnitt 5 → **Publish**.
-6. **Version 1.0** (iOS App → "+" / Prepare for Submission): Promotional Text, Description, Keywords, Support URL,
+6. **Version 1.1** (iOS App → "+" / Prepare for Submission): Promotional Text, Description, Keywords, Support URL,
    Copyright (avsnitt 3).
 7. **Skärmbilder** 6,9" 1320 × 2868 (avsnitt 3): färdiga i `D:\CAPOnline\docs\appstore\` (1-hem … 6-trana-sjalv),
    gjorda med påhittad demodata av `tools/skarmbilder.js`.
