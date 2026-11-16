@@ -28,8 +28,8 @@ const TEL = '070-555 66 77';
 
   // ---- Haris: priser, en kund och en öppen vecka ----
   const a = await nyFlik('haris', { viewport: { width: 1280, height: 900 } });
-  await a.goto(base + 'index.html#/admin', { waitUntil: 'networkidle' });
-  await a.fill('#losen', 'testlosen'); await a.click('form[data-form=admin-login] button');
+  await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
+  await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
   await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(1000);
   const tok = await a.evaluate(() => JSON.parse(localStorage.getItem('caponline.v3') || '{}').admin);
   const adm = (metod, p, data) => fetch(API + p, { method: metod, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }).then(r => r.json());
@@ -46,7 +46,7 @@ const TEL = '070-555 66 77';
 
   // ---- föräldern: loggar in och bokar ett enstaka pass ----
   const f = await nyFlik('förälder', devices['iPhone 13']);
-  await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' });
+  await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' }); await f.waitForSelector('#losen1', { timeout: 15000 }); await f.fill('#losen1', 'hemligt1'); await f.fill('#losen2', 'hemligt1'); await f.click('form[data-form=losen] button[type=submit]');
   await f.waitForFunction(() => document.querySelector('#name') || document.querySelector('.greet'), null, { timeout: 15000 });
   if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); }
   await f.waitForSelector('.greet', { timeout: 15000 });

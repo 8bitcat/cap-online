@@ -766,3 +766,25 @@ body.admin .view { max-width: 1080px; }
 .btn.danger.armed { background: var(--danger, var(--warn)); color: #fff; }
 .pott-form { margin-top: 10px; }
 .pott-snabb { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+
+/* Inloggningen (Carl 2026-11-16): en snygg första sida, mobilnummer + lösenord, koden från sms:et första gången */
+.login-skarm { min-height: calc(100dvh - 120px); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 28px 0 24px; position: relative; }
+.login-skarm::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(120% 60% at 50% -10%, rgba(0, 212, 203, .22), transparent 60%), radial-gradient(80% 50% at 100% 100%, rgba(0, 240, 255, .08), transparent 60%); }
+.login-logga { text-align: center; margin: 0 0 22px; }
+.login-logga img { height: 74px; max-width: 80%; filter: drop-shadow(0 6px 24px rgba(0, 212, 203, .35)); }
+.login-kort { width: 100%; max-width: 420px; background: rgba(13, 22, 33, .86); border: 1px solid rgba(0, 212, 203, .28); border-radius: 18px;
+  padding: 24px 20px 20px; box-shadow: 0 18px 50px rgba(0, 0, 0, .45); backdrop-filter: blur(6px); }
+.login-kort h1 { font-size: 26px; margin: 0 0 6px; }
+.login-kort .field input { font-size: 18px; padding: 14px 14px; }
+.login-kort .btn.stor { padding: 15px 18px; font-size: 18px; margin-top: 6px; }
+.losen-rad { position: relative; display: flex; }
+.losen-rad input { flex: 1; padding-right: 70px !important; }
+.visa-losen { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: 0; color: var(--brand); font: inherit; font-size: 14px; font-weight: 700; padding: 8px 10px; cursor: pointer; }
+.hint-rad { margin: -4px 0 14px; color: var(--muted); }
+.hint-rad b { color: var(--text); }
+.login-fot { max-width: 420px; text-align: center; margin: 18px 12px 0; line-height: 1.5; }
+.kod-stor { display: flex; align-items: baseline; gap: 10px; margin: 8px 0 2px; }
+.kod-stor b { font-size: 28px; letter-spacing: .12em; color: var(--brand); font-variant-numeric: tabular-nums; }
+body.inloggning header.top { display: none; }
+body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }

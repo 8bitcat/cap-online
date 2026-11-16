@@ -5,8 +5,10 @@
 //   POST /auth/sms        {telefon}                 → {ok}            engångskod (6 siffror, 10 min) som sms till registrerat nummer
 //   POST /auth/sms/verifiera {telefon, kod}         → {token, user}
 //   POST /auth/kod        {kod}                     → {token, user}   länken #/k/KOD ur sms:et (eller en gammal e-postkod)
-//   POST /auth/login      {telefon, pin}            → {token, user}   mobilnummer + den kod föräldern valt (när sms är av)
-//   POST /auth/pin        {pin}  Bearer             → {ok}            välj (ny) kod; länkens engångskod förbrukas
+//   POST /auth/login      {anvandare, losen}        → {token, user, nyttLosen} | {admin}   EN inloggning för alla (Carl 2026-11-16):
+//                         mobilnummer + lösenord, eller mobilnummer + koden ur sms:et första gången (nyttLosen: välj
+//                         lösenord direkt). E-post + adminlösenordet = Haris (adminkontot). Äldre appar skickar {telefon, pin}.
+//   POST /auth/pin        {losen} Bearer            → {ok}            välj (nytt) lösenord, minst 6 tecken; sms-koden förbrukas
 //   POST /auth/glomt      {telefon}                 → {ok, skickat}   ny länk via sms, annars får Haris en flagga i registret
 //   GET  /auth/me         Bearer <token>            → {user}
 //   POST /auth/ut         Bearer <token>            → {ok}
@@ -155,8 +157,11 @@ const kodVisa = kod => `${kod.slice(0, 3)}-${kod.slice(3)}`;
 function smsHamta(env, k) {
   return `Hej${k.foralder ? ' ' + k.foralder : ''}! Haris har lagt in ${k.barn || 'ditt barn'} i CAP, träningsappen från Complete Athletic Performance.\nHämta appen här: ${hamtaLank(env)}\nNär appen är installerad trycker du på länken i nästa sms, så loggas du in.\n/Haris`;
 }
+// Carl 2026-11-16: "Haris skapar användaren när han gör sitt sms, och den koden man får är ens login. Det första som
+// ska hända när man loggar in via koden är att man sätter ett lösenord." Ett sms med allt.
 function smsLogga(env, k, kod) {
-  return `Logga in i CAP: ${lank(env, kod)}\nTryck på länken när appen är installerad. Går det inte: öppna appen och skriv koden ${kodVisa(kod)}.\n/Haris`;
+  const tel = String(k.telefon || '').replace(/^\+46/, '0').replace(/^(0\d{2})(\d{3})(\d{2})(\d{2})$/, '$1-$2 $3 $4');
+  return `Hej${k.foralder ? ' ' + k.foralder : ''}! Välkommen till CAP, appen för träningen hos Haris.\n1. Hämta appen: ${hamtaLank(env)}\n2. Logga in med ditt mobilnummer ${tel} och koden ${kodVisa(kod)}.\n3. Välj ett eget lösenord. Sedan loggar du in med mobilnumret och lösenordet.\n/Haris`;
 }
 const giltigKod = k => (k.kod?.kod && !k.kod.forbrukad ? k.kod.kod : null);
 // var föräldern loggade in senast: i appen eller i webbläsaren
@@ -220,7 +225,7 @@ async function hamtaKlienter(env) {
 // Ny engångslänk: koden pekar på klienten i 90 dagar och förbrukas när pin valts
 async function nyKod(env, k) {
   if (k.kod?.kod) await env.DB.delete(`kod:${k.kod.kod}`);
-  let kod; do { kod = slump(6); } while (await env.DB.get(`kod:${kod}`));
+  let kod; do { kod = slump(6, '0123456789'); } while (await env.DB.get(`kod:${kod}`));
   await env.DB.put(`kod:${kod}`, JSON.stringify({ klientId: k.id, skapad: nu() }), { expirationTtl: 60 * 60 * 24 * 90 });
   k.kod = { kod, skapad: nu(), anvand: null };
   return kod;
@@ -488,6 +493,12 @@ function noteraKlient(k, typ, title, text, hash = '') {
   k.notiser = [...(k.notiser || []), n].slice(-60);
   return n;
 }
+// Haris loggar in med sin e-post (Carl 2026-11-16). Tillåtna adresser: config:admins.epost (Admin → Mer) och
+// ADMIN_EPOST (kommaseparerad, för lokala tester). Lösenordet är adminlösenordet ADMIN_LOSEN.
+async function adminEpost(env) {
+  const cfg = (await env.DB.get('config:admins', 'json')) || {};
+  return [...String(env.ADMIN_EPOST || '').split(','), ...(cfg.epost || [])].map(x => String(x).trim().toLowerCase()).filter(Boolean);
+}
 async function sessionUser(env, req) {
   const t = bearer(req);
   const s = t && await env.DB.get(`sess:${t}`, 'json');
@@ -691,11 +702,11 @@ export default {
         if (k.kod?.kod === kod && !k.kod.anvand) k.kod.anvand = nu();
         inloggad(k, kallaAv(d));
         await sparaKlient(env, k);
-        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k) });
+        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k), nyttLosen: true });
       }
       // gammal e-postkod
       const inv = await env.DB.get(`inv:${kod}`, 'json');
-      if (!inv) return fel('koden finns inte eller har gått ut', 404);
+      if (!inv) return fel('koden finns inte längre. Har du redan valt ett lösenord? Logga in med mobilnummer och lösenord.', 404);
       let uid = await env.DB.get(`email:${inv.email}`);
       let user = uid ? await env.DB.get(`user:${uid}`, 'json') : null;
       if (!user) {
@@ -712,17 +723,44 @@ export default {
     }
     if (p === '/auth/login' && req.method === 'POST') {
       const d = await json(); if (!d) return fel('trasig JSON');
-      const tel = telefonNorm(d.telefon);
-      if (!tel) return fel('skriv mobilnumret, t.ex. 070-123 45 67');
-      if (!pinOk(d.pin)) return fel('koden är fyra till sex siffror');
+      const anv = String(d.anvandare ?? d.telefon ?? '').trim();
+      const losen = String(d.losen ?? d.pin ?? '');
+      if (!anv) return fel('skriv ditt mobilnummer');
+      if (!losen) return fel('skriv lösenordet, eller koden från sms:et första gången');
+      // Haris: e-post + adminlösenordet ger adminkontot
+      if (anv.includes('@')) {
+        const epost = anv.toLowerCase();
+        const limKey = `lim:${epost}`;
+        const forsok = +(await env.DB.get(limKey)) || 0;
+        if (forsok >= 10) return fel('för många försök, vänta en kvart och prova igen', 429);
+        if (!env.ADMIN_LOSEN || !(await adminEpost(env)).includes(epost) || losen !== env.ADMIN_LOSEN) {
+          await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 });
+          return fel('fel e-post eller lösenord', 403);
+        }
+        await env.DB.delete(limKey);
+        const token = tokenNy();
+        await env.DB.put(`adm:${token}`, JSON.stringify({ skapad: nu(), epost }), { expirationTtl: 60 * 60 * 24 * 365 });
+        return svar({ ok: true, admin: token, epost });
+      }
+      const tel = telefonNorm(anv);
+      if (!tel) return fel('skriv mobilnumret, t.ex. 070-123 45 67 (Haris loggar in med sin e-post)');
       const limKey = `lim:${tel}`;
       const forsok = +(await env.DB.get(limKey)) || 0;
       if (forsok >= 10) return fel('för många försök, vänta en kvart och prova igen', 429);
       const id = await env.DB.get(`tel:${tel}`);
       const k = id ? await hamtaKlient(env, id) : null;
-      if (!k) return fel('numret finns inte hos Haris än', 404);
-      if (!k.pin) return fel('du har ingen kod än, öppna länken du fick av Haris först', 409);
-      if ((await pinHash(d.pin, k.pin.salt)) !== k.pin.hash) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel(`fel kod${forsok >= 6 ? `, ${10 - forsok - 1} försök kvar` : ''}`, 403); }
+      if (!k) return fel('numret finns inte hos Haris än. Be honom lägga in er.', 404);
+      // koden ur sms:et loggar in, och då väljer man ett lösenord direkt
+      const kod = giltigKod(k), skrivet = losen.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (kod && skrivet === kod) {
+        await env.DB.delete(limKey);
+        if (!k.kod.anvand) k.kod.anvand = nu();
+        inloggad(k, kallaAv(d));
+        await sparaKlient(env, k);
+        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k), nyttLosen: true });
+      }
+      if (!k.pin) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel('fel kod. Första gången loggar du in med koden i sms:et från Haris.', 403); }
+      if ((await pinHash(losen, k.pin.salt)) !== k.pin.hash) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel(`fel lösenord${forsok >= 6 ? `, ${10 - forsok - 1} försök kvar` : ''}`, 403); }
       await env.DB.delete(limKey);
       inloggad(k, kallaAv(d));
       await sparaKlient(env, k);
@@ -730,13 +768,16 @@ export default {
     }
     if (p === '/auth/pin' && req.method === 'POST') {
       const d = await json(); if (!d) return fel('trasig JSON');
-      if (!pinOk(d.pin)) return fel('koden är fyra till sex siffror');
+      const losen = String(d.losen ?? d.pin ?? '');
+      if (losen.length < 6 || losen.length > 100) return fel('lösenordet ska vara minst sex tecken');
       const s = await env.DB.get(`sess:${bearer(req)}`, 'json');
       const k = s && await hamtaKlient(env, s.uid);
       if (!k) return fel('inte inloggad', 401);
       const salt = slump(16, SMA);
-      k.pin = { salt, hash: await pinHash(d.pin, salt), t: nu() };
+      k.pin = { salt, hash: await pinHash(losen, salt), t: nu() };
       k.vilLank = null; k.status = 'aktiv';
+      // sms-koden har gjort sitt: den (och länken) slutar gälla när lösenordet är valt
+      if (k.kod?.kod) { await env.DB.delete(`kod:${k.kod.kod}`); k.kod.forbrukad = nu(); }
       await sparaKlient(env, k);
       return svar({ ok: true, user: userAvKlient(k) });
     }
@@ -749,9 +790,9 @@ export default {
       if (!k) return fel('numret finns inte hos Haris än', 404);
       const kod = giltigKod(k) || await nyKod(env, k);
       const sms = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kod), base);
-      if (!sms.skickat) k.vilLank = nu();
+      if (!sms.skickat) { k.vilLank = nu(); tillHaris('Glömt lösenordet', `${barnNamn(k)} har glömt lösenordet. Skicka sms:et med koden från klientsidan.`, `/admin/klient/${k.id}`); }
       await sparaKlient(env, k);
-      return svar({ ok: true, skickat: sms.skickat, meddelande: sms.skickat ? 'En ny länk är skickad som sms till ditt nummer.' : 'Haris får ett meddelande och skickar en ny länk till dig.' });
+      return svar({ ok: true, skickat: sms.skickat, meddelande: sms.skickat ? 'En ny kod är skickad som sms till ditt nummer.' : 'Haris får ett meddelande och skickar ett sms med en ny kod till dig.' });
     }
     if (p === '/auth/me' && req.method === 'GET') {
       const user = await sessionUser(env, req);
@@ -992,7 +1033,7 @@ export default {
         const kod = await nyKod(env, k);
         const l = lank(env, kod);
         let sms = { ok: false, skickat: false, av: !smsPa(env) };
-        if (d.skicka) { sms = await skickaTillKlient(env, k, 'hamta', smsHamta(env, k), base); if (sms.skickat) sms = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kod), base); }
+        if (d.skicka) sms = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kod), base);
         await sparaKlient(env, k);
         await env.DB.put(`tel:${tel}`, k.id);
         const ids = await klientIndex(env); if (!ids.includes(k.id)) { ids.push(k.id); await env.DB.put('klienter', JSON.stringify(ids)); }
@@ -1452,6 +1493,14 @@ export default {
         const inbjudningar = (await hamtaAlla(env, 'inv:')).sort((a, b) => b.skapad.localeCompare(a.skapad));
         const anvandare = (await hamtaAlla(env, 'user:')).sort((a, b) => (b.senast || '').localeCompare(a.senast || ''));
         return svar({ ok: true, inbjudningar, anvandare });
+      }
+      if (p === '/admin/config/admins' && req.method === 'GET') return svar({ ok: true, epost: ((await env.DB.get('config:admins', 'json')) || {}).epost || [] });
+      if (p === '/admin/config/admins' && req.method === 'PUT') {
+        const d = await json(); if (!d) return fel('trasig JSON');
+        const lista = [...new Set((Array.isArray(d.epost) ? d.epost : []).map(email).filter(Boolean))].slice(0, 10);
+        if (!lista.length) return fel('minst en e-postadress behövs, annars kan ingen logga in som Haris');
+        await env.DB.put('config:admins', JSON.stringify({ epost: lista, uppdaterad: nu() }));
+        return svar({ ok: true, epost: lista });
       }
       if (p === '/admin/notiser' && req.method === 'GET') {
         let telefoner = null;

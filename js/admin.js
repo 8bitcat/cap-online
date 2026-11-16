@@ -85,6 +85,7 @@ function merFlik() {
   </section>
   ${betalningPanel()}
   ${notiserPanel()}
+  ${adminsPanel()}
   ${nyhetFlik()}
   <section class="panel">
     <h3>Tjänster</h3>
@@ -158,6 +159,24 @@ function bytPanel(id, rita) {
   el.replaceWith(ny);
   ny.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', ui.onAction));
   ny.querySelectorAll('form[data-form]').forEach(f => f.addEventListener('submit', ui.onSubmit));
+}
+// Vilka e-postadresser som loggar in som Haris (Carl 2026-11-16: "Haris loggar in med sin e-postadress och får då
+// admin-kontot"). Lösenordet är adminlösenordet.
+function adminsPanel() {
+  if (!state.admins && !state.adminsHamtar) {
+    state.adminsHamtar = true;
+    api.admin.get('/admin/config/admins').then(r => { state.admins = r.ok ? r.epost : []; }).finally(() => { state.adminsHamtar = false; bytPanel('admins', adminsPanel); });
+  }
+  const lista = state.admins;
+  return `
+  <section class="panel" id="admins">
+    <h3>Inloggning för Haris</h3>
+    <p class="small muted" style="margin-top:0">E-postadresserna som loggar in som Haris (admin) på inloggningssidan, med adminlösenordet. Alla andra loggar in med sitt mobilnummer och är föräldrar.</p>
+    ${lista ? `<form data-form="admin-admins">
+      <div class="field" style="margin:0 0 8px"><label for="admEpost">En adress per rad</label><textarea id="admEpost" name="epost" rows="3" autocapitalize="off" spellcheck="false">${esc(lista.join('\n'))}</textarea></div>
+      <button class="btn secondary" type="submit">Spara</button>
+    </form>` : '<p class="small muted" style="margin:0">Hämtar…</p>'}
+  </section>`;
 }
 function notiserPanel() {
   if (!state.notiser && !state.notiserHamtar) {
@@ -323,7 +342,7 @@ export async function adminAction(action, el, e) {
   if (action.startsWith('stig-')) return stigAdminAction(action, el, e);
   if (action.startsWith('klient-')) return klienterAction(action, el, e);
   if (action.startsWith('ov-')) return ovningarAction(action, el, e);
-  if (action === 'admin-ut') { e.preventDefault(); await pushAdminAv(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.go('/admin'); return true; }
+  if (action === 'admin-ut') { e.preventDefault(); await pushAdminAv(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.toast('Utloggad'); ui.go(store.session ? '/' : '/login'); return true; }
   if (action === 'admin-notis-denna') {
     const r = await pushSatt(true);
     ui.toast(r.ok ? 'Telefonen kopplas till dig…' : r.fel === 'nekad' ? 'Tillåt notiser för CAP i Inställningar' : `Gick inte: ${r.fel}`);
@@ -400,6 +419,12 @@ export async function adminSubmit(kind, f, fd) {
     state.betalning = r.config; tiderGlom();
     toast(r.config.swish && r.config.pris ? `Sparat: ${kr(r.config.pris)} per pass${r.config.paket.length ? ` och ${r.config.paket.length} ${r.config.paket.length === 1 ? 'paket' : 'paket'}` : ''}.` : 'Sparat. Veckor kan öppnas när både Swish-nummer och pris finns.');
     route(); return true;
+  }
+  if (kind === 'admin-admins') {
+    const epost = String(fd.get('epost') || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+    const r = await api.admin.put('/admin/config/admins', { epost });
+    if (r.ok) { state.admins = r.epost; ui.toast(`Sparat: ${r.epost.length} ${r.epost.length === 1 ? 'adress' : 'adresser'}`); } else ui.toast(`Gick inte: ${r.fel}`);
+    ui.route(); return true;
   }
   if (kind === 'admin-notiser') {
     const body = Object.fromEntries(NOTIS_VAL.map(([k]) => [k, fd.get(k) === 'on']));

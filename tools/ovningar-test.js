@@ -25,7 +25,7 @@ const TEL = '070-444 55 66';
   // länken ur sms 2, sedan barnets namn och födelseår, tills startsidan syns
   let kod = '';
   const loggaInForalder = async p => {
-    await p.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' });
+    await p.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' }); await p.waitForSelector('#losen1', { timeout: 15000 }); await p.fill('#losen1', 'hemligt1'); await p.fill('#losen2', 'hemligt1'); await p.click('form[data-form=losen] button[type=submit]');
     await p.waitForFunction(() => /^#\/(start\/1)?$/.test(location.hash) && (document.querySelector('#name') || document.querySelector('.greet')), null, { timeout: 15000 });
     if (await p.$('#name')) {
       await p.fill('#name', 'Ida'); await p.fill('#efternamn', 'Berg'); await p.selectOption('#fodd', String(new Date().getFullYear() - 9));
@@ -36,20 +36,20 @@ const TEL = '070-444 55 66';
 
   // ---- Haris loggar in på telefonen ----
   const a = await nyFlik('haris', devices['iPhone 13']);
-  await a.goto(base + 'index.html#/admin', { waitUntil: 'networkidle' });
-  await a.fill('#losen', 'testlosen'); await a.click('form[data-form=admin-login] button');
+  await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
+  await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
   await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(1200);
   koll('Haris meny längst ner har Övningar', (await flikar(a)).join(',') === 'Klienter,Tider,Övningar,Filmer,Stigen,Mer', (await flikar(a)).join(','));
-  koll('⇄ syns i admin och leder till föräldern', await a.$eval('#vaxla', e => !e.hidden && e.textContent.trim() === 'Förälder'));
+  koll('bara Haris inloggad: ingen ⇄', await a.$eval('#vaxla', e => e.hidden));
 
   // en klient att planera åt
   for (const kort of await a.$$('.klient-card')) { if ((await kort.textContent()).includes(TEL)) { await kort.click(); await a.waitForTimeout(1000); await a.click('[data-action=klient-radera]'); await a.click('[data-action=klient-radera]'); await a.waitForTimeout(1200); break; } }
   await a.goto(base + 'index.html#/admin/klient/ny'); await a.waitForSelector('#ktel'); await a.click('.mer-om summary');
   await a.fill('#kbarn', 'Ida'); await a.fill('#kefter', 'Berg'); await a.fill('#kforalder', 'Lisa'); await a.fill('#ktel', TEL);
   await a.click('form[data-form=klient-ny] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klient\/k[a-z0-9]+$/, { timeout: 15000 }); await a.waitForSelector('.sms-steg .msg', { state: 'attached', timeout: 10000 });
+  await a.waitForURL(/#\/admin\/klient\/k[a-z0-9]+$/, { timeout: 15000 }); await a.waitForSelector('#inloggning .kod-stor b', { timeout: 10000 });
   const kid = url(a).split('/').pop();
-  kod = ((await a.$$eval('.sms-steg .msg', m => m.map(x => x.textContent).join('\n'))).match(/\/k\/([A-Z0-9]+)/) || [])[1];
+  kod = (await a.$eval('#inloggning .kod-stor b', e => e.textContent)).replace(/\D/g, '');
 
   // ---- övningsbanken ----
   await a.click('.tabs a[data-tab="/admin/ovningar"]'); await a.waitForSelector('.ov-kort', { timeout: 10000 });
@@ -139,11 +139,13 @@ const TEL = '070-444 55 66';
 
   // ---- en förälder utan admin ser ingen växling ----
   const f = await nyFlik('förälder', devices['iPhone 13']);
-  await loggaInForalder(f);
+  // koden slutade gälla när lösenordet valdes: nu loggar föräldern in med mobilnummer och lösenord
+  await f.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
+  await f.fill('#anv', TEL); await f.fill('#losen', 'hemligt1'); await f.click('form[data-form=login] button[type=submit]');
+  await f.waitForURL(/#\/(start\/1)?$/, { timeout: 10000 }).catch(() => {});
+  koll('förälder loggar in med mobilnummer och lösenord', /^\/(start\/1)?$/.test(url(f)), url(f));
   await f.goto(base + 'index.html#/mer'); await f.waitForTimeout(800);
-  koll('förälder utan admin: ⇄ syns och leder till Haris inloggning', await f.$eval('#vaxla', e => !e.hidden));
-  await f.click('#vaxla'); await f.waitForTimeout(600);
-  koll('⇄ utan inloggning: lösenordsrutan', !!(await f.$('#losen')), url(f));
+  koll('förälder utan admin: ingen ⇄', await f.$eval('#vaxla', e => e.hidden));
 
   console.log(fel ? `\n${fel} FEL` : '\nALLT GRÖNT');
   console.log('sidfel:', errs.length ? errs : 'inga');

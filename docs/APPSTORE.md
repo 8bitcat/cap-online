@@ -138,12 +138,11 @@ Diagnostics, Usage Data för analys, Sensitive Info, Contacts.
 ```
 CAP is the companion app for the families who train football (soccer) with coach Haris Skenderovic at Complete Athletic Performance in Sweden. The app is in Swedish.
 
-Parents do not sign up themselves: the coach adds each family in his client register and sends them a login link by text message. For review we have created a demo family account.
+Parents do not sign up themselves: the coach adds each family with the parent's mobile number and sends a one-time code by text message. The parent signs in with the mobile number and the code, and then chooses a password. For review we have created a demo family account that already has a password.
 
 How to sign in:
-1. Open the app and tap "Förälder" (Parent).
-2. Tap "Har du valt en egen kod? Logga in med mobilnummer och kod" (sign in with mobile number and code).
-3. Enter the mobile number and code from the Sign-in Information fields and tap "Logga in".
+1. Open the app. The first screen is "Logga in" (Sign in).
+2. Enter the mobile number ("Mobilnummer") and password ("Lösenord") from the Sign-in Information fields and tap "Logga in".
 
 What to try:
 - "Med Haris" (With Haris, bottom bar): pick a free time slot in an open week and confirm it. The app then offers to pay with Swish, or to use a session from the family's prepaid package/balance.
@@ -155,7 +154,7 @@ What to try:
 
 Payments: The sessions are physical, in-person football training sessions with the coach, consumed outside the app. Payment is made with Swish (the Swedish bank payment app) by opening Swish with the amount prefilled; the app never handles card or bank details. Under guideline 3.1.3(e) (goods and services outside of the app) in-app purchase is not used. There are no digital goods or subscriptions for sale.
 
-The "Admin" card on the first screen and the "⇄ Haris" button in the top bar lead to the coach's admin view, which is protected by the coach's password and only used by the coach.
+The coach signs in on the same screen with his e-mail address and the admin password, and then gets the coach's admin view (client register, time slots, sessions). It is only used by the coach and is not needed to review the parent features.
 
 The app is built and published by Carl Pålsson (8bitcat) on behalf of Complete Athletic Performance, with the owner's permission (see attached letter).
 ```

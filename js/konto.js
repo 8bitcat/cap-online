@@ -2,15 +2,17 @@
 // Föräldern loggar in med sitt mobilnummer och får en engångskod som sms (avsändare CapSwe). Har man väl loggat in
 // förblir man inloggad. Utan sms-tjänst: länken låter föräldern välja en egen kod (4–6 siffror), sedan nummer + kod.
 import { store } from './store.js';
-import { loggaInMedKod, loggaInMedTelefon, sattPin, glomtKod, smsBeKod, smsVerifiera, statusNu } from './api.js';
+import { loggaInMedKod, loggaIn, sattLosen, glomtKod, statusNu } from './api.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const visaTel = t => { if (!t) return ''; let s = String(t); if (s.startsWith('+46')) s = '0' + s.slice(3); const m = /^(0\d{2})(\d{3})(\d{2})(\d{2})$/.exec(s); return m ? `${m[1]}-${m[2]} ${m[3]} ${m[4]}` : s; };
 let senast = { telefon: '' };
 try { senast.telefon = localStorage.getItem('cap_tel') || ''; } catch { /* ok */ }
-let smsSteg = null; // { telefon, skickad, vanta } medan föräldern väntar på koden
-let tick = null;
 
+// Inloggningen (Carl 2026-11-16): "för att komma in krävs ett login, en snygg login-skärm, man ska kunna logga in
+// direkt med en kod från sms:et. Användarnamnet blir ens mobilnummer … det första som ska hända när man loggar in via
+// koden är att man sätter ett lösenord. Haris loggar in med sin e-postadress och får då admin-kontot."
+const logga = () => `<div class="login-logga"><img src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance"></div>`;
 const hero = (rubrik, text) => `
   <section class="hero" style="padding-top:40px">
     <img class="hero-logo" src="assets/cap-logo.png" alt="CAP – Complete Athletic Performance">
@@ -18,125 +20,81 @@ const hero = (rubrik, text) => `
     <h1>${rubrik}</h1>
     <p class="lead">${text}</p>
   </section>`;
-const nyHos = () => `
-  <section class="panel">
-    <h3>Ny hos Haris?</h3>
-    <p class="small muted" style="margin:0">Haris lägger in ert mobilnummer och skickar två sms: ett där du hämtar appen och ett som loggar in dig. <a data-action="gast" href="#/">Prova utan konto</a></p>
-  </section>
-  <p class="small muted" style="text-align:center;margin-top:24px"><a href="#/admin">Admin</a> · för Haris och Carl</p>`;
-const kodFalt = (namn, etikett, extra = '') => `<div class="field"><label for="${namn}">${etikett}</label><input type="password" id="${namn}" name="${namn === 'pin2' ? 'pin2' : 'pin'}" inputmode="numeric" pattern="[0-9]*" maxlength="6" ${extra} style="font-size:22px;letter-spacing:.3em;text-align:center;font-weight:700"></div>`;
+const losenFalt = (id, namn, etikett, extra = '') => `<div class="field"><label for="${id}">${etikett}</label>
+  <div class="losen-rad"><input type="password" id="${id}" name="${namn}" ${extra}><button type="button" class="visa-losen" data-visa="${id}" aria-label="Visa lösenordet">Visa</button></div></div>`;
 
-export function loginPage({ fel = '', telefon = senast.telefon, lage = '', kod = '', info = '' } = {}) {
-  const felRad = fel ? `<div class="note warn small" style="margin:0 0 12px">${esc(fel)}</div>` : '';
-  const infoRad = info ? `<div class="note small" style="margin:0 0 12px">${esc(info)}</div>` : '';
-  const sms = statusNu().sms;
+export function loginPage({ fel = '', anv = senast.telefon, lage = '', info = '' } = {}) {
+  const felRad = fel ? `<div class="note warn small" style="margin:0 0 14px">${esc(fel)}</div>` : '';
+  const infoRad = info ? `<div class="note small" style="margin:0 0 14px">${esc(info)}</div>` : '';
   if (lage === 'glomt') return `
-  ${hero('Glömt koden?', 'Skriv ditt mobilnummer så skickar Haris en ny inloggningslänk.')}
-  <section class="panel">
-    ${felRad}${infoRad}
-    <form data-form="glomt">
-      <div class="field"><label for="gtel">Mobilnummer</label><input type="tel" id="gtel" name="telefon" value="${esc(telefon)}" placeholder="070-123 45 67" autocomplete="tel" required></div>
-      <button class="btn grad block" type="submit">Skicka ny länk</button>
-    </form>
-    <p class="small muted" style="margin:12px 0 0"><a href="#/login">‹ Tillbaka till inloggningen</a></p>
-  </section>`;
-  // Koden ur inloggnings-sms:et (samma kod som i länken), när länken inte öppnar appen
-  const kodForm = `
-    <form data-form="kod">
-      <div class="field">
-        <label for="kod">Koden från sms:et</label>
-        <input type="text" id="kod" name="kod" value="${esc(kod)}" placeholder="ABC-234" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="7" required style="font-size:26px;letter-spacing:.2em;text-align:center;font-weight:800;text-transform:uppercase">
-      </div>
-      <button class="btn grad block" type="submit">Logga in</button>
-    </form>`;
-  const iApp = !!window.Capacitor?.isNativePlatform?.();
-  if (lage === 'kod' || (!sms && lage !== 'pin')) return `
-  ${hero(iApp ? 'Logga in i appen' : 'Välkommen', 'Tryck på inloggningslänken i sms:et från Haris, så loggas du in. Du kan också skriva koden från sms:et här.')}
-  <section class="panel">
-    ${felRad}${infoRad}
-    ${kodForm}
-    <p class="small muted" style="margin:12px 0 0;text-align:center">${sms ? '<a href="#/login">Logga in med mobilnummer och sms-kod</a>' : '<a href="#/login/pin">Har du valt en egen kod? Logga in med mobilnummer och kod</a>'}</p>
-  </section>
-  ${nyHos()}`;
-
-  // Sms-inloggning: steg 2, skriv koden
-  if (sms && lage !== 'pin' && smsSteg) return `
-  ${hero('Skriv koden', `Vi skickade en kod med sex siffror till <b>${esc(visaTel(smsSteg.telefon) || smsSteg.telefon)}</b>. Den kommer från CapSwe.`)}
-  <section class="panel">
-    ${felRad}${infoRad}
-    <form data-form="sms-kod">
-      <div class="field"><label for="smskod">Kod från sms:et</label><input type="text" id="smskod" name="kod" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" required placeholder="••••••" style="font-size:26px;letter-spacing:.4em;text-align:center;font-weight:800"></div>
-      <button class="btn grad block" type="submit">Logga in</button>
-    </form>
-    <div class="btn-row two" style="margin-bottom:0">
-      <button class="btn secondary" data-action="sms-ny" id="smsNy" disabled>Skicka ny kod <span id="smsVanta"></span></button>
-      <button class="btn secondary" data-action="sms-andra">Ändra nummer</button>
-    </div>
-  </section>`;
-  // Sms-inloggning: steg 1, mobilnumret
-  if (sms && lage !== 'pin') return `
-  ${hero('Välkommen', 'Logga in med ditt mobilnummer. Du får en kod som sms, och sedan är du inloggad på den här telefonen.')}
-  <section class="panel">
-    ${felRad}${infoRad}
-    <form data-form="sms-skicka">
-      <div class="field"><label for="stel">Mobilnummer</label><input type="tel" id="stel" name="telefon" value="${esc(telefon)}" placeholder="070-123 45 67" autocomplete="tel" required></div>
-      <button class="btn grad block" type="submit">Skicka kod</button>
-    </form>
-    <p class="small muted" style="margin:12px 0 0;text-align:center"><a href="#/login/kod">Har du en kod från Haris? Skriv den här</a></p>
-  </section>
-  ${nyHos()}`;
-  // Mobilnummer + egen kod (valfri, väljs under Mer)
+  <div class="login-skarm">
+    ${logga()}
+    <section class="login-kort">
+      <h1>Glömt lösenordet?</h1>
+      <p class="muted small">Skriv ditt mobilnummer. Haris får ett meddelande och skickar ett sms med en ny kod. Logga in med koden och välj ett nytt lösenord.</p>
+      ${felRad}${infoRad}
+      <form data-form="glomt">
+        <div class="field"><label for="gtel">Mobilnummer</label><input type="tel" id="gtel" name="telefon" value="${esc(String(anv).includes('@') ? '' : anv)}" placeholder="070-123 45 67" autocomplete="tel" required></div>
+        <button class="btn grad block stor" type="submit">Be om en ny kod</button>
+      </form>
+      <p class="small" style="margin:14px 0 0;text-align:center"><a href="#/login">‹ Tillbaka till inloggningen</a></p>
+    </section>
+  </div>`;
   return `
-  ${hero('Egen kod', 'Logga in med ditt mobilnummer och koden du valt under Mer. Första gången: tryck på inloggningslänken i sms:et från Haris.')}
-  <section class="panel">
-    ${felRad}${infoRad}
-    <form data-form="login-tel">
-      <div class="field"><label for="ltel">Mobilnummer</label><input type="tel" id="ltel" name="telefon" value="${esc(telefon)}" placeholder="070-123 45 67" autocomplete="tel" required></div>
-      ${kodFalt('lpin', 'Din kod', 'placeholder="4–6 siffror" autocomplete="current-password" required')}
-      <button class="btn grad block" type="submit">Logga in</button>
-    </form>
-    <p class="small" style="margin:12px 0 0;text-align:center"><a href="#/login">‹ ${sms ? 'Logga in med sms-kod' : 'Logga in med koden från sms:et'}</a> · <a href="#/login/glomt">Glömt koden?</a></p>
-  </section>
-  ${nyHos()}`;
+  <div class="login-skarm">
+    ${logga()}
+    <section class="login-kort">
+      <h1>Logga in</h1>
+      <p class="muted small" style="margin-top:-4px">Träning, bokning och utveckling hos Haris.</p>
+      ${felRad}${infoRad}
+      <form data-form="login" autocomplete="on">
+        <div class="field"><label for="anv">Mobilnummer</label><input type="text" id="anv" name="anvandare" value="${esc(anv)}" placeholder="070-123 45 67" autocomplete="username" inputmode="tel" autocapitalize="off" spellcheck="false" required></div>
+        ${losenFalt('losen', 'losen', 'Lösenord', 'autocomplete="current-password" required placeholder="Ditt lösenord"')}
+        <p class="hint-rad small">Första gången? Skriv <b>koden från sms:et</b> från Haris som lösenord. Sedan väljer du ett eget.</p>
+        <button class="btn grad block stor" type="submit">Logga in</button>
+      </form>
+      <p class="small" style="margin:14px 0 0;text-align:center"><a href="#/login/glomt">Glömt lösenordet?</a></p>
+    </section>
+    <p class="login-fot small muted">Ny hos Haris? Han lägger in ditt mobilnummer och skickar ett sms med koden.<br>Haris loggar in med sin e-postadress.</p>
+  </div>`;
 }
 
-// Väntetiden innan "Skicka ny kod" går att trycka, och att koden skickas så fort sex siffror skrivits (autofyll)
-export function kontoAfterRender(view, submit) {
-  clearInterval(tick);
-  const knapp = view.querySelector('#smsNy');
-  if (knapp && smsSteg) {
-    const draw = () => {
-      const kvar = Math.max(0, Math.ceil((smsSteg.skickad + (smsSteg.vanta || 45) * 1000 - Date.now()) / 1000));
-      const s = view.querySelector('#smsVanta'); if (s) s.textContent = kvar ? `(${kvar})` : '';
-      knapp.disabled = kvar > 0;
-      if (!kvar) clearInterval(tick);
-    };
-    draw(); tick = setInterval(draw, 500);
-  }
-  const falt = view.querySelector('#smskod');
-  if (falt) {
-    setTimeout(() => falt.focus(), 50);
-    falt.addEventListener('input', () => { const v = falt.value.replace(/\D/g, ''); if (v !== falt.value) falt.value = v; if (v.length === 6) falt.form.requestSubmit(); });
+// Visa/dölj lösenordet, och tangentbordet följer det man skriver (siffror för mobilnummer, bokstäver för e-post)
+export function kontoAfterRender(view) {
+  view.querySelectorAll('[data-visa]').forEach(b => b.addEventListener('click', () => {
+    const f = view.querySelector('#' + b.dataset.visa); if (!f) return;
+    const visa = f.type === 'password'; f.type = visa ? 'text' : 'password'; b.textContent = visa ? 'Dölj' : 'Visa';
+  }));
+  const anv = view.querySelector('#anv');
+  if (anv) {
+    const lab = view.querySelector('label[for=anv]');
+    const satt = () => { const epost = /[a-z@]/i.test(anv.value); anv.inputMode = epost ? 'email' : 'tel'; if (lab) lab.textContent = epost ? 'E-post' : 'Mobilnummer'; };
+    anv.addEventListener('input', satt); satt();
   }
 }
-export function kontoStop() { clearInterval(tick); }
+export function kontoStop() { /* inget att stoppa */ }
 
-// Välj (ny) egen kod efter länken, eller byt kod under Mer (bara när sms är av)
-export function pinPage({ fel = '' } = {}) {
-  const u = store.session?.user;
+// Välj lösenord: direkt efter inloggning med sms-koden (måste), eller Byt lösenord under Mer
+export function losenPage({ fel = '' } = {}) {
+  const s = store.session, u = s?.user;
   if (!u) return null;
-  const forsta = !u.harPin;
+  const maste = !!s.nyttLosen;
   return `
-  ${hero(forsta ? 'Egen kod' : 'Välj en ny kod', forsta ? `Valfritt. Med en egen kod, fyra till sex siffror, kan du logga in med <b>${esc(visaTel(u.telefon))}</b> på en ny telefon utan att be Haris om en ny länk.` : 'Fyra till sex siffror. Den gamla slutar gälla direkt.')}
-  <section class="panel">
-    ${fel ? `<div class="note warn small" style="margin:0 0 12px">${esc(fel)}</div>` : ''}
-    <form data-form="pin">
-      ${kodFalt('pin1', 'Kod', 'minlength="4" required autocomplete="new-password"')}
-      ${kodFalt('pin2', 'Samma kod igen', 'minlength="4" required autocomplete="new-password"')}
-      <button class="btn grad block" type="submit">${forsta ? 'Spara koden och börja' : 'Byt kod'}</button>
-    </form>
-    <p class="small muted" style="margin:12px 0 0;text-align:center"><a href="#/mer">${forsta ? 'Inte nu' : 'Avbryt'}</a></p>
-  </section>`;
+  <div class="login-skarm">
+    ${logga()}
+    <section class="login-kort">
+      <h1>${maste ? 'Välj ditt lösenord' : 'Byt lösenord'}</h1>
+      <p class="muted small">${maste ? `Du loggade in med koden från sms:et. Välj nu ett eget lösenord. Nästa gång loggar du in med ditt mobilnummer <b>${esc(visaTel(u.telefon))}</b> och lösenordet.` : 'Minst sex tecken. Det gamla slutar gälla direkt.'}</p>
+      ${fel ? `<div class="note warn small" style="margin:0 0 14px">${esc(fel)}</div>` : ''}
+      <form data-form="losen">
+        <input type="text" name="anvandare" value="${esc(visaTel(u.telefon))}" autocomplete="username" hidden>
+        ${losenFalt('losen1', 'losen', 'Nytt lösenord', 'minlength="6" required autocomplete="new-password" placeholder="Minst sex tecken"')}
+        ${losenFalt('losen2', 'losen2', 'Samma lösenord igen', 'minlength="6" required autocomplete="new-password"')}
+        <button class="btn grad block stor" type="submit">${maste ? 'Spara och fortsätt' : 'Byt lösenord'}</button>
+      </form>
+      ${maste ? '' : '<p class="small" style="margin:14px 0 0;text-align:center"><a href="#/mer">Avbryt</a></p>'}
+    </section>
+  </div>`;
 }
 
 // Hämta appen: länken i sms:et leder hit efter inloggningen (Carl: "länken till det numret, för att ladda ner appen")
@@ -161,20 +119,17 @@ export function appPage() {
   <section class="btn-row"><a class="btn secondary block" href="#/">${native ? 'Till appen' : 'Fortsätt i webbläsaren'} ›</a></section>`;
 }
 
-// #/k/KOD – länken ur sms:et loggar in direkt; utan sms väljer man egen kod, annars visas Hämta appen
-// Länken loggar in direkt – i appen (via caponline://k/KOD eller cap.8bitcat.io/k/KOD) eller i webbläsaren.
-// Första gången leder startsidan vidare till barnets namn och födelseår.
+// #/k/KOD – länken ur sms:et loggar in direkt (i appen eller i webbläsaren), och sedan väljer man lösenord
 export async function loggaInViaLank(kod, { toast, go }) {
   const r = await loggaInMedKod(kod);
   if (!r.ok) { toast(r.fel || 'Länken fungerade inte'); return go('/login'); }
-  efterInloggning(r.user, { toast });
-  go('/');
+  efterInloggning(r.user, { toast, tyst: true });
+  go(r.nyttLosen ? '/losen' : '/');
 }
 
 export function efterInloggning(user, { toast, tyst = false } = {}) {
   store.guest = false;
   store.proto = 'app';
-  smsSteg = null;
   if (user?.telefon) { senast.telefon = visaTel(user.telefon); try { localStorage.setItem('cap_tel', senast.telefon); } catch { /* ok */ } }
   // registrets uppgifter förifyller startguiden (barnets namn, efternamn, födelseår, position)
   if (!store.profile) {
@@ -188,63 +143,36 @@ export function efterInloggning(user, { toast, tyst = false } = {}) {
   if (!tyst) toast(`Välkommen${user?.namn ? ', ' + user.namn : ''}!`);
 }
 
-// Inloggningens knappar som inte är formulär
-export async function kontoAction(action, el, { toast, render }) {
-  if (action === 'sms-andra') { smsSteg = null; render(loginPage()); return true; }
-  if (action === 'sms-ny') {
-    if (!smsSteg) return true;
-    el.disabled = true;
-    const r = await smsBeKod(smsSteg.telefon);
-    if (!r.ok) { render(loginPage({ fel: r.fel || 'Gick inte att skicka' })); return true; }
-    smsSteg = { ...smsSteg, skickad: Date.now(), vanta: r.vantaSek || 45 };
-    render(loginPage({ info: 'En ny kod är skickad.' })); return true;
-  }
-  return false;
-}
+export async function kontoAction() { return false; }
 
 // Inloggningsformulären. render(html) ritar om sidan med fel eller besked.
 export async function kontoSubmit(kind, f, fd, { toast, go, render }) {
-  const btn = f.querySelector('button[type=submit]'); const txt = btn.textContent; btn.disabled = true; btn.textContent = 'Kontrollerar…';
+  const btn = f.querySelector('button[type=submit]'); const txt = btn.textContent; btn.disabled = true; btn.textContent = kind === 'losen' ? 'Sparar…' : 'Loggar in…';
   const ater = () => { btn.disabled = false; btn.textContent = txt; };
-  if (kind === 'sms-skicka') {
-    const telefon = fd.get('telefon');
-    const r = await smsBeKod(telefon);
-    if (!r.ok) { ater(); render(loginPage({ telefon, fel: r.fel || 'Gick inte att skicka koden' })); return; }
-    senast.telefon = telefon; try { localStorage.setItem('cap_tel', telefon); } catch { /* ok */ }
-    smsSteg = { telefon, skickad: Date.now(), vanta: r.vantaSek || 45 };
-    render(loginPage()); return;
-  }
-  if (kind === 'sms-kod') {
-    const r = await smsVerifiera(smsSteg?.telefon || senast.telefon, fd.get('kod'));
-    if (!r.ok) { ater(); render(loginPage({ fel: r.fel || 'Fel kod' })); return; }
-    efterInloggning(r.user, { toast }); go('/'); return;
-  }
-  if (kind === 'login-tel') {
-    const telefon = fd.get('telefon');
-    const r = await loggaInMedTelefon(telefon, fd.get('pin'));
-    if (!r.ok) { ater(); render(loginPage({ lage: 'pin', telefon, fel: r.fel || 'Gick inte att logga in' })); return; }
-    efterInloggning(r.user, { toast }); go('/'); return;
+  if (kind === 'login') {
+    const anv = String(fd.get('anvandare') || '').trim();
+    const r = await loggaIn(anv, fd.get('losen'));
+    if (!r.ok) { ater(); render(loginPage({ anv, fel: r.fel || 'Gick inte att logga in' })); return; }
+    if (r.admin) { toast('Välkommen, Haris!'); go('/admin/klienter'); return; }
+    efterInloggning(r.user, { toast, tyst: !!r.nyttLosen });
+    go(r.nyttLosen ? '/losen' : '/'); return;
   }
   if (kind === 'glomt') {
     const telefon = fd.get('telefon');
     const r = await glomtKod(telefon);
     ater();
-    if (!r.ok) { render(loginPage({ lage: 'glomt', telefon, fel: r.fel || 'Gick inte' })); return; }
+    if (!r.ok) { render(loginPage({ lage: 'glomt', anv: telefon, fel: r.fel || 'Gick inte' })); return; }
     senast.telefon = telefon; try { localStorage.setItem('cap_tel', telefon); } catch { /* ok */ }
-    render(loginPage({ telefon, info: r.meddelande || 'En ny länk är på väg.' })); return;
+    render(loginPage({ anv: telefon, info: r.meddelande || 'En ny kod är på väg.' })); return;
   }
-  if (kind === 'kod') {
-    const r = await loggaInMedKod(fd.get('kod'));
-    if (!r.ok) { ater(); render(loginPage({ lage: 'kod', kod: fd.get('kod'), fel: r.fel || 'Koden fungerade inte' })); return; }
-    efterInloggning(r.user, { toast }); go('/'); return;
-  }
-  if (kind === 'pin') {
-    const pin = String(fd.get('pin') || ''), pin2 = String(fd.get('pin2') || '');
-    if (!/^\d{4,6}$/.test(pin)) { ater(); render(pinPage({ fel: 'Koden ska vara fyra till sex siffror.' })); return; }
-    if (pin !== pin2) { ater(); render(pinPage({ fel: 'Koderna är inte lika, skriv samma kod två gånger.' })); return; }
-    const r = await sattPin(pin);
-    if (!r.ok) { ater(); render(pinPage({ fel: r.fel || 'Gick inte att spara koden' })); return; }
-    toast('Koden är sparad. Logga in med mobilnumret och koden nästa gång.');
+  if (kind === 'losen') {
+    const l1 = String(fd.get('losen') || ''), l2 = String(fd.get('losen2') || '');
+    if (l1.length < 6) { ater(); render(losenPage({ fel: 'Lösenordet ska vara minst sex tecken.' })); return; }
+    if (l1 !== l2) { ater(); render(losenPage({ fel: 'Lösenorden är inte lika. Skriv samma två gånger.' })); return; }
+    const forsta = !!store.session?.nyttLosen;
+    const r = await sattLosen(l1);
+    if (!r.ok) { ater(); render(losenPage({ fel: r.fel || 'Gick inte att spara lösenordet' })); return; }
+    toast(forsta ? 'Lösenordet är sparat. Välkommen till CAP!' : 'Lösenordet är bytt');
     go(store.profile ? '/' : '/start/1'); return;
   }
   ater();
@@ -253,6 +181,5 @@ export async function kontoSubmit(kind, f, fd, { toast, go, render }) {
 export function kontoRad() {
   const s = store.session;
   if (s?.user) return `<span class="small muted">Inloggad som <b>${esc(s.user.telefon ? visaTel(s.user.telefon) : s.user.email)}</b></span> · <a data-action="logga-ut" href="#/login">Logga ut</a>`;
-  if (store.guest) return `<span class="small muted">Du provar utan konto.</span> · <a href="#/login">Logga in</a>`;
   return '';
 }

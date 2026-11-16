@@ -28,7 +28,7 @@ const TEL = '070-333 44 55';
 
   // ---- meddelandet och länken (modulen direkt) ----
   const a = await nyFlik('admin', { viewport: { width: 1280, height: 900 } });
-  await a.goto(base + 'index.html#/admin', { waitUntil: 'networkidle' });
+  await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
   const u = await a.evaluate(async () => {
     const s = await import('./js/swish.js');
     return {
@@ -44,7 +44,7 @@ const TEL = '070-333 44 55';
   koll('bokningens meddelande', u.bok === 'CAP Åsa Öberg 3 nov kl 17.00', u.bok);
 
   // ---- Haris: Swish-nummer och pris i Admin → Mer ----
-  await a.fill('#losen', 'testlosen'); await a.click('form[data-form=admin-login] button');
+  await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
   await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(1500);
   await a.goto(base + 'index.html#/admin/mer'); await a.waitForSelector('form[data-form=admin-betalning]', { timeout: 10000 });
   await a.fill('form[data-form=admin-betalning] input[name=swish]', '12345'); await a.fill('form[data-form=admin-betalning] input[name=pris]', '300');
@@ -66,10 +66,10 @@ const TEL = '070-333 44 55';
   await a.goto(base + 'index.html#/admin/klient/ny'); await a.waitForSelector('#ktel'); await a.click('.mer-om summary');
   await a.fill('#kforalder', 'Sara'); await a.fill('#ktel', TEL);
   await a.click('form[data-form=klient-ny] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klient\/k[a-z0-9]+$/, { timeout: 15000 }); await a.waitForSelector('.sms-steg .msg', { state: 'attached', timeout: 10000 });
+  await a.waitForURL(/#\/admin\/klient\/k[a-z0-9]+$/, { timeout: 15000 }); await a.waitForSelector('#inloggning .kod-stor b', { timeout: 10000 });
   const kid = url(a).split('/').pop();
-  const loggaText = await a.$$eval('.sms-steg', ss => ss.map(s => s.querySelector('.msg')?.textContent || '').join('\n'));
-  const kod = (loggaText.match(/\/k\/([A-Z0-9]+)/) || [])[1];
+  const loggaText = await a.$eval('#inloggning .msg', e => e.textContent).catch(() => '');
+  const kod = (await a.$eval('#inloggning .kod-stor b', e => e.textContent)).replace(/\D/g, '');
   koll('kund med inloggningslänk', !!kod, kod);
   await a.goto(base + 'index.html#/admin/tider'); await a.waitForSelector('.vecka-titel', { timeout: 10000 });
   await a.click('[data-action=tid-vecka]:last-of-type'); await a.waitForTimeout(400);
@@ -80,7 +80,7 @@ const TEL = '070-333 44 55';
 
   // ---- föräldern: loggar in, barnets namn, bokar ----
   const f = await nyFlik('förälder', devices['iPhone 13']);
-  await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' }); await f.waitForSelector('#name', { timeout: 15000 });
+  await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' }); await f.waitForSelector('#losen1', { timeout: 15000 }); await f.fill('#losen1', 'hemligt1'); await f.fill('#losen2', 'hemligt1'); await f.click('form[data-form=losen] button[type=submit]'); await f.waitForSelector('#name', { timeout: 15000 });
   await f.fill('#name', 'Alva'); await f.fill('#efternamn', 'Lind'); await f.selectOption('#fodd', String(new Date().getFullYear() - 10));
   await f.click('form[data-form=wiz1] button'); await f.waitForTimeout(1500);
   await f.goto(base + 'index.html#/boka'); await f.waitForSelector('.tid', { timeout: 10000 });

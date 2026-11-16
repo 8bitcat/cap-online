@@ -37,8 +37,8 @@ const TOK_FORALDER = 'a'.repeat(64), TOK_HARIS = 'b'.repeat(64), TOK_ANNAN = 'c'
 
   // ---- Haris: pris, en kund med eget pris 500 kr ----
   const a = await nyFlik('haris', { viewport: { width: 1280, height: 900 } });
-  await a.goto(base + 'index.html#/admin', { waitUntil: 'networkidle' });
-  await a.fill('#losen', 'testlosen'); await a.click('form[data-form=admin-login] button');
+  await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
+  await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
   await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(800);
   const tok = await a.evaluate(() => JSON.parse(localStorage.getItem('caponline.v3') || '{}').admin);
   const adm = (metod, p, data) => fetch(API + p, { method: metod, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }).then(r => r.json());
@@ -51,7 +51,7 @@ const TOK_FORALDER = 'a'.repeat(64), TOK_HARIS = 'b'.repeat(64), TOK_ANNAN = 'c'
 
   // ---- föräldern loggar in; telefonerna kopplas: föräldern, Haris och en annan förälder utan inloggning ----
   const f = await nyFlik('förälder', devices['iPhone 13']);
-  await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' });
+  await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' }); await f.waitForSelector('#losen1', { timeout: 15000 }); await f.fill('#losen1', 'hemligt1'); await f.fill('#losen2', 'hemligt1'); await f.click('form[data-form=losen] button[type=submit]');
   await f.waitForFunction(() => document.querySelector('#name') || document.querySelector('.greet'), null, { timeout: 15000 });
   if (await f.$('#name')) { await f.selectOption('#fodd', '2015'); await f.click('form[data-form=wiz1] button'); }
   await f.waitForSelector('.greet', { timeout: 15000 });
@@ -172,8 +172,8 @@ const TOK_FORALDER = 'a'.repeat(64), TOK_HARIS = 'b'.repeat(64), TOK_ANNAN = 'c'
   await f.goto(base + 'index.html#/radera'); await f.waitForSelector('[data-action=konto-radera]');
   koll('raderasidan varnar för pengarna i potten', (await text(f, '#view')).includes('16 000 kr kvar i potten'), (await text(f, '#view')).slice(0, 300));
   await f.click('[data-action=konto-radera]'); await f.click('[data-action=konto-radera]');
-  await f.waitForURL(/#\/valkommen/, { timeout: 10000 }).catch(() => {});
-  koll('kontot raderat, tillbaka till välkomstsidan', /valkommen/.test(f.url()));
+  await f.waitForURL(/#\/login/, { timeout: 10000 }).catch(() => {});
+  koll('kontot raderat, tillbaka till inloggningen', /login/.test(f.url()));
   pl = await vantaPush(l => l.length >= 1);
   koll('Haris får notis om raderingen med potten', till(pl, TOK_HARIS).some(x => x.title === 'Konto raderat' && x.text.includes('16 000 kr kvar i potten')), JSON.stringify(pl).slice(0, 200));
   const lista = await adm('GET', '/admin/klienter');

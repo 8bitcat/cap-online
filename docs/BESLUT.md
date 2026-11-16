@@ -3,6 +3,25 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-11-16 – v1.1.0: ny första sida med inloggning, lösenord, Haris loggar in med e-post
+
+- **Inloggning krävs.** Carl: "för att komma in krävs ett login, det ska vara en snygg login-skärm". Första sidan
+  "Vem är du?" och "Prova utan konto" är borta. En inloggningssida för alla: Mobilnummer + Lösenord.
+- **Mobilnumret är användarnamnet, koden ur sms:et är första lösenordet.** Carl: "Haris skapar användaren när han
+  gör sitt sms, och den koden man får är ens login. Det första som ska hända när man loggar in via koden är att man
+  sätter ett lösenord." Koden är nu sex siffror (lättare att skriva på telefonen). Efter inloggning med koden
+  kommer "Välj ditt lösenord" (minst sex tecken), och inget annat går innan det är gjort. När lösenordet är valt
+  slutar koden och länken gälla.
+- **Ett sms i stället för två:** länken till appen, mobilnumret och koden. Länken /k/KOD fungerar fortfarande.
+- **Haris loggar in med sin e-post** och adminlösenordet och får adminvyn. Adresserna står i Admin → Mer → "Inloggning
+  för Haris" (config:admins). Haris.skenderovic@outlook.com är inlagd **(antagande: den adress Carl gav som Haris
+  Apple-ID)**. Alla som loggar in med mobilnummer är föräldrar. ⇄ syns bara på en telefon som är inloggad både som
+  Haris och som förälder.
+- **Glömt lösenordet:** föräldern ber om en ny kod, Haris får en notis och ser "Föräldern har glömt lösenordet" på
+  klientsidan med en ny kod att skicka. Gamla egna koder (4–6 siffror) fungerar som lösenord tills man byter.
+- Test: `tools/login-test.js` (hela flödet med Jennifer och Elijah), och pott-, paket-, swish- och övningstesterna
+  är anpassade.
+
 ## 2026-11-13 – v1.0.0: pott med pengar, notiser till rätt telefon, redo för App Store
 
 - **Pott (eget avtal).** Carl: "lägga in en pott. Först lägger man en pott med pengar, sen ska det dras av ifrån

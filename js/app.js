@@ -3,7 +3,7 @@ import { VERSION } from './version.js';
 import { notisStod, paminnDagar, paminnSatt, pushSatt, paminnUppdatera, testaLokal, testaPush, pushLyssna, pushAuto } from './notiser.js';
 import { loggaUt, hamtaFilmer, filmerNu } from './api.js';
 import { kr } from './swish.js';
-import { loginPage, pinPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
+import { loginPage, losenPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
 import { serverStatus, statusNu, sparaBarn } from './api.js';
 import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar } from './admin.js';
 import { bokaInit, minaPassPage, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu, veckorGlom } from './boka.js';
@@ -120,13 +120,13 @@ function kvar() { const h = location.hash; return () => { if (location.hash === 
 
 const routes = [
   [/^\/?$/, home],
-  [/^\/valkommen$/, valkommenPage],
+  [/^\/valkommen$/, () => go('/login')],
   [/^\/login$/, () => loginPage()],
-  [/^\/login\/(glomt|kod|pin)$/, lage => loginPage({ lage })],
+  [/^\/login\/(glomt|kod|pin)$/, lage => loginPage({ lage: lage === 'glomt' ? 'glomt' : '' })],
   [/^\/app$/, appPage],
-  [/^\/pin$/, () => pinPage() || go('/login')],
+  [/^\/(losen|pin)$/, () => losenPage() || go('/login')],
   [/^\/k\/([A-Za-z0-9-]+)$/, kod => { loggaInViaLank(kod, { toast, go }); return `<section class="empty"><p class="muted">Loggar in…</p></section>`; }],
-  [/^\/admin$/, () => store.admin ? go('/admin/klienter') : adminPage()],
+  [/^\/admin$/, () => go(store.admin ? '/admin/klienter' : '/login')],
   [/^\/admin\/klient\/ny$/, () => adminPage('klienter', 'ny')],
   [/^\/admin\/klient\/([a-z0-9]+)(?:\/(redigera|boka))?$/, (id, lage) => adminPage('klienter', id, lage)],
   [/^\/admin\/pass\/ny\/([a-z0-9]+)$/, kid => adminPage('pass', 'ny', kid)],
@@ -173,8 +173,14 @@ function route() {
   clearInterval(timerHandle);
   stoppaHallTimer(); adminStop(); kontoStop();
   const path = location.hash.replace(/^#/, '') || '/';
-  const oppen = /^\/(valkommen|login|k\/|admin)/.test(path);
-  if (!oppen && !store.session && !store.guest) return go('/valkommen');
+  // Carl 2026-11-16: "för att komma in krävs ett login". Föräldrar (mobilnummer) får föräldravyn, Haris (e-post)
+  // adminvyn. Den som loggat in med sms-koden väljer lösenord innan något annat.
+  const oppen = /^\/(valkommen|login|k\/|app$)/.test(path);
+  if (!oppen && !store.session && !store.admin) return go('/login');
+  if (store.session?.nyttLosen && !/^\/(losen|k\/|login)/.test(path)) return go('/losen');
+  if (path.startsWith('/admin') && !store.admin) return go('/login');
+  if (!oppen && store.admin && !store.session && !path.startsWith('/admin')) return go('/admin/klienter');
+  if (path.startsWith('/login') && (store.session || store.admin) && !store.session?.nyttLosen) return go(store.session ? '/' : '/admin/klienter');
   // Carl 2026-10-28: prototyperna är borttagna, appen som den är nu är föräldravyn
   if (store.proto !== 'app') store.proto = 'app';
   if (!store.profile && path === '/') return go('/start/1');
@@ -198,12 +204,14 @@ function route() {
 function renderTabs() {
   const path = location.hash.replace(/^#/, '') || '/';
   const admin = path.startsWith('/admin');
-  const tabs = admin ? (store.admin ? TABS.admin : null) : /^\/(valkommen|login|k\/|pin)/.test(path) ? null : TABS.app;
+  const tabs = admin ? (store.admin ? TABS.admin : null) : /^\/(valkommen|login|k\/|pin|losen)/.test(path) ? null : TABS.app;
   document.body.classList.toggle('no-tabs', !tabs);
+  document.body.classList.toggle('inloggning', /^\/(login|losen|pin|valkommen)/.test(path));
   document.body.classList.toggle('admin', admin && !!store.admin);
   // Carl 2026-10-28: Haris hittade inte växlingen (han var bara inloggad som Haris i Chrome, inte i appen).
   // ⇄ syns därför alltid; utan Haris inloggning leder den till inloggningen för Haris.
-  vaxla.hidden = path.startsWith('/k/');
+  // ⇄ bara när telefonen är inloggad både som förälder och som Haris (t.ex. Carl som provar)
+  vaxla.hidden = path.startsWith('/k/') || !(store.admin && store.session) || /^\/(login|losen)/.test(path);
   vaxla.querySelector('span').textContent = admin ? 'Förälder' : 'Haris';
   vaxla.title = admin ? 'Växla till föräldravyn' : 'Växla till Haris vy';
   vaxla.setAttribute('aria-label', vaxla.title);
@@ -245,7 +253,7 @@ function afterRender(path) {
   }
   if ($('.hall', view)) startHallTimer();
   const mina = $('#mina', view); if (mina) fyllMina(mina);
-  if (/^\/(login|valkommen)/.test(path)) kontoAfterRender(view);
+  if (/^\/(login|losen|pin)/.test(path)) kontoAfterRender(view);
 }
 
 /* ---------- Spelstatus (härleds ur sparad data) ---------- */
@@ -706,7 +714,7 @@ function merPage() {
     ${rad('/foralder', '💛', 'Föräldraguiden', 'Kommunikation, feedback, motivation')}
     ${rad('/notiser', '🔔', 'Notiser', 'Påminnelser och nyheter från Haris')}
     ${rad('/start/1', '✏️', 'Ändra barnets namn och födelseår', 'Position, drömspelare och mål finns på spelarkortet')}
-    ${store.session?.user?.klientId && !statusNu().sms ? rad('/pin', '🔑', 'Egen inloggningskod', 'Valfritt: logga in med mobilnummer och kod på en ny telefon') : ''}
+    ${store.session?.user?.klientId ? rad('/losen', '🔑', 'Byt lösenord', 'Du loggar in med ditt mobilnummer och lösenordet') : ''}
     ${window.Capacitor?.isNativePlatform?.() ? '' : rad('/app', '📲', 'Hämta appen', 'Lägg CAP på telefonens hemskärm')}
   </section>
   <p class="small muted" style="text-align:center;margin-top:24px">${kontoRad()}</p>
@@ -1645,7 +1653,7 @@ async function onAction(e) {
     if (!r.ok) { el.disabled = false; toast(r.fel || 'Gick inte att radera'); return; }
     store.session = null; store.guest = false;
     store.notiser = { ...store.notiser, kopplad: null };
-    toast('Kontot är raderat'); go('/valkommen'); return;
+    toast('Kontot är raderat'); go('/login'); return;
   }
   if (action === 'filmer-alla') { e.preventDefault(); location.hash = location.hash.includes('alla') ? '#/filmer' : '#/filmer?alla'; route(); return; }
   if (action === 'add') { const b = snapshot(); store.add(id); celebrate(b, 'Tillagt i ditt bibliotek'); route(); }
@@ -1690,7 +1698,7 @@ async function onSubmit(e) {
   const fd = new FormData(f);
   const kind = f.dataset.form;
   if (kind.startsWith('admin') || kind.startsWith('tid-') || kind.startsWith('pass-') || kind.startsWith('klient-')) { await adminSubmit(kind, f, fd); return; }
-  if (['kod', 'login-tel', 'glomt', 'pin', 'sms-skicka', 'sms-kod'].includes(kind)) {
+  if (['login', 'glomt', 'losen'].includes(kind)) {
     const path = location.hash.replace(/^#/, '') || '/';
     await kontoSubmit(kind, f, fd, { toast, go, render: html => { view.innerHTML = html; afterRender(path); } });
     return;
@@ -1798,11 +1806,11 @@ async function boot() {
   if (bell) bell.addEventListener('click', () => go('/notiser'));
   // Kallstart utan adress: inloggad förälder hamnar direkt på startsidan (man förblir inloggad, Carl 2026-10-25),
   // annars första sidan med Förälder och Admin
-  if (!location.hash || location.hash === '#/' || location.hash === '#') location.replace(store.session ? '#/' : '#/valkommen');
+  if (!location.hash || location.hash === '#/' || location.hash === '#') location.replace(store.session ? '#/' : store.admin ? '#/admin/klienter' : '#/login');
   kollaNyVersion();
   pushLyssna();
   // sms på/av och länken till appen styr inloggningssidan
-  serverStatus().then(() => { if (/^#\/(login|app|valkommen|mer)/.test(location.hash)) route(); });
+  serverStatus().then(() => { if (/^#\/(app|mer)/.test(location.hash)) route(); });
   // håll sessionen vid liv (servern förlänger den), och släpp den bara om servern säger att den inte finns
   if (store.session?.token) api.get('/auth/me', store.session.token).then(r => {
     if (r.ok) store.session = { ...store.session, user: r.user };

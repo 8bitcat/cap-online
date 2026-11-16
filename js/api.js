@@ -35,7 +35,19 @@ export const api = {
 const kalla = () => (window.Capacitor?.isNativePlatform?.() ? 'app' : 'webb');
 export async function loggaInMedKod(kod) {
   const r = await api.post('/auth/kod', { kod, kalla: kalla() });
-  if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now() };
+  if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now(), nyttLosen: !!r.nyttLosen };
+  return r;
+}
+// En inloggning för alla (Carl 2026-11-16): mobilnummer + lösenord (eller sms-koden första gången), e-post = Haris
+export async function loggaIn(anvandare, losen) {
+  const r = await api.post('/auth/login', { anvandare, losen, kalla: kalla() });
+  if (r.ok && r.admin) store.admin = r.admin;
+  else if (r.ok) store.session = { token: r.token, user: r.user, t: Date.now(), nyttLosen: !!r.nyttLosen };
+  return r;
+}
+export async function sattLosen(losen) {
+  const r = await api.post('/auth/pin', { losen }, store.session?.token);
+  if (r.ok) store.session = { ...store.session, user: r.user, nyttLosen: false };
   return r;
 }
 // Logga in med mobilnummer och den kod föräldern valt
