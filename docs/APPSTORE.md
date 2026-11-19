@@ -8,8 +8,8 @@ Fält med `[HAKPARENTES]` fylls i innan inlämningen.
   eller välj ett befintligt TestFlight-bygge i versionen och skicka in för hand (rekommenderas första gången, se checklistan)
 - Integritetspolicy: https://8bitcat.github.io/cap-online/integritet.html
 - Support: https://8bitcat.github.io/cap-online/support.html
-  (publicerade i v1.0.0. Kontaktmejl och organisationsnummer saknas än, sidorna säger "hör av er till Haris direkt".
-  Fyll i dem där det står `KONTAKT:` i källan innan inlämningen)
+  (kontakt hello@8bitcat.io sedan v1.1.2, samma som Pixelcity. Hjälpsidan har en engelsk del för Apple.
+  Organisationsnummer behövs inte för inlämningen)
 
 ---
 
