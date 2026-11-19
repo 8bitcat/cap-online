@@ -1,0 +1,1633 @@
+{
+ "ovningar": [
+  {
+   "id": "ub1",
+   "namn": "Bollkänsla och första driv",
+   "desc": "Sulan, tårna och in- och utsida på stället, sedan ett lugnt driv över planen med bollen nära.",
+   "typ": "Övning",
+   "tid": 3,
+   "maltid": null,
+   "fas": "Uppvärmning",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Jonglering & bollkänsla",
+    "Driv"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Uppvärmning + bollkontroll",
+    "url": "media/uppvarmning-bollkontroll.mp4",
+    "poster": "assets/posters/uppvarmning-bollkontroll.jpg",
+    "start": 1,
+    "slut": 11
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 1 Uppvärmning + bollkontroll, moment 1"
+  },
+  {
+   "id": "ub2",
+   "namn": "In- och utsida i sidled",
+   "desc": "Flytta bollen mellan fötterna och följ med i sidled. Närbilden visar hur nära bollen ska vara.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Uppvärmning",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Jonglering & bollkänsla"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Uppvärmning + bollkontroll",
+    "url": "media/uppvarmning-bollkontroll.mp4",
+    "poster": "assets/posters/uppvarmning-bollkontroll.jpg",
+    "start": 12,
+    "slut": 26
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 1 Uppvärmning + bollkontroll, moment 2"
+  },
+  {
+   "id": "ub3",
+   "namn": "Driv, vändning och riktningsbyte",
+   "desc": "Driv iväg, vänd med sulan eller insidan och driv tillbaka. Byt riktning vid linjen.",
+   "typ": "Övning",
+   "tid": 3,
+   "maltid": null,
+   "fas": "Uppvärmning",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Driv",
+    "Vändningar"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Uppvärmning + bollkontroll",
+    "url": "media/uppvarmning-bollkontroll.mp4",
+    "poster": "assets/posters/uppvarmning-bollkontroll.jpg",
+    "start": 27,
+    "slut": 49
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 1 Uppvärmning + bollkontroll, moment 3"
+  },
+  {
+   "id": "ub4",
+   "namn": "Snabba touch till sist",
+   "desc": "Många snabba touch på kort tid. Avsluta medan det är kul.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Uppvärmning",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Snabba fötter",
+    "Jonglering & bollkänsla"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Uppvärmning + bollkontroll",
+    "url": "media/uppvarmning-bollkontroll.mp4",
+    "poster": "assets/posters/uppvarmning-bollkontroll.jpg",
+    "start": 50,
+    "slut": 66
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 1 Uppvärmning + bollkontroll, moment 4"
+  },
+  {
+   "id": "ft1",
+   "namn": "Mottagning med insidan",
+   "desc": "Haris rullar bollen, barnet tar emot med insidan mellan konerna och spelar tillbaka. Byt fot varannan gång.",
+   "typ": "Övning",
+   "tid": 3,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Första touch",
+    "url": "media/forsta-touch.mp4",
+    "poster": "assets/posters/forsta-touch.jpg",
+    "start": 0,
+    "slut": 13
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 2 Första touch, moment 1"
+  },
+  {
+   "id": "ft2",
+   "namn": "Riktad första touch",
+   "desc": "Ta emot och styr bollen åt sidan i samma touch, spela sedan tillbaka.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Första touch",
+    "url": "media/forsta-touch.mp4",
+    "poster": "assets/posters/forsta-touch.jpg",
+    "start": 14,
+    "slut": 21
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 2 Första touch, moment 2"
+  },
+  {
+   "id": "ft3",
+   "namn": "Längre bollar på avstånd",
+   "desc": "Haris spelar från andra sidan konerna. Barnet möter bollen i rörelse och tar den med sig.",
+   "typ": "Övning",
+   "tid": 3,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Första touch",
+    "url": "media/forsta-touch.mp4",
+    "poster": "assets/posters/forsta-touch.jpg",
+    "start": 22,
+    "slut": 41
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 2 Första touch, moment 3"
+  },
+  {
+   "id": "ft4",
+   "namn": "Dämpa en studsande boll",
+   "desc": "Bollen kastas eller studsar in. Dämpa med insida, lår eller sula och lägg den framför dig.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch"
+   ],
+   "niva": 1,
+   "film": {
+    "namn": "Första touch",
+    "url": "media/forsta-touch.mp4",
+    "poster": "assets/posters/forsta-touch.jpg",
+    "start": 42,
+    "slut": 54
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 2 Första touch, moment 4"
+  },
+  {
+   "id": "pa1",
+   "namn": "Stödfoten bredvid bollen",
+   "desc": "Ställ stödfoten intill bollen med tårna mot målet. Filmen ringar in den.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Passning insida"
+   ],
+   "niva": 2,
+   "film": {
+    "namn": "Passningar",
+    "url": "media/passningar.mp4",
+    "poster": "assets/posters/passningar.jpg",
+    "start": 27,
+    "slut": 32
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 3 Passningar, moment 1"
+  },
+  {
+   "id": "pa2",
+   "namn": "Insidespassning i konrutan",
+   "desc": "Passa genom konerna till Haris, med både höger och vänster fot. Räkna passningar i rad.",
+   "typ": "Övning",
+   "tid": 5,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Passning insida"
+   ],
+   "niva": 2,
+   "film": {
+    "namn": "Passningar",
+    "url": "media/passningar.mp4",
+    "poster": "assets/posters/passningar.jpg",
+    "start": 2,
+    "slut": 15
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 3 Passningar, moment 2"
+  },
+  {
+   "id": "pa3",
+   "namn": "Ta emot och passa tillbaka",
+   "desc": "Ta emot bollen, ett touch, passa tillbaka. Öka tempot när det sitter.",
+   "typ": "Övning",
+   "tid": 3,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Passning insida",
+    "Första touch"
+   ],
+   "niva": 2,
+   "film": {
+    "namn": "Passningar",
+    "url": "media/passningar.mp4",
+    "poster": "assets/posters/passningar.jpg",
+    "start": 16,
+    "slut": 26
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 3 Passningar, moment 3"
+  },
+  {
+   "id": "dr1",
+   "namn": "Driv ut till konerna",
+   "desc": "Driv i fart till konerna längst bort och tillbaka. Få touch, titta upp.",
+   "typ": "Övning",
+   "tid": 4,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Driv"
+   ],
+   "niva": 2,
+   "film": {
+    "namn": "Dribblingar",
+    "url": "media/dribblingar.mp4",
+    "poster": "assets/posters/dribblingar.jpg",
+    "start": 2,
+    "slut": 12
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 4 Dribblingar, moment 1"
+  },
+  {
+   "id": "dr2",
+   "namn": "Riktningsbyten vid konerna",
+   "desc": "Byt riktning med insidan eller utsidan vid varje kon. Bollen stannar nära foten.",
+   "typ": "Övning",
+   "tid": 5,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Dribbling & finter",
+    "Vändningar"
+   ],
+   "niva": 2,
+   "film": {
+    "namn": "Dribblingar",
+    "url": "media/dribblingar.mp4",
+    "poster": "assets/posters/dribblingar.jpg",
+    "start": 13,
+    "slut": 29
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 4 Dribblingar, moment 2"
+  },
+  {
+   "id": "dr3",
+   "namn": "Fint och vändning i fart",
+   "desc": "Lägg in en fint före riktningsbytet. Haris visar vid konen.",
+   "typ": "Övning",
+   "tid": 6,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Dribbling & finter"
+   ],
+   "niva": 2,
+   "film": {
+    "namn": "Dribblingar",
+    "url": "media/dribblingar.mp4",
+    "poster": "assets/posters/dribblingar.jpg",
+    "start": 30,
+    "slut": 45
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 4 Dribblingar, moment 3"
+  },
+  {
+   "id": "ko1",
+   "namn": "Snabba fötter vid konerna",
+   "desc": "Tåtouch och sidosteg över bollen. Lätta fötter, blicken upp.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Snabba fötter"
+   ],
+   "niva": 3,
+   "film": {
+    "namn": "Koordination",
+    "url": "media/koordination.mp4",
+    "poster": "assets/posters/koordination.jpg",
+    "start": 2,
+    "slut": 10
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 5 Koordination, moment 1"
+  },
+  {
+   "id": "ko2",
+   "namn": "Reagera på bollen",
+   "desc": "Haris rullar bollen åt ena eller andra hållet. Reagera och ta den i första touchen.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Reaktion",
+    "Första touch"
+   ],
+   "niva": 3,
+   "film": {
+    "namn": "Koordination",
+    "url": "media/koordination.mp4",
+    "poster": "assets/posters/koordination.jpg",
+    "start": 11,
+    "slut": 16
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 5 Koordination, moment 2"
+  },
+  {
+   "id": "ko3",
+   "namn": "Konraden och tillbaka med boll",
+   "desc": "Sidosteg mellan konerna, hämta bollen och driv tillbaka.",
+   "typ": "Övning",
+   "tid": 3,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Snabba fötter",
+    "Driv"
+   ],
+   "niva": 3,
+   "film": {
+    "namn": "Koordination",
+    "url": "media/koordination.mp4",
+    "poster": "assets/posters/koordination.jpg",
+    "start": 17,
+    "slut": 31
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 5 Koordination, moment 3"
+  },
+  {
+   "id": "ko4",
+   "namn": "Reaktion och passning",
+   "desc": "Fotarbete, signal från Haris, och direkt en passning.",
+   "typ": "Övning",
+   "tid": 2,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Reaktion",
+    "Passning insida"
+   ],
+   "niva": 3,
+   "film": {
+    "namn": "Koordination",
+    "url": "media/koordination.mp4",
+    "poster": "assets/posters/koordination.jpg",
+    "start": 32,
+    "slut": 45
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "CAP-passet del 5 Koordination, moment 4"
+  },
+  {
+   "id": "ko5",
+   "namn": "Fotarbete över bollen",
+   "desc": "Avsluta med snabba fötter över bollen.",
+   "typ": "Övning",
+   "tid": 1,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Snabba fötter",
+    "Balans"
+   ],
+   "niva": 3,
+   "film": {
+    "namn": "Koordination",
+    "url": "media/koordination.mp4",
+    "poster": "assets/posters/koordination.jpg",
+    "start": 46,
+    "slut": 54
+   },
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "CAP-passet del 5 Koordination, moment 5"
+  },
+  {
+   "id": "n2-mv-grepp",
+   "namn": "Grepp och fotarbete",
+   "desc": "Händerna i W, fötterna i rörelse.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Målvaktsspel"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Målvakt",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 2, målvakt + Stigen etapp 2 (e2-mv)"
+  },
+  {
+   "id": "n2-back-stallning",
+   "namn": "Försvarsställning",
+   "desc": "Låg tyngdpunkt, sidledes fötter, rätt avstånd.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Balans",
+    "Spelförståelse"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Back",
+   "yta": "",
+   "utr": [
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 2, back + Stigen etapp 2 (e2-back)"
+  },
+  {
+   "id": "n2-mitt-vandning",
+   "namn": "Vändningar",
+   "desc": "Ta emot och vänd i samma rörelse.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Vändningar",
+    "Första touch"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Mittfältare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 2, mittfältare + Stigen etapp 2 (e2-mitt)"
+  },
+  {
+   "id": "n2-anf-avslut",
+   "namn": "Avslut insida",
+   "desc": "Placerat lågt i hörnet, från båda sidor.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Avslut"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Anfallare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 2, anfallare + Stigen etapp 2 (e2-anf)"
+  },
+  {
+   "id": "n3-finter",
+   "namn": "Finter i fart",
+   "desc": "Kroppsfint, överstegsfint och sax i fart mot kon.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Dribbling & finter"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3 + Stigen etapp 3 (e3-finter)"
+  },
+  {
+   "id": "n3-jonglering",
+   "namn": "Jonglering 20",
+   "desc": "Fot, lår och båda fötterna. Målet är tjugo i rad.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Jonglering & bollkänsla"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Alla",
+   "yta": "Liten (5×5 m)",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Ensam"
+   ],
+   "kalla": "Utbildningsvägen nivå 3"
+  },
+  {
+   "id": "n3-avslut",
+   "namn": "Avslut från kanten av straffområdet",
+   "desc": "Vrist och bredsida, efter en touch.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Avslut"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3"
+  },
+  {
+   "id": "n3-mv-fall",
+   "namn": "Fallteknik",
+   "desc": "Falla mjukt åt båda hållen och komma upp snabbt.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Målvaktsspel"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Målvakt",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3, målvakt + Stigen etapp 3 (e3-mv)"
+  },
+  {
+   "id": "n3-mv-fotter",
+   "namn": "Spel med fötterna",
+   "desc": "Första touch och passning under press, som målvakt.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Målvaktsspel",
+    "Första touch"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Målvakt",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3, målvakt"
+  },
+  {
+   "id": "n3-back-nick",
+   "namn": "Nickar",
+   "desc": "Pannan, ögonen öppna, nicka bort och nicka till en lagkamrat.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Nickar"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Back",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3, back + Stigen etapp 3 (e3-back)"
+  },
+  {
+   "id": "n3-mitt-axel",
+   "namn": "Titta över axeln innan bollen",
+   "desc": "Mottagning med motståndare i ryggen.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch",
+    "Spelförståelse"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Mittfältare",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 3, mittfältare + Stigen etapp 3 (e3-mitt)"
+  },
+  {
+   "id": "n3-mitt-framat",
+   "namn": "Första touch framåt",
+   "desc": "Ta bollen förbi motståndaren i första touchen.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch",
+    "Driv"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Mittfältare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3, mittfältare"
+  },
+  {
+   "id": "n3-anf-touch",
+   "namn": "Första touch mot mål",
+   "desc": "Ta emot så att skottet kommer direkt efter.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch",
+    "Avslut"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Anfallare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3, anfallare + Stigen etapp 3 (e3-anf)"
+  },
+  {
+   "id": "n3-anf-vrist",
+   "namn": "Avslut bredsida och vrist",
+   "desc": "Hårt och lågt, efter mottagning.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Avslut"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Anfallare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3, anfallare"
+  },
+  {
+   "id": "n4-press",
+   "namn": "Första touch under press",
+   "desc": "Mottagning med en aktiv motståndare.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Första touch"
+   ],
+   "niva": 4,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 4 + Stigen etapp 4 (e4-press)"
+  },
+  {
+   "id": "n4-langa",
+   "namn": "Långa tillslag",
+   "desc": "Vristen, lyftet och crossbollen.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Långa tillslag"
+   ],
+   "niva": 4,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 4 + Stigen etapp 4 (e4-langa)"
+  },
+  {
+   "id": "n4-back-inlagg",
+   "namn": "Inlägg från kanten",
+   "desc": "Slå inlägget i fart, mot första och bortre stolpen.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Långa tillslag"
+   ],
+   "niva": 4,
+   "film": null,
+   "position": "Back",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 4, back"
+  },
+  {
+   "id": "n4-mitt-tempo",
+   "namn": "Tempo och spelvändning",
+   "desc": "Få touch, lång passning till andra kanten.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Långa tillslag",
+    "Spelförståelse"
+   ],
+   "niva": 4,
+   "film": null,
+   "position": "Mittfältare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 4, mittfältare"
+  },
+  {
+   "id": "n4-anf-nick",
+   "namn": "Nickskott",
+   "desc": "Möta inlägget och styra nicken nedåt.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Nickar",
+    "Avslut"
+   ],
+   "niva": 4,
+   "film": null,
+   "position": "Anfallare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 4, anfallare"
+  },
+  {
+   "id": "n5-avslut-fart",
+   "namn": "Avslut i fart",
+   "desc": "Driv, touch, skott. Allt i full fart.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Avslut",
+    "Driv"
+   ],
+   "niva": 5,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Koner",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 5 + Stigen etapp 5 (e5-fart)"
+  },
+  {
+   "id": "n5-en-mot-en",
+   "namn": "En mot en i matchfart",
+   "desc": "Fint, riktningsbyte och avslut mot en aktiv motståndare.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Dribbling & finter",
+    "Avslut"
+   ],
+   "niva": 5,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 5 + Stigen etapp 5 (e5-enmoten)"
+  },
+  {
+   "id": "n5-mv-straff",
+   "namn": "Straffar och en mot en",
+   "desc": "Läsa skytten, stå stor, välja rätt.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Koordination",
+   "fardighet": [
+    "Målvaktsspel"
+   ],
+   "niva": 5,
+   "film": null,
+   "position": "Målvakt",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 5, målvakt"
+  },
+  {
+   "id": "n5-anf-press",
+   "namn": "Avslut under press",
+   "desc": "Kallt huvud med en back i ryggen.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Avslut"
+   ],
+   "niva": 5,
+   "film": null,
+   "position": "Anfallare",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 5, anfallare"
+  },
+  {
+   "id": "e1-jong",
+   "namn": "Jonglering, steg 1",
+   "desc": "Fem i rad med foten.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Jonglering & bollkänsla"
+   ],
+   "niva": 1,
+   "film": null,
+   "position": "Alla",
+   "yta": "Liten (5×5 m)",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Ensam"
+   ],
+   "kalla": "Stigen etapp 1 (e1-jong)"
+  },
+  {
+   "id": "e1-slalom",
+   "namn": "Slalom genom fem koner",
+   "desc": "Ställ fem koner med en meter mellan. Dribbla tur och retur så fort du kan utan att missa en kon. Föräldern tar tiden i appen.",
+   "typ": "Tidtagning",
+   "tid": null,
+   "maltid": 25,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Dribbling & finter",
+    "Driv"
+   ],
+   "niva": 1,
+   "film": null,
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Stigen etapp 1, tidtagning"
+  },
+  {
+   "id": "e2-vagg",
+   "namn": "20 passningar mot vägg",
+   "desc": "Stå tre meter från en vägg. Passa med insidan, ta emot, passa igen. Tiden för 20 passningar.",
+   "typ": "Tidtagning",
+   "tid": null,
+   "maltid": 40,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Passning insida",
+    "Första touch"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Alla",
+   "yta": "Liten (5×5 m)",
+   "utr": [
+    "Boll",
+    "Vägg"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Stigen etapp 2, tidtagning"
+  },
+  {
+   "id": "e2-driv",
+   "namn": "Driv 20 meter och tillbaka",
+   "desc": "Två koner med 20 meter mellan. Driv dit, vänd med sulan, driv tillbaka. Bollen under kontroll hela vägen.",
+   "typ": "Tidtagning",
+   "tid": null,
+   "maltid": 14,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Driv",
+    "Vändningar"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Alla",
+   "yta": "Stor (halvplan)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Stigen etapp 2, tidtagning"
+  },
+  {
+   "id": "e3-fotter",
+   "namn": "30 tåtouch på tid",
+   "desc": "Bollen stilla, växla fot ovanpå bollen. Tiden för 30 touch.",
+   "typ": "Tidtagning",
+   "tid": null,
+   "maltid": 20,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Snabba fötter"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Alla",
+   "yta": "Liten (5×5 m)",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Stigen etapp 3, tidtagning"
+  },
+  {
+   "id": "e4-konrad",
+   "namn": "Konraden med boll, två varv",
+   "desc": "Sex koner på rad. Driv slalom fram och tillbaka två gånger.",
+   "typ": "Tidtagning",
+   "tid": null,
+   "maltid": 30,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Dribbling & finter"
+   ],
+   "niva": 4,
+   "film": null,
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Stigen etapp 4, tidtagning"
+  },
+  {
+   "id": "n1-prov",
+   "namn": "Nivåprov 1",
+   "desc": "Filma barnet: 20 touch med bollen nära foten utan att tappa den, och tio mottagningar med insidan. Haris tittar och godkänner.",
+   "typ": "Nivåprov",
+   "tid": null,
+   "maltid": null,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Jonglering & bollkänsla",
+    "Första touch"
+   ],
+   "niva": 1,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 1 + stigens grind 1"
+  },
+  {
+   "id": "n2-prov",
+   "namn": "Nivåprov 2",
+   "desc": "Filma: tio passningar i rad med insidan, fem med varje fot, och en dribbling genom fyra koner utan att tappa bollen.",
+   "typ": "Nivåprov",
+   "tid": null,
+   "maltid": null,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Passning insida",
+    "Dribbling & finter"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 2 + stigens grind 2"
+  },
+  {
+   "id": "n3-prov",
+   "namn": "Nivåprov 3",
+   "desc": "Filma: tjugo jongleringar i rad och tre olika finter i fart mot en passiv motståndare.",
+   "typ": "Nivåprov",
+   "tid": null,
+   "maltid": null,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Jonglering & bollkänsla",
+    "Dribbling & finter"
+   ],
+   "niva": 3,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 3 + stigens grind 3"
+  },
+  {
+   "id": "n4-prov",
+   "namn": "Nivåprov 4",
+   "desc": "Filma: fem långa passningar till en kompis på tjugo meter och tre mottagningar under press.",
+   "typ": "Nivåprov",
+   "tid": null,
+   "maltid": null,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Långa tillslag",
+    "Första touch"
+   ],
+   "niva": 4,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Medspelare"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Utbildningsvägen nivå 4 + stigens grind 4"
+  },
+  {
+   "id": "n5-prov",
+   "namn": "Diplom: Matchvinnare",
+   "desc": "Haris tittar på en hel match eller ett längre träningsklipp och ger ett personligt omdöme.",
+   "typ": "Nivåprov",
+   "tid": null,
+   "maltid": null,
+   "fas": "",
+   "omrade": "",
+   "fardighet": [
+    "Spelförståelse"
+   ],
+   "niva": 5,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Utbildningsvägen nivå 5 + stigens grind 5"
+  },
+  {
+   "id": "avslut-jonglering",
+   "namn": "Avslut: jongleringsrekord",
+   "desc": "Räkna hur många jongleringar barnet klarar i rad. Skriv upp rekordet.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Avslut",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Jonglering & bollkänsla"
+   ],
+   "niva": 1,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "Prototyp 2 Spelarkortet, avslut efter Uppvärmning + bollkontroll"
+  },
+  {
+   "id": "avslut-straffar",
+   "namn": "Avslut: straffar mot föräldern",
+   "desc": "Fem straffar var. Den som gör flest mål väljer kvällens efterrätt.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Avslut",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Avslut"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Mål"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Prototyp 2 Spelarkortet, avslut efter Passningar"
+  },
+  {
+   "id": "avslut-en-mot-en",
+   "namn": "Avslut: en mot en till konen",
+   "desc": "Barnet ska ta sig förbi dig till konen. Bäst av fem.",
+   "typ": "Övning",
+   "tid": null,
+   "maltid": null,
+   "fas": "Avslut",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Dribbling & finter"
+   ],
+   "niva": 2,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Prototyp 2 Spelarkortet, avslut efter Dribblingar"
+  },
+  {
+   "id": "mall-uppvarmning",
+   "namn": "Uppvärmning med boll",
+   "desc": "Touch på stället, driv, vändningar.",
+   "typ": "Övning",
+   "tid": 10,
+   "maltid": null,
+   "fas": "Uppvärmning",
+   "omrade": "Bollkontroll",
+   "fardighet": [
+    "Driv",
+    "Jonglering & bollkänsla"
+   ],
+   "niva": 1,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Ensam",
+    "Med förälder"
+   ],
+   "kalla": "Passmallen i admin (Nytt pass)"
+  },
+  {
+   "id": "mall-konbana",
+   "namn": "Konbana",
+   "desc": "Fem koner, en meter mellan. Tur och retur. Tre försök, medeltiden sparas.",
+   "typ": "Bedömning",
+   "tid": 6,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [
+    "Dribbling & finter"
+   ],
+   "niva": 1,
+   "film": null,
+   "position": "Alla",
+   "yta": "Mellan (10×10 m)",
+   "utr": [
+    "Boll",
+    "Koner"
+   ],
+   "sallskap": [
+    "Med förälder"
+   ],
+   "kalla": "Passmallen i admin (Nytt pass)"
+  },
+  {
+   "id": "mall-spel",
+   "namn": "Spel med moment",
+   "desc": "Använd dagens moment i spelform.",
+   "typ": "Övning",
+   "tid": 12,
+   "maltid": null,
+   "fas": "Huvuddel",
+   "omrade": "Teknik",
+   "fardighet": [],
+   "niva": 1,
+   "film": null,
+   "position": "Alla",
+   "yta": "",
+   "utr": [
+    "Boll"
+   ],
+   "sallskap": [
+    "Med förälder",
+    "Med kompis"
+   ],
+   "kalla": "Passmallen i admin (Nytt pass)"
+  }
+ ]
+}

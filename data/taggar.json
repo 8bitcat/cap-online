@@ -1,0 +1,14 @@
+{
+  "alder":      { "namn": "Ålder",          "alla": true,  "val": ["7–8", "9–10", "11–12", "13–14"] },
+  "niva":       { "namn": "Nivå",           "alla": true,  "val": ["Nybörjare", "Spelat 1–2 år", "Spelat 3+ år"] },
+  "position":   { "namn": "Position",       "alla": true,  "val": ["Målvakt", "Back", "Mittfältare", "Anfallare"] },
+  "omrade":     { "namn": "Område",         "alla": false, "val": ["Bollkontroll", "Teknik", "Koordination", "Kunskap"] },
+  "fardighet":  { "namn": "Färdighet",      "alla": false, "val": ["Första touch", "Driv", "Vändningar", "Jonglering & bollkänsla", "Passning insida", "Långa tillslag", "Avslut", "Dribbling & finter", "Nickar", "Snabba fötter", "Reaktion", "Balans", "Spelförståelse", "Målvaktsspel"] },
+  "typ":        { "namn": "Typ",            "alla": false, "val": ["Del av pass", "Specifik färdighet", "Kunskap", "Nivåprov"] },
+  "fas":        { "namn": "Fas i passet",   "alla": false, "val": ["Uppvärmning", "Huvuddel", "Avslut"] },
+  "svarighet":  { "namn": "Svårighet",      "alla": true,  "val": ["1 Bollkompis", "2 Touchmästare", "3 Dribblare", "4 Spelmotor", "5 Matchvinnare"] },
+  "utrustning": { "namn": "Utrustning",     "alla": false, "val": ["Boll", "Koner", "Mål", "Vägg", "Medspelare", "Stege/häckar"] },
+  "yta":        { "namn": "Yta",            "alla": false, "val": ["Liten (5×5 m)", "Mellan (10×10 m)", "Stor (halvplan)"] },
+  "sallskap":   { "namn": "Sällskap",       "alla": false, "val": ["Ensam", "Med förälder", "Med kompis"] },
+  "plats":      { "namn": "Plats",          "alla": true,  "val": ["Utomhus", "Inomhus", "Hemma"] }
+}
