@@ -26,6 +26,15 @@ const TEL = '070-555 12 34';
   await a.goto(base + 'index.html', { waitUntil: 'networkidle' });
   koll('första sidan är inloggningen', url(a) === '/login' && !!(await a.$('.login-kort #anv')) && !(await a.$('.tabs a')), url(a));
   await a.screenshot({ path: path.join(UT, 'login-forsta.png') });
+  // Haris 2026-11-19: sifferknappsatsen gick inte att byta – knappen under rutan ger e-posttangentbordet
+  koll('rutan börjar med siffertangentbord', await a.$eval('#anv', e => e.inputMode) === 'tel');
+  await a.click('#anv-lage'); await a.waitForTimeout(150);
+  koll('knappen byter till e-post', await a.$eval('#anv', e => e.inputMode) === 'email' && (await text(a, 'label[for=anv]')) === 'E-post' && (await text(a, '#anv-lage')).includes('mobilnummer'));
+  await a.fill('#anv', '0701234567'); await a.waitForTimeout(50);
+  koll('e-postläget står kvar när man skriver siffror', await a.$eval('#anv', e => e.inputMode) === 'email');
+  await a.screenshot({ path: path.join(UT, 'login-epost.png') });
+  await a.click('#anv-lage'); await a.waitForTimeout(150);
+  koll('knappen byter tillbaka till mobilnummer', await a.$eval('#anv', e => e.inputMode) === 'tel' && (await text(a, 'label[for=anv]')) === 'Mobilnummer');
   await logga(a, 'fel@test.se', 'testlosen');
   koll('okänd e-post nekas', (await text(a, '.login-kort')).includes('fel e-post eller lösenord'));
   await logga(a, 'Haris@Test.se', 'testlosen');

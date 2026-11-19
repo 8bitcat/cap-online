@@ -781,6 +781,7 @@ body.admin .view { max-width: 1080px; }
 .losen-rad { position: relative; display: flex; }
 .losen-rad input { flex: 1; padding-right: 70px !important; }
 .visa-losen { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: transparent; border: 0; color: var(--brand); font: inherit; font-size: 14px; font-weight: 700; padding: 8px 10px; cursor: pointer; }
+.anv-lage { display: block; margin: 8px 0 0 auto; background: transparent; border: 0; color: var(--brand); font: inherit; font-size: 14px; font-weight: 700; padding: 6px 2px; cursor: pointer; }
 .hint-rad { margin: -4px 0 14px; color: var(--muted); }
 .hint-rad b { color: var(--text); }
 .login-fot { max-width: 420px; text-align: center; margin: 18px 12px 0; line-height: 1.5; }

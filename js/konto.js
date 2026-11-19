@@ -48,14 +48,15 @@ export function loginPage({ fel = '', anv = senast.telefon, lage = '', info = ''
       <p class="muted small" style="margin-top:-4px">Träning, bokning och utveckling hos Haris.</p>
       ${felRad}${infoRad}
       <form data-form="login" autocomplete="on">
-        <div class="field"><label for="anv">Mobilnummer</label><input type="text" id="anv" name="anvandare" value="${esc(anv)}" placeholder="070-123 45 67" autocomplete="username" inputmode="tel" autocapitalize="off" spellcheck="false" required></div>
+        <div class="field"><label for="anv">Mobilnummer</label><input type="text" id="anv" name="anvandare" value="${esc(anv)}" placeholder="070-123 45 67" autocomplete="username" inputmode="tel" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+          <button type="button" class="anv-lage" id="anv-lage">Logga in med e-post i stället</button></div>
         ${losenFalt('losen', 'losen', 'Lösenord', 'autocomplete="current-password" required placeholder="Ditt lösenord"')}
         <p class="hint-rad small">Första gången? Skriv <b>koden från sms:et</b> från Haris som lösenord. Sedan väljer du ett eget.</p>
         <button class="btn grad block stor" type="submit">Logga in</button>
       </form>
       <p class="small" style="margin:14px 0 0;text-align:center"><a href="#/login/glomt">Glömt lösenordet?</a></p>
     </section>
-    <p class="login-fot small muted">Ny hos Haris? Han lägger in ditt mobilnummer och skickar ett sms med koden.<br>Haris loggar in med sin e-postadress.</p>
+    <p class="login-fot small muted">Ny hos Haris? Han lägger in ditt mobilnummer och skickar ett sms med koden.</p>
   </div>`;
 }
 
@@ -65,11 +66,22 @@ export function kontoAfterRender(view) {
     const f = view.querySelector('#' + b.dataset.visa); if (!f) return;
     const visa = f.type === 'password'; f.type = visa ? 'text' : 'password'; b.textContent = visa ? 'Dölj' : 'Visa';
   }));
+  // Haris (2026-11-19): sifferknappsatsen gick inte att byta till bokstäver på iPhone, så han kunde inte skriva sin
+  // e-post. Knappen under rutan byter mellan mobilnummer (siffror) och e-post (bokstäver och @).
   const anv = view.querySelector('#anv');
   if (anv) {
-    const lab = view.querySelector('label[for=anv]');
-    const satt = () => { const epost = /[a-z@]/i.test(anv.value); anv.inputMode = epost ? 'email' : 'tel'; if (lab) lab.textContent = epost ? 'E-post' : 'Mobilnummer'; };
-    anv.addEventListener('input', satt); satt();
+    const lab = view.querySelector('label[for=anv]'), knapp = view.querySelector('#anv-lage');
+    let epost = /[a-z@]/i.test(anv.value);
+    const satt = (fokus = false) => {
+      anv.inputMode = epost ? 'email' : 'tel';
+      anv.placeholder = epost ? 'namn@exempel.se' : '070-123 45 67';
+      if (lab) lab.textContent = epost ? 'E-post' : 'Mobilnummer';
+      if (knapp) knapp.textContent = epost ? 'Logga in med mobilnummer i stället' : 'Logga in med e-post i stället';
+      if (fokus) { anv.blur(); setTimeout(() => anv.focus(), 30); }   // iPhone byter tangentbord först vid ny fokus
+    };
+    knapp?.addEventListener('click', () => { epost = !epost; anv.value = ''; satt(true); });
+    anv.addEventListener('input', () => { if (!epost && /[a-z@]/i.test(anv.value)) { epost = true; satt(); } });
+    satt();
   }
 }
 export function kontoStop() { /* inget att stoppa */ }
@@ -153,7 +165,7 @@ export async function kontoSubmit(kind, f, fd, { toast, go, render }) {
     const anv = String(fd.get('anvandare') || '').trim();
     const r = await loggaIn(anv, fd.get('losen'));
     if (!r.ok) { ater(); render(loginPage({ anv, fel: r.fel || 'Gick inte att logga in' })); return; }
-    if (r.admin) { toast('Välkommen, Haris!'); go('/admin/klienter'); return; }
+    if (r.admin) { senast.telefon = anv; try { localStorage.setItem('cap_tel', anv); } catch { /* ok */ } toast('Välkommen, Haris!'); go('/admin/klienter'); return; }
     efterInloggning(r.user, { toast, tyst: !!r.nyttLosen });
     go(r.nyttLosen ? '/losen' : '/'); return;
   }
