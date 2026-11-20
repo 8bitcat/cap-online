@@ -19,7 +19,7 @@ LANK_BASE = "https://cap.8bitcat.io"
 IOS_APP_ID = "GYTVJ3CTBJ.se.completeathletic.caponline"
 SMS_FROM = "CapSwe"
 SMS_MAX_DAG = "25"
-APP_LANK_IOS = ""
+APP_LANK_IOS = "https://apps.apple.com/se/app/cap/id6825529179"
 
 [[kv_namespaces]]
 binding = "DB"
