@@ -46,6 +46,9 @@
 //     /auto {schema: [{dag, pa, start, slut}], langd, plats, ersatt}   veckoschema med egna tider per dag (config:tidschema)
 //     Påminnelser: schemat var 15:e minut (scheduled) och POST /admin/paminnelser {nu (bara TEST_LAGE)}
 //   Kalender: GET /kal/<v>/<slot>/<uid>/<sig>.ics   signerad länk i /mina (bokningar[].kal), en kalenderhändelse
+//   Syskon: POST /admin/klient/<id>/syskon {barn, efternamn, fodd}   nytt barn med samma förälder och nummer (k.huvud /
+//     k.syskon). Bokningar {barnIds} i /boka/bekrafta och /admin/klient/<id>/boka: en bokning, ett pris, flera barn.
+//     /veckor och /mina skickar familj; pris, paket och pott ligger på huvudklienten.
 //     En vecka går inte att öppna utan Swish-nummer och pris per pass (409).
 //     När en vecka öppnas går en pushnotis till alla föräldrar med notiser på (en gång per vecka, notis: false hoppar över)
 //     POST /admin/vecka/<v>/betald {slot, betald}   Haris bockar av (eller ångrar) en betalning
