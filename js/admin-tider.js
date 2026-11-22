@@ -34,7 +34,7 @@ export async function tiderLadda(tvinga = false) {
   if (st.laddat && !tvinga) return;
   const [r, b] = await Promise.all([api.admin.get('/admin/veckor'), api.admin.get('/admin/config/betalning')]);
   st.betalning = b.ok ? b.config : null;
-  if (r.ok) { st.nu = r.nu; st.veckor = r.veckor; st.mandag = r.mandag; st.laddat = true; st.hamtat = Date.now(); if (!st.vald || st.vald < veckaPlus(st.nu, -1)) st.vald = st.nu; }
+  if (r.ok) { st.nu = r.nu; st.veckor = r.veckor; st.mandag = r.mandag; st.schema = r.schema || null; st.laddat = true; st.hamtat = Date.now(); if (!st.vald || st.vald < veckaPlus(st.nu, -1)) st.vald = st.nu; }
 }
 export const tiderGlom = () => { st.laddat = false; };
 const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen: false, slots: [] };
@@ -103,19 +103,7 @@ export function tiderView() {
       ${w.notis ? `<p class="small muted" style="margin:8px 0 0">Notisen om veckan gick ut ${esc(fmtTid(w.notis))}. När veckan är öppen kan du skicka en ny.</p>` : v < st.nu ? '' : '<label class="check" style="margin:10px 0 0"><input type="checkbox" id="oppnaNotis" checked><span>Skicka en notis till alla föräldrar med appen</span></label>'}` : ''}
     </div>`}
   </section>
-  <section class="panel">
-    <h3>Autosätt tider</h3>
-    <form data-form="tid-auto" class="auto-form">
-      <div class="chips">${[1, 2, 3, 4, 5, 6, 7].map(d => `<label class="chip"><input type="checkbox" name="dagar" value="${d}" ${d <= 5 ? 'checked' : ''} style="margin:0 6px 0 0;accent-color:var(--brand)">${DAG[d]}</label>`).join('')}</div>
-      <div class="auto-rad">
-        <label>Från <input type="time" name="start" value="16:00"></label>
-        <label>Till <input type="time" name="slut" value="20:00"></label>
-        <label>Längd <select name="langd"><option value="45">45 min</option><option value="60" selected>60 min</option><option value="90">90 min</option></select></label>
-      </div>
-      <div class="field" style="margin:8px 0"><input type="text" name="plats" placeholder="Plats, t.ex. Hisings Backa"></div>
-      <button class="btn secondary block" type="submit">Lägg till lediga tider</button>
-    </form>
-  </section>
+  ${schemaPanel(v, w)}
   <section>
     <div class="section-head"><h2>Tiderna</h2><button class="btn ${st.nyTid ? 'secondary' : ''}" data-action="tid-ny">${st.nyTid ? 'Stäng' : '+ Lägg till en tid'}</button></div>
     ${st.nyTid ? `<form data-form="tid-ny" class="panel brand" style="margin-bottom:14px">
@@ -136,6 +124,49 @@ export function tiderView() {
     <p class="small muted">Ändrade tider och platser sparas med Spara veckan. Bokade tider går inte att flytta, avboka dem först.</p>
   </section>`;
 }
+
+// Veckoschemat (Haris 2026-11-22: "det går inte att sätta olika tider för olika dagar utan alla är mellan samma
+// intervall ex 14-17. Vissa dagar har jag till 18 och helger har jag endast två tider"). Varje dag har egen början
+// och eget slut. Schemat sparas på servern och fylls i nästa gång, på alla Haris enheter.
+const STANDARD = { schema: [1, 2, 3, 4, 5, 6, 7].map(dag => ({ dag, pa: dag <= 5, start: dag <= 5 ? '14:00' : '10:00', slut: dag <= 5 ? '17:00' : '12:00' })), langd: 60, plats: '', ersatt: true };
+const tillMin = t => { const [h, m] = String(t || '').split(':').map(Number); return h * 60 + m; };
+const antalPass = (start, slut, langd) => Math.max(0, Math.floor((tillMin(slut) - tillMin(start)) / langd));
+const passText = n => `${n} ${n === 1 ? 'pass' : 'pass'}`;
+function schemaPanel(v, w) {
+  const s = st.schema || STANDARD;
+  const rad = d => s.schema?.find(x => x.dag === d) || STANDARD.schema[d - 1];
+  const plats = s.plats || w.slots.find(x => x.plats)?.plats || '';
+  const lediga = w.slots.filter(x => !x.bokad).length;
+  return `<section class="panel" id="schema">
+    <h3>Veckoschema</h3>
+    <p class="small muted" style="margin-top:0">Bocka i dagarna du tränar och skriv när du börjar och slutar. Varje dag kan ha egna tider. Passen läggs efter varandra, så 14–18 blir fyra pass om ett pass är 60 minuter.</p>
+    <form data-form="tid-auto" class="auto-form schema-form">
+      <div class="schema">${[1, 2, 3, 4, 5, 6, 7].map(d => { const r = rad(d); return `<div class="schema-rad ${r.pa ? '' : 'av'}" data-dag="${d}">
+        <label class="schema-dag"><input type="checkbox" name="pa${d}" ${r.pa ? 'checked' : ''}><span><b>${DAG[d]}</b> <small class="muted">${fmtDatum(datumFor(v, d))}</small><small class="schema-antal">${r.pa ? passText(antalPass(r.start, r.slut, s.langd || 60)) : 'ledig'}</small></span></label>
+        <input type="time" name="start${d}" value="${esc(r.start)}" aria-label="${DAG[d]}dag från"><span class="muted">–</span><input type="time" name="slut${d}" value="${esc(r.slut)}" aria-label="${DAG[d]}dag till">
+      </div>`; }).join('')}</div>
+      <div class="auto-rad">
+        <label>Ett pass är <select name="langd">${[30, 45, 60, 75, 90, 120].map(m => `<option value="${m}" ${m === (s.langd || 60) ? 'selected' : ''}>${m} min</option>`).join('')}</select></label>
+      </div>
+      <div class="field" style="margin:8px 0"><input type="text" name="plats" value="${esc(plats)}" placeholder="Plats, t.ex. Hisings Backa"></div>
+      <label class="check" style="margin:0 0 10px"><input type="checkbox" name="ersatt" ${s.ersatt !== false ? 'checked' : ''}><span>Ta bort veckans lediga tider först${lediga ? ` (${lediga} st)` : ''}. Bokade tider ligger alltid kvar.</span></label>
+      <button class="btn secondary block" type="submit">Lägg in tiderna i vecka ${Number(v.split('-W')[1])}</button>
+    </form>
+  </section>`;
+}
+// antalet pass per dag räknas om medan Haris skriver
+function schemaRakna(e) {
+  const f = e.target.closest?.('.schema-form');
+  if (!f) return;
+  const langd = Number(f.elements.langd.value) || 60;
+  for (const r of f.querySelectorAll('.schema-rad')) {
+    const d = r.dataset.dag, pa = f.elements[`pa${d}`].checked;
+    r.classList.toggle('av', !pa);
+    r.querySelector('.schema-antal').textContent = pa ? passText(antalPass(f.elements[`start${d}`].value, f.elements[`slut${d}`].value, langd)) : 'ledig';
+  }
+}
+document.addEventListener('input', schemaRakna);
+document.addEventListener('change', schemaRakna);
 
 function lasSlots() {
   const w = vecka();
@@ -244,10 +275,26 @@ export async function tiderSubmit(kind, f, fd) {
     route(); return true;
   }
   if (kind !== 'tid-auto') return false;
-  const dagar = fd.getAll('dagar').map(Number);
-  if (!dagar.length) { toast('Välj minst en dag'); return true; }
-  const r = await api.admin.post(`/admin/vecka/${st.vald}/auto`, { dagar, start: fd.get('start'), slut: fd.get('slut'), langd: Number(fd.get('langd')), plats: fd.get('plats') });
-  if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); toast(`${r.vecka.slots.length} tider i veckan${stangdText()}`); }
-  else toast(`Gick inte: ${r.fel}`);
+  const langd = Number(fd.get('langd')) || 60, ersatt = fd.get('ersatt') === 'on';
+  const schema = [1, 2, 3, 4, 5, 6, 7].map(dag => ({ dag, pa: fd.get(`pa${dag}`) === 'on', start: fd.get(`start${dag}`) || '', slut: fd.get(`slut${dag}`) || '' }));
+  const pa = schema.filter(x => x.pa);
+  if (!pa.length && !ersatt) { toast('Bocka i minst en dag'); return true; }
+  const fel = pa.find(x => !x.start || !x.slut || antalPass(x.start, x.slut, langd) < 1);
+  if (fel) { toast(`${DAG[fel.dag]}dag: sluttiden måste vara minst ${langd} min efter starten`); return true; }
+  // att ersätta lediga tider i en vecka kräver ett andra tryck, så att inget försvinner av misstag
+  const lediga = vecka().slots.filter(x => !x.bokad).length;
+  const knapp = f.querySelector('button[type=submit]');
+  if (ersatt && lediga && !knapp.dataset.armed) {
+    const t = knapp.textContent; knapp.dataset.armed = '1'; knapp.classList.add('armed');
+    knapp.textContent = `Tryck igen: ${lediga} lediga tider byts mot schemat`;
+    setTimeout(() => { delete knapp.dataset.armed; knapp.textContent = t; knapp.classList.remove('armed'); }, 5000);
+    return true;
+  }
+  const r = await api.admin.post(`/admin/vecka/${st.vald}/auto`, { schema, langd, plats: fd.get('plats'), ersatt });
+  if (r.ok) {
+    st.schema = { schema, langd, plats: fd.get('plats'), ersatt };
+    const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka);
+    toast(`${r.nya} ${r.nya === 1 ? 'tid' : 'tider'} inlagda${r.bort ? `, ${r.bort} gamla borttagna` : ''}. Veckan har ${r.vecka.slots.length} tider${stangdText()}`);
+  } else toast(`Gick inte: ${r.fel}`);
   route(); return true;
 }

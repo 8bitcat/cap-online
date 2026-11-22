@@ -150,6 +150,7 @@ const NOTIS_VAL = [
   ['betald', 'Betalningar', 'När du bockar av att en betalning kommit'],
   ['utveckling', 'Utveckling', 'Nya bedömningar, filmer och delade pass'],
   ['haris', 'Till dig', 'När en förälder bokar, avbokar, swishar eller köper ett paket'],
+  ['paminnelse', 'Påminnelse om passet', 'Kvällen före kl 18 till föräldern som bokat (två timmar före om tiden bokades senare)'],
 ];
 function bytPanel(id, rita) {
   const el = document.getElementById(id);

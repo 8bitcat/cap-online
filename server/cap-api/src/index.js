@@ -43,6 +43,9 @@
 //   Filmer: GET /admin/filmer · POST /admin/film · PUT/DELETE /admin/film/<id>
 //   Uppladdning i delar till R2: POST /admin/upload/start {filmId|klientId, filnamn, typ} · PUT /admin/upload/part · POST /admin/upload/complete · PUT /admin/upload/poster/<id>
 //   Tider: GET /admin/veckor · PUT /admin/vecka/<v> {oppen, slots, notis} · POST /admin/vecka/<v>/auto · POST /admin/vecka/<v>/duplicera
+//     /auto {schema: [{dag, pa, start, slut}], langd, plats, ersatt}   veckoschema med egna tider per dag (config:tidschema)
+//     Påminnelser: schemat var 15:e minut (scheduled) och POST /admin/paminnelser {nu (bara TEST_LAGE)}
+//   Kalender: GET /kal/<v>/<slot>/<uid>/<sig>.ics   signerad länk i /mina (bokningar[].kal), en kalenderhändelse
 //     En vecka går inte att öppna utan Swish-nummer och pris per pass (409).
 //     När en vecka öppnas går en pushnotis till alla föräldrar med notiser på (en gång per vecka, notis: false hoppar över)
 //     POST /admin/vecka/<v>/betald {slot, betald}   Haris bockar av (eller ångrar) en betalning
@@ -474,7 +477,7 @@ async function flyttaTillPott(env, k, veckor, cfg) {
 // Telefonen registrerar sin pushkod hos cap-push via cap-api, som skickar med klientens id (kid) eller admin-flaggan.
 // Varje notis till en förälder sparas också i k.notiser, så att den syns under 🔔 i appen även utan push.
 // Haris stänger av typer i config:notiser {vecka, bokning, pass, betald, utveckling, haris} (allt är på från början).
-const NOTIS_TYPER = ['vecka', 'bokning', 'pass', 'betald', 'utveckling', 'haris'];
+const NOTIS_TYPER = ['vecka', 'bokning', 'pass', 'betald', 'utveckling', 'haris', 'paminnelse'];
 const hamtaNotisCfg = async env => ({ ...Object.fromEntries(NOTIS_TYPER.map(t => [t, true])), ...((await env.DB.get('config:notiser', 'json')) || {}) });
 async function pushServer(env, path, data) {
   if (!env.PUSH_BASE || !env.PUSH_HEMLIG) return { ok: false, skickade: 0, fel: 'push är inte påslaget' };
@@ -493,6 +496,68 @@ function noteraKlient(k, typ, title, text, hash = '') {
   k.notiser = [...(k.notiser || []), n].slice(-60);
   return n;
 }
+
+// ---------- påminnelse inför passet (Khaleds mamma via Haris 2026-11-22: "kan man få notis inför träningspassen?") ----------
+// Kvällen före kl 18 till föräldern som har tiden. Bokades tiden efter det får föräldern påminnelsen två timmar före
+// i stället, och bokades den ännu senare kommer ingen. Schemat kör var 15:e minut ([triggers] i wrangler.toml).
+// Att påminnelsen gått iväg sparas som pam:<vecka>:<tid>:<bokningens tid> (egen nyckel, så att schemat aldrig skriver
+// över en vecka som någon bokar i samtidigt). Haris kan stänga av typen paminnelse under Admin → Mer → Notiser.
+const dagFore = dag => new Date(Date.parse(`${dag}T12:00:00Z`) - 864e5).toISOString().slice(0, 10);
+const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+function paminnNar(v, s) {
+  const dag = datumFor(v, s.dag), kvall = `${dagFore(dag)}T18:00`;
+  const bokat = s.bokad.t ? lokal(new Date(s.bokad.t)) : '';
+  if (bokat < kvall) return { nar: kvall, imorgon: true };
+  const tva = minuter(s.start) >= 120 ? `${dag}T${hhmm(minuter(s.start) - 120)}` : '';
+  return tva && bokat < tva ? { nar: tva, imorgon: false } : null;
+}
+async function paminnelser(env, nuL = lokal()) {
+  if ((await hamtaNotisCfg(env)).paminnelse === false) return { skickade: 0, av: true };
+  const nuV = veckaAv(new Date(Date.parse(`${nuL.slice(0, 10)}T12:00:00Z`)));
+  const ut = [];
+  for (const v of [nuV, veckaPlus(nuV, 1)]) {
+    const w = await env.DB.get(`vecka:${v}`, 'json');
+    for (const s of w?.slots || []) {
+      const b = s.bokad;
+      if (!b?.uid || `${datumFor(v, s.dag)}T${s.start}` <= nuL) continue;
+      const nar = paminnNar(v, s);
+      if (!nar || nuL < nar.nar) continue;
+      const nyckel = `pam:${v}:${s.id}:${b.t || ''}`;
+      if (await env.DB.get(nyckel)) continue;
+      await env.DB.put(nyckel, '1', { expirationTtl: 14 * 86400 });
+      const title = nar.imorgon ? 'Träning med Haris i morgon' : 'Träning med Haris i dag';
+      const text = `${b.barn || 'Ni'} tränar ${nar.imorgon ? 'i morgon' : 'i dag'}, ${tidText(v, s)}–${s.slut}${s.plats ? `, ${s.plats}` : ''}. Vi ses!`;
+      const r = await pushServer(env, '/skicka', { title, text, hash: '/boka', till: [b.uid] });
+      ut.push({ v, slot: s.id, uid: b.uid, title, text, ok: r.ok, skickade: r.skickade });
+    }
+  }
+  return { skickade: ut.length, paminnelser: ut };
+}
+
+// ---------- lägg passet i kalendern (Carl 2026-11-22) ----------
+// Mina bokningar har en länk /kal/<vecka>/<tid>/<uid>/<sig>.ics. Länken är signerad, så den behöver ingen inloggning
+// (Safari öppnar den utanför appen) och kan inte gissas. iPhone visar "Lägg till i kalendern" med en påminnelse en timme före.
+async function kalSig(env, v, slot, uid) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(`kal|${env.PUSH_HEMLIG || env.ADMIN_LOSEN || 'cap'}`), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${v}|${slot}|${uid}`)));
+  return [...sig.slice(0, 9)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+// svensk tid → UTC (sommar- och vintertid följer med)
+function utcAv(dag, tid) { const g = Date.parse(`${dag}T${tid}:00Z`); return new Date(g - (Date.parse(`${lokal(new Date(g))}:00Z`) - g)); }
+const icsTid = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+const icsText = s => String(s || '').replace(/[\\;,]/g, m => `\\${m}`).replace(/\r?\n/g, '\\n');
+function icsFor(v, s) {
+  const dag = datumFor(v, s.dag);
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//8bitcat//CAP//SV', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+    `UID:${v}-${s.id}-${s.bokad.uid}@cap.8bitcat.io`, `DTSTAMP:${icsTid(new Date())}`,
+    `DTSTART:${icsTid(utcAv(dag, s.start))}`, `DTEND:${icsTid(utcAv(dag, s.slut))}`,
+    `SUMMARY:${icsText(`Träning med Haris${s.bokad.barn ? ` (${s.bokad.barn})` : ''}`)}`,
+    s.plats ? `LOCATION:${icsText(s.plats)}` : '',
+    `DESCRIPTION:${icsText('Bokat i CAP. Avboka i appen under Med Haris om ni inte kan komma.')}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText('Träning med Haris')}`, 'TRIGGER:-PT1H', 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).join('\r\n') + '\r\n';
+}
+const textSvar = (t, status) => new Response(t, { status, headers: { 'content-type': 'text/plain; charset=utf-8', ...CORS } });
 // Haris loggar in med sin e-post (Carl 2026-11-16). Tillåtna adresser: config:admins.epost (Admin → Mer) och
 // ADMIN_EPOST (kommaseparerad, för lokala tester). Lösenordet är adminlösenordet ADMIN_LOSEN.
 async function adminEpost(env) {
@@ -621,6 +686,14 @@ export default {
     if (req.method === 'GET' && p === '/' && lankVard) return Response.redirect(env.APP_BASE, 302);
     if (req.method === 'GET' && p === '/') return svar({ ok: true, app: 'CAP API', r2: !!env.MEDIA, sms: smsPa(env), appLank: env.APP_LANK_IOS || '' });
     if (req.method === 'GET' && p.startsWith('/media/')) return media(req, env, decodeURIComponent(p.slice(7)));
+    const mkal = /^\/kal\/(\d{4}-W\d{2})\/([a-z0-9]{4,12})\/([A-Za-z0-9_-]{1,40})\/([0-9a-f]{18})\.ics$/.exec(p);
+    if (req.method === 'GET' && mkal) {
+      const [, v, sid, uid, sig] = mkal;
+      if (sig !== await kalSig(env, v, sid, uid)) return textSvar('Länken stämmer inte.', 403);
+      const s = (await hamtaVecka(env, v)).slots.find(x => x.id === sid);
+      if (s?.bokad?.uid !== uid) return textSvar('Tiden är inte bokad längre. Öppna CAP för att se era bokningar.', 404);
+      return new Response(icsFor(v, s), { headers: { 'content-type': 'text/calendar; charset=utf-8', 'content-disposition': 'inline; filename="cap-traning.ics"', 'cache-control': 'no-store', ...CORS } });
+    }
 
     const json = async () => { try { return await req.json(); } catch { return null; } };
     // notiser skickas i bakgrunden, så att svaret inte väntar på Apple. tillKlient sparar också notisen på klienten
@@ -885,6 +958,7 @@ export default {
       if (!user) return fel('inte inloggad', 401);
       const veckor = await hamtaAlla(env, 'vecka:');
       const bokningar = bokningarFor(veckor, user.uid);
+      for (const b of bokningar) b.kal = `/kal/${b.v}/${b.id}/${user.uid}/${await kalSig(env, b.v, b.id, user.uid)}.ics`;
       const planer = (await hamtaAlla(env, 'plan:')).filter(x => x.uid === user.uid && x.delad).sort((a, b) => b.datum.localeCompare(a.datum));
       const klient = user.klientId ? publikKlient(await hamtaKlient(env, user.klientId)) : null;
       const bedomningar = user.klientId ? ((await env.DB.get(`bed:${user.klientId}`, 'json')) || []) : [];
@@ -1316,7 +1390,12 @@ export default {
       if (p === '/admin/veckor' && req.method === 'GET') {
         const nuV = veckaAv();
         const veckor = (await hamtaAlla(env, 'vecka:')).filter(w => w.v >= veckaPlus(nuV, -1)).sort((a, b) => a.v.localeCompare(b.v)).map(stadaHall);
-        return svar({ ok: true, nu: nuV, veckor, mandag: Object.fromEntries(veckor.map(w => [w.v, mandag(w.v).toISOString().slice(0, 10)])) });
+        return svar({ ok: true, nu: nuV, veckor, mandag: Object.fromEntries(veckor.map(w => [w.v, mandag(w.v).toISOString().slice(0, 10)])), schema: (await env.DB.get('config:tidschema', 'json')) || null });
+      }
+      // Kör påminnelserna nu (samma som schemat var 15:e minut). nu = låtsad svensk tid, bara i testläge.
+      if (p === '/admin/paminnelser' && req.method === 'POST') {
+        const d = (await json()) || {};
+        return svar({ ok: true, ...(await paminnelser(env, env.TEST_LAGE && d.nu ? String(d.nu).slice(0, 16) : lokal())) });
       }
       const mv = /^\/admin\/vecka\/(\d{4}-W\d{2})(\/auto|\/duplicera|\/betald|\/notis)?$/.exec(p);
       if (mv) {
@@ -1354,22 +1433,37 @@ export default {
           }
           return svar({ ok: true, vecka, kastade: st.kastade, notis });
         }
+        // Veckoschemat (Haris 2026-11-22: "det går inte att sätta olika tider för olika dagar … vissa dagar har jag till 18
+        // och helger har jag endast två tider"): schema = [{dag, pa, start, slut}] med egna tider per dag. ersatt = ta
+        // bort veckans lediga tider först (bokade och hållna ligger kvar). Schemat sparas i config:tidschema och fylls i
+        // nästa gång. Det gamla formatet {dagar, start, slut} fungerar som förut.
         if (mv[2] === '/auto' && req.method === 'POST') {
-          const dagar = (Array.isArray(d.dagar) ? d.dagar : [1, 2, 3, 4, 5]).map(Number).filter(x => x >= 1 && x <= 7);
-          const start = tidOk(d.start) ? d.start : '16:00', slut = tidOk(d.slut) ? d.slut : '20:00';
           const langd = Math.max(15, Math.min(240, Math.round(+d.langd || 60)));
-          const [sh, sm] = start.split(':').map(Number), [eh, em] = slut.split(':').map(Number);
+          let rader;
+          if (Array.isArray(d.schema)) {
+            const alla = d.schema.slice(0, 7).map(r => ({ dag: Math.round(+r.dag), pa: !!r.pa, start: tidOk(r.start) ? r.start : '16:00', slut: tidOk(r.slut) ? r.slut : '18:00' })).filter(r => r.dag >= 1 && r.dag <= 7);
+            await env.DB.put('config:tidschema', JSON.stringify({ schema: alla, langd, plats: ren(d.plats, 60), ersatt: !!d.ersatt, uppdaterad: nu() }));
+            rader = alla.filter(r => r.pa);
+          } else {
+            const dagar = (Array.isArray(d.dagar) ? d.dagar : [1, 2, 3, 4, 5]).map(Number).filter(x => x >= 1 && x <= 7);
+            const start = tidOk(d.start) ? d.start : '16:00', slut = tidOk(d.slut) ? d.slut : '20:00';
+            rader = dagar.map(dag => ({ dag, start, slut }));
+          }
+          const fore = vecka.slots.length;
+          if (d.ersatt) vecka.slots = vecka.slots.filter(s => s.bokad || s.hall);
+          const bort = fore - vecka.slots.length;
           const fmt = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
           let nya = 0;
-          for (const dag of dagar) for (let m = sh * 60 + sm; m + langd <= eh * 60 + em; m += langd) {
+          for (const { dag, start, slut } of rader) for (let m = minuter(start); m + langd <= minuter(slut); m += langd) {
             // hoppa över tider som krockar med något som redan finns den dagen
             if (vecka.slots.some(s => s.dag === dag && m < minuter(s.slut) && m + langd > minuter(s.start))) continue;
             vecka.slots.push(renSlot({ dag, start: fmt(m), slut: fmt(m + langd), plats: d.plats }));
             nya++;
           }
           vecka.slots = stadaSlots(vecka.slots).slots;
-          await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
-          return svar({ ok: true, vecka, nya });
+          if (!vecka.oppen && !vecka.slots.length) await env.DB.delete(`vecka:${v}`);
+          else await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
+          return svar({ ok: true, vecka, nya, bort });
         }
         if (mv[2] === '/duplicera' && req.method === 'POST') {
           const till = VECKA_RE.test(String(d.till || '')) ? d.till : veckaPlus(v, 1);
@@ -1530,4 +1624,6 @@ export default {
     }
     return fel('okänd adress', 404);
   },
+  // var 15:e minut: påminnelser inför passen
+  async scheduled(ev, env, ctx) { ctx.waitUntil(paminnelser(env)); },
 };

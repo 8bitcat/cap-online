@@ -8,7 +8,7 @@
 // Pott (Carl 2026-11-13): Haris sätter in pengar på barnet (eget avtal). Varje bokning kan betalas ur potten; beloppet
 // dras när passet körts. Pass kvar = potten delad med barnets pris just nu.
 import { store } from './store.js';
-import { api } from './api.js';
+import { api, API } from './api.js';
 import { swishLank, visaSwish, bokningsMeddelande, paketMeddelande, kr } from './swish.js';
 import { notisStod, pushSatt } from './notiser.js';
 
@@ -61,6 +61,8 @@ const aktivtPaket = () => (data.paket || []).find(p => p.kvar > 0) || null;
 const pottRacker = () => { const p = data.pott, pris = data.betalning?.pris || p?.pris; return p && pris && p.ledigt >= pris ? p : null; };
 const barnNamn = () => [mina.klient?.barn || store.profile?.name, mina.klient?.efternamn || store.profile?.efternamn];
 
+// Carl 2026-11-22: "så att vi lägger det i kalender". Länken öppnas i Safari, som visar "Lägg till i kalendern".
+const kalKnapp = b => b?.kal ? `<a class="film kal-knapp" href="${esc(API + b.kal)}" target="_blank" rel="noopener">📅 Lägg i kalendern</a>` : '';
 // Betalraden under en bokning: Swish-knappen, "Jag har swishat", eller Betald ✓ när Haris bockat av
 function betalRad(b) {
   if (b.paket) { const p = [...(mina.paket || []), ...(data.paket || [])].find(x => x.id === b.paket); return `<div class="betalrad"><span class="i-paket">Ingår i paketet${p ? ` ${esc(p.namn)}` : ''}</span></div>`; }
@@ -136,7 +138,7 @@ export function bokaPage(v) {
     <h1>Boka en tid</h1>
     ${notisStod() && !store.notiser.push && !store.notiser.bokaNej ? `<div class="panel notis-fraga">
       <b>🔔 Få en notis när Haris öppnar nya tider</b>
-      <p class="small muted" style="margin:2px 0 10px">Då ser du direkt när det går att boka.</p>
+      <p class="small muted" style="margin:2px 0 10px">Då ser du direkt när det går att boka, och du får en påminnelse kvällen före varje pass.</p>
       <div class="btn-row two" style="margin:0"><button class="btn grad" data-action="boka-notis">Slå på notiser</button><button class="btn secondary" data-action="boka-notis-nej">Inte nu</button></div>
     </div>` : ''}
     ${data.pott ? `<a class="saldo-ruta" href="#/mina-pass"><span><b>${esc(kr(data.pott.saldo))}</b> i potten · ${data.pott.passKvar} pass kvar</span><span class="small">Historik ›</span></a>` : ''}
@@ -154,6 +156,7 @@ export function bokaPage(v) {
     <h3 style="margin:0 0 4px">${esc(DAG[nyss.dag])} ${fmtDatum(datumFor(nyss.v, nyss.dag))} · ${esc(nyss.start)}–${esc(nyss.slut)}</h3>
     <p class="small muted" style="margin:0">${nyss.plats ? `${esc(nyss.plats)} · ` : ''}${esc(nyss.barn || barn)}${nyss.paket ? `. Passet dras från paketet${(data.paket || []).find(p => p.id === nyss.paket) ? `, ${(data.paket || []).find(p => p.id === nyss.paket).kvar} kvar` : ''}. Vi ses!` : nyss.pott ? `. ${esc(kr(nyss.pris || 0))} dras ur potten när passet körts${data.pott ? `, sedan räcker den till ${data.pott.passKvar} pass` : ''}. Vi ses!` : nyss.betald ? '' : bet ? '. Betala med Swish, så är allt klart.' : '. Vi ses!'}</p>
     ${betalRad(nyss)}
+    <div class="kal-rad">${kalKnapp(nyss)}</div>
   </section>` : ''}
   ${h ? `<section class="panel brand hall" data-tills="${h.tills}">
     <div class="eyebrow">Platsen hålls åt dig</div>
@@ -185,14 +188,14 @@ export async function fyllMina(el) {
   const m = await hamtaMina();
   const idag = new Date().toISOString().slice(0, 10);
   // kommande tider, plus tidigare som inte är betalda än
-  const bok = m.bokningar.filter(b => !b.datum || b.datum >= idag || (m.betalning && !b.betald && !b.paket && !b.pott)).map(b => `<li class="row bokning"><span class="grow"><b>${esc(DAG[b.dag])} ${fmtDatum(datumFor(b.v, b.dag))}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])}${b.barn ? ` · ${esc(b.barn)}` : ''}${b.av === 'haris' ? ' · bokad av Haris' : ''}</div>${betalRad(b)}</span>${b.datum >= idag ? `<button class="film" data-action="boka-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button>` : ''}</li>`).join('');
+  const bok = m.bokningar.filter(b => !b.datum || b.datum >= idag || (m.betalning && !b.betald && !b.paket && !b.pott)).map(b => `<li class="row bokning"><span class="grow"><b>${esc(DAG[b.dag])} ${fmtDatum(datumFor(b.v, b.dag))}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])}${b.barn ? ` · ${esc(b.barn)}` : ''}${b.av === 'haris' ? ' · bokad av Haris' : ''}</div>${betalRad(b)}${b.datum >= idag ? `<div class="kal-rad">${kalKnapp(b)}</div>` : ''}</span>${b.datum >= idag ? `<button class="film" data-action="boka-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button>` : ''}</li>`).join('');
   const planer = m.planer.map(p => `<a class="card" href="#/med-haris/${p.id}"><div class="card-body"><div class="eyebrow">${esc(p.datum)}</div><h3>${esc(p.titel)}</h3><p class="desc">${p.block.length} moment · ${p.block.filter(b => b.resultat || b.tider?.length).length} ${p.block.filter(b => b.resultat).length ? 'bedömningar' : 'tidtagningar'} · ${p.block.reduce((n, b) => n + (b.media?.length || 0) + (b.film ? 1 : 0), 0)} inspelningar</p></div></a>`).join('');
   const paket = (m.paket || []).filter(p => p.kvar > 0 || !p.betald).reverse();
   el.innerHTML = `
     ${m.pott ? `<h2>Din pott</h2>${pottKort(m.pott)}` : ''}
     ${paket.length ? `<h2 ${m.pott ? 'style="margin-top:22px"' : ''}>Ditt paket</h2>${paket.map(paketKort).join('')}` : ''}
     <h2 ${paket.length || m.pott ? 'style="margin-top:22px"' : ''}>Mina bokningar</h2>
-    ${bok ? `<ul class="list">${bok}</ul>` : '<p class="muted small">Inga bokade tider än.</p>'}
+    ${bok ? `<ul class="list">${bok}</ul><p class="small muted" style="margin:6px 0 0">${store.notiser.push ? '🔔 Du får en påminnelse kvällen före varje pass.' : '🔔 Slå på notiser för CAP, så får du en påminnelse kvällen före varje pass.'}</p>` : '<p class="muted small">Inga bokade tider än.</p>'}
     ${kopPaket(m)}
     <h2 style="margin-top:22px">Pass med Haris</h2>
     ${planer ? `<div class="cards">${planer}</div>` : '<p class="muted small">När Haris delat ett pass med er syns det här, med tider, filmer och hans kommentarer.</p>'}

@@ -21,6 +21,10 @@ SMS_FROM = "CapSwe"
 SMS_MAX_DAG = "25"
 APP_LANK_IOS = "https://apps.apple.com/se/app/cap/id6825529179"
 
+# påminnelser inför passen (kvällen före kl 18, eller två timmar före)
+[triggers]
+crons = ["*/15 * * * *"]
+
 [[kv_namespaces]]
 binding = "DB"
 id = "82d710ec9f334606ac2fc8ab2f0aaca5"
