@@ -70,7 +70,7 @@ export function tiderView() {
           ${x.bokad ? `<div class="small"><b style="color:var(--danger)">Bokad:</b> ${x.bokad.uid && klienterNu().some(k => k.id === x.bokad.uid) ? `<a href="#/admin/klient/${x.bokad.uid}">${esc(x.bokad.barn || '')}</a>` : esc(x.bokad.barn || '')}${x.bokad.namn ? ` (${esc(x.bokad.namn)})` : ''}${x.bokad.telefon ? ` · <a href="tel:${esc(x.bokad.telefon)}">${esc(visaTel(x.bokad.telefon))}</a>` : x.bokad.email ? ` · ${esc(x.bokad.email)}` : ''}${x.bokad.av === 'haris' ? ' · av Haris' : ''} <button class="film" data-action="tid-avboka" data-id="${x.id}">Avboka</button>
             <div class="betal-rad-admin">${betalStatus(x.bokad)}${x.bokad.paket ? '' : ` <button type="button" class="film" data-action="tid-betald" data-id="${x.id}" ${x.bokad.betald ? '' : 'data-betald="1"'}>${x.bokad.betald ? 'Ångra betald' : 'Markera betald'}</button>`}</div></div>`
           : x.hall ? '<div class="small muted">Någon håller platsen just nu.</div>'
-          : st.bokaFor === x.id ? `<div class="boka-rad"><select data-boka-klient>${klienterNu().map(k => `<option value="${k.id}">${esc(k.barn)} · ${esc(k.foralder || visaTel(k.telefon))}</option>`).join('') || '<option value="">Inga klienter än</option>'}</select><button type="button" class="btn" data-action="tid-boka-klient" data-id="${x.id}">Boka</button><button type="button" class="btn secondary" data-action="tid-boka" data-id="">Avbryt</button></div>`
+          : st.bokaFor === x.id ? `<div class="boka-rad"><select data-boka-klient>${klienterNu().flatMap(k => [`<option value="${k.id}">${esc(k.barn)} · ${esc(k.foralder || visaTel(k.telefon))}</option>`, ...(k.syskonNamn?.length ? [`<option value="${k.id}|alla">${esc([k.barn, ...k.syskonNamn].join(' och '))} tillsammans</option>`] : [])]).join('') || '<option value="">Inga klienter än</option>'}</select><button type="button" class="btn" data-action="tid-boka-klient" data-id="${x.id}">Boka</button><button type="button" class="btn secondary" data-action="tid-boka" data-id="">Avbryt</button></div>`
           : `<div class="small"><button type="button" class="film" data-action="tid-boka" data-id="${x.id}">Boka åt en kund</button></div>`}
         </div>
         <button type="button" class="film" data-action="tid-bort" data-id="${x.id}" ${x.bokad ? 'disabled title="Avboka först"' : ''}>✕</button>
@@ -239,10 +239,11 @@ export async function tiderAction(action, el) {
     route(); return true;
   }
   if (action === 'tid-boka-klient') {
-    const sel = document.querySelector('[data-boka-klient]'); const kid = sel?.value;
+    const sel = document.querySelector('[data-boka-klient]'); const [kid, alla] = String(sel?.value || '').split('|');
     if (!kid) { toast('Lägg in klienten under Klienter först'); return true; }
-    const r = await api.admin.post(`/admin/klient/${kid}/boka`, { v: st.vald, slot: el.dataset.id });
-    if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); st.bokaFor = null; klientGlom(); toast(`Bokad åt ${klienterNu().find(k => k.id === kid)?.barn || 'klienten'}`); }
+    const kl = klienterNu().find(k => k.id === kid);
+    const r = await api.admin.post(`/admin/klient/${kid}/boka`, { v: st.vald, slot: el.dataset.id, barnIds: alla ? [kid, ...(kl?.syskon || [])] : undefined });
+    if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); st.bokaFor = null; klientGlom(); toast(`Bokad åt ${alla ? [kl?.barn, ...(kl?.syskonNamn || [])].join(' och ') : kl?.barn || 'klienten'}`); }
     else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }

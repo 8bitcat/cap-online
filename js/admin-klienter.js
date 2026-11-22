@@ -105,10 +105,10 @@ function kort(k) {
     <span class="kc-niva" title="Nivå ${k.niva}">${k.niva}</span>
     <span class="kc-body">
       <b>${esc(helt(k) || '(namn saknas)')}${k.fodd ? ` <span class="muted small">${esc(alder(k.fodd))}</span>` : ''}</b>
-      <span class="small muted">${esc(k.foralder || '')}${k.foralder ? ' · ' : ''}${esc(visaTel(k.telefon))} · ${esc(POS[k.position] || '')}${k.lag ? ` · ${esc(k.lag)}` : ''}</span>
+      <span class="small muted">${esc(k.foralder || '')}${k.foralder ? ' · ' : ''}${esc(visaTel(k.telefon))} · ${esc(POS[k.position] || '')}${k.lag ? ` · ${esc(k.lag)}` : ''}${k.syskonTill ? ` · syskon till ${esc(k.syskonTill)}` : k.syskonNamn?.length ? ` · syskon ${esc(k.syskonNamn.join(', '))}` : ''}</span>
       <span class="small kc-rad">${n ? `📅 ${DAG[n.dag]} ${fmtIso(n.datum)} ${esc(n.start)}` : '📅 Ingen tid bokad'}${k.pottSaldo != null ? ` · 💰 ${esc(kr(k.pottSaldo))} (${k.pottPass} pass)` : ''}${k.paketKvar ? ` · 🎟 ${k.paketKvar} pass kvar` : ''}${k.paketObetalda ? ' · <span style="color:var(--warn)">paket obetalt</span>' : ''}${k.senasteBed ? ` · 📊 ${esc(k.senasteBed.namn)} ${fmtSek(k.senasteBed.medel)}` : ''}${k.antalPass ? ` · ${k.antalPass} pass` : ''}</span>
     </span>
-    <span class="kc-flagg">${k.vilLank ? '⚠ Ny länk' : k.inloggad?.app ? '<span style="color:var(--ok)">I appen ✓</span>' : !k.senast ? '<span class="muted">Ej inloggad än</span>' : '<span class="muted">Inte i appen än</span>'}</span>
+    <span class="kc-flagg">${k.syskonTill ? `<span class="muted">Loggar in via ${esc(k.syskonTill)}</span>` : k.vilLank ? '⚠ Ny länk' : k.inloggad?.app ? '<span style="color:var(--ok)">I appen ✓</span>' : !k.senast ? '<span class="muted">Ej inloggad än</span>' : '<span class="muted">Inte i appen än</span>'}</span>
   </a>`;
 }
 
@@ -162,10 +162,10 @@ function klientSida() {
   const pottOk = !!(d.pott && d.pott.pris && d.pott.ledigt >= d.pott.pris);
   // hur tiden betalas: paket, pott eller styckvis (Swish/kontant), och knapparna för att byta
   const satt = (b, s, t) => `<button type="button" class="film" data-action="klient-tidpaket" data-v="${b.v}" data-slot="${b.id}" data-satt="${s}">${t}</button>`;
-  const knappar = b => b.paket ? `${satt(b, 'styck', 'Betala styckvis i stället')}${pottOk ? ` ${satt(b, 'pott', 'Ur potten i stället')}` : ''}`
+  const knappar = b => k.huvud ? '' : b.paket ? `${satt(b, 'styck', 'Betala styckvis i stället')}${pottOk ? ` ${satt(b, 'pott', 'Ur potten i stället')}` : ''}`
     : b.pott ? satt(b, 'styck', 'Betala styckvis i stället')
     : `<button type="button" class="film" data-action="klient-betald" data-v="${b.v}" data-slot="${b.id}" ${b.betald ? '' : 'data-betald="1"'}>${b.betald ? 'Ångra betald' : 'Markera betald'}</button>${harPass && !b.betald && !b.swishad ? ` ${satt(b, 'paket', 'Dra från paketet')}` : ''}${pottOk && !b.betald && !b.swishad ? ` ${satt(b, 'pott', 'Dra från potten')}` : ''}`;
-  const tidRad = (b, kan) => `<li class="row bokning"><span class="grow"><b>${DAGL[b.dag]} ${fmtIso(b.datum)}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])} · bokad av ${b.av === 'haris' ? 'Haris' : 'föräldern'}</div>
+  const tidRad = (b, kan) => `<li class="row bokning"><span class="grow"><b>${DAGL[b.dag]} ${fmtIso(b.datum)}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])} · bokad av ${b.av === 'haris' ? 'Haris' : 'föräldern'}${b.barnIds?.length > 1 ? ` · ${esc(b.barn)} tillsammans` : ''}</div>
     <div class="betal-rad-admin">${betalStatus(b)} ${knappar(b)}</div></span>${kan ? `<button class="film" data-action="klient-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button>` : ''}</li>`;
   return `
   <section>
@@ -181,7 +181,8 @@ function klientSida() {
   </section>
   <div class="admin-grid">
   <div>
-  ${lankPanel(d)}
+  ${k.huvud ? '' : lankPanel(d)}
+  ${syskonPanel(d)}
   <section class="panel">
     <div class="section-head"><h3>Nivå</h3><span class="small muted">${k.nivaHistorik?.length > 1 ? `ändrad ${k.nivaHistorik.length - 1} ${k.nivaHistorik.length === 2 ? 'gång' : 'gånger'}` : ''}</span></div>
     <div class="niva-stepper">
@@ -192,8 +193,8 @@ function klientSida() {
     <div class="niva-skala">${[1, 2, 3, 4, 5].map(n => `<i class="${n <= k.niva ? 'on' : ''}"></i>`).join('')}</div>
     ${k.nivaHistorik?.length > 1 ? `<p class="small muted" style="margin:10px 0 0">${k.nivaHistorik.slice(-3).reverse().map(h => `${esc(h.t.slice(0, 10))}: nivå ${h.niva}${h.kommentar ? ` (${esc(h.kommentar)})` : ''}`).join(' · ')}</p>` : ''}
   </section>
-  ${pottPanel(d)}
-  ${paketPanel(d)}
+  ${k.huvud ? '' : pottPanel(d)}
+  ${k.huvud ? '' : paketPanel(d)}
   <section>
     <div class="section-head"><h2>Tider</h2><a class="small" href="#/admin/klient/${k.id}/boka">Boka ›</a></div>
     ${kommande.length ? `<ul class="list">${kommande.map(b => tidRad(b, true)).join('')}</ul>` : '<p class="muted small">Ingen kommande tid. Boka en åt familjen, så ser de den i appen.</p>'}
@@ -217,6 +218,27 @@ function klientSida() {
   <p class="small" style="text-align:center"><a href="#/admin/klient/${k.id}/redigera">Ändra uppgifter</a> · <a data-action="klient-radera" data-id="${k.id}" href="#/admin/klient/${k.id}">Ta bort klienten</a></p>
   </div>
   </div>`;
+}
+
+// Syskon (Haris 2026-11-22: "en klient som lämnar sina tvillingar till mig"). Varje barn har en egen sida med nivå,
+// bedömningar och filmer. Föräldern loggar in en gång och bokar tider där barnen tränar tillsammans, och pris, paket och
+// pott ligger på det första barnets sida (huvudklienten).
+function syskonPanel(d) {
+  const k = d.klient, fam = d.familj || [], h = fam.find(x => x.huvud);
+  const andra = fam.filter(x => x.id !== k.id);
+  return `<section class="panel" id="syskon">
+    <h3>Syskon</h3>
+    ${k.huvud && h ? `<p class="small" style="margin:0 0 8px">${esc(k.barn || 'Barnet')} är syskon till <a href="#/admin/klient/${h.id}">${esc(h.barn || 'huvudklienten')}</a>. Inloggning, pris, paket och pott sköts på <a href="#/admin/klient/${h.id}">${esc(h.barn || 'den')}s sida</a>.</p>` : ''}
+    ${andra.length ? `<ul class="list small">${andra.map(x => `<li class="row"><a class="grow" href="#/admin/klient/${x.id}"><b>${esc([x.barn, x.efternamn].filter(Boolean).join(' '))}</b>${x.fodd ? ` <span class="muted">${esc(alder(x.fodd))}</span>` : ''}${x.huvud ? ' <span class="muted">· inloggning och betalning</span>' : ''}</a></li>`).join('')}</ul>` : `<p class="small muted" style="margin:0 0 8px">Har föräldern fler barn som tränar, till exempel tvillingar? Lägg till dem här. De loggar in med samma mobilnummer, och föräldern kryssar i vilka barn som kommer när hen bokar. Ett pass kostar samma pris oavsett hur många barn som kommer.</p>`}
+    ${st.syskonForm ? `<form data-form="klient-syskon" class="rad-form" style="margin-top:8px">
+      <div class="auto-rad" style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="field" style="flex:1;min-width:120px;margin:0"><label for="sysbarn">Förnamn</label><input type="text" id="sysbarn" name="barn" required></div>
+        <div class="field" style="flex:1;min-width:120px;margin:0"><label for="sysefter">Efternamn</label><input type="text" id="sysefter" name="efternamn" value="${esc(k.efternamn || '')}"></div>
+        <label class="field" style="flex:1;min-width:110px;margin:0">Född år <select name="fodd"><option value="">–</option>${Array.from({ length: 12 }, (_, i) => new Date().getFullYear() - 5 - i).map(y => `<option value="${y}" ${String(k.fodd) === String(y) ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
+      </div>
+      <div class="btn-row two" style="margin-top:8px"><button class="btn grad" type="submit">Lägg till syskonet</button><button class="btn secondary" type="button" data-action="klient-syskon-form">Avbryt</button></div>
+    </form>` : `<button class="btn secondary block" data-action="klient-syskon-form" style="margin-top:6px">+ Lägg till syskon</button>`}
+  </section>`;
 }
 
 // Pass och pris på barnet (Carl 2026-10-28): saldot, ett eget pris per pass ("olika barn ska kunna ha deals"),
@@ -378,8 +400,13 @@ function veckaPlus(v, n) {
   return `${x.getUTCFullYear()}-W${String(1 + Math.round(((x - forsta) / 864e5 - 3 + ((forsta.getUTCDay() + 6) % 7)) / 7)).padStart(2, '0')}`;
 }
 async function veckorLadda() { const r = await api.admin.get('/admin/veckor'); if (r.ok) { st.veckor = r.veckor; st.nu = r.nu; if (!st.veckaVald || st.veckaVald < r.nu) st.veckaVald = r.nu; } }
+// syskon: vilka barn Haris bokar åt (alla från början, tvillingarna tränar tillsammans)
+const bokaBarn = d => (st.bokaBarn?.kid === d.klient.id ? st.bokaBarn.ids : (d.familj || []).map(x => x.id));
 function bokaVy() {
   const d = st.vald, k = d.klient;
+  const fam = d.familj || [], huvudId = fam.find(x => x.huvud)?.id || k.id;
+  const valda = fam.length > 1 ? bokaBarn(d) : [k.id];
+  const valText = fam.filter(x => valda.includes(x.id)).map(x => x.barn).join(' och ') || k.barn;
   if (!st.veckor) { veckorLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar tiderna…</p></section>`; }
   const v = st.veckaVald, w = st.veckor.find(x => x.v === v) || { v, oppen: false, slots: [] };
   const idagD = new Date(new Date().toDateString());
@@ -388,14 +415,18 @@ function bokaVy() {
     const slots = w.slots.filter(x => x.dag === dag); if (!slots.length) continue;
     const datum = datumFor(v, dag), passerad = datum < idagD;
     dagar += `<div class="dag"><div class="dag-rubrik"><b>${DAGL[dag]}</b> <span class="muted small">${fmtDatum(datum)}</span></div><div class="tider">${slots.map(s => {
-      const min = s.bokad?.uid === k.id, upptagen = !!s.bokad && !min, hall = !s.bokad && s.hall;
-      return `<button class="tid ${min ? 'min' : upptagen ? 'upptagen' : hall ? 'haller' : ''}" ${passerad || upptagen || hall || min ? 'disabled' : ''} data-action="klient-boka" data-v="${v}" data-slot="${s.id}"><b>${esc(s.start)}–${esc(s.slut)}</b><small>${min ? `Bokad åt ${esc(k.barn)}` : upptagen ? `Upptagen · ${esc(s.bokad.barn || s.bokad.namn || '')}` : hall ? 'Någon håller platsen' : 'Ledig'}${s.plats ? ` · ${esc(s.plats)}` : ''}</small></button>`;
+      const ids = s.bokad ? (s.bokad.barnIds?.length ? s.bokad.barnIds : [s.bokad.uid]) : [];
+      const familjens = !!s.bokad && s.bokad.uid === huvudId;
+      const min = familjens && valda.every(id => ids.includes(id)), upptagen = !!s.bokad && !familjens, hall = !s.bokad && s.hall;
+      return `<button class="tid ${min ? 'min' : upptagen ? 'upptagen' : hall ? 'haller' : ''}" ${passerad || upptagen || hall || min ? 'disabled' : ''} data-action="klient-boka" data-v="${v}" data-slot="${s.id}"><b>${esc(s.start)}–${esc(s.slut)}</b><small>${min ? `Bokad åt ${esc(s.bokad.barn || k.barn)}` : familjens ? `${esc(s.bokad.barn)} · lägg till` : upptagen ? `Upptagen · ${esc(s.bokad.barn || s.bokad.namn || '')}` : hall ? 'Någon håller platsen' : 'Ledig'}${s.plats ? ` · ${esc(s.plats)}` : ''}</small></button>`;
     }).join('')}</div></div>`;
   }
   return `
   <section>
     <a class="back" href="#/admin/klient/${k.id}">‹ ${esc(k.barn)}</a>
-    <h1>Boka en tid åt ${esc(k.barn)}</h1>
+    <h1>Boka en tid åt ${esc(fam.length > 1 ? valText : k.barn)}</h1>
+    ${fam.length > 1 ? `<div class="chips barn-val">${fam.map(x => `<button type="button" class="chip ${valda.includes(x.id) ? 'on' : ''}" data-action="klient-boka-barn" data-id="${x.id}" aria-pressed="${valda.includes(x.id)}">${valda.includes(x.id) ? '✓ ' : ''}${esc(x.barn)}</button>`).join('')}</div>
+    <p class="muted small" style="margin-top:0">Syskonen tränar på samma tid och betalar ett pris för passet. Tryck på ett namn för att boka bara det barnet.</p>` : ''}
     <p class="muted small">Tryck på en ledig tid. Familjen ser den direkt i appen under Träna med Haris, även om veckan inte är öppnad för andra.</p>
     <div class="vecka-nav">
       <button class="btn secondary" data-action="klient-boka-vecka" data-v="${veckaPlus(v, -1)}" ${v <= st.nu ? 'disabled' : ''}>‹</button>
@@ -440,14 +471,23 @@ async function klienterActionNu(action, el, e) {
   }
   if (action === 'klient-boka-vecka') { st.veckaVald = el.dataset.v; route(); return true; }
   if (action === 'klient-boka') {
-    const r = await api.admin.post(`/admin/klient/${k.id}/boka`, { v: el.dataset.v, slot: el.dataset.slot });
-    if (r.ok) { d.bokningar = r.bokningar; if (d.pott) await uppdatera(); st.laddat = false; st.veckor = null; toast(`Tiden är bokad åt ${k.barn}`); go(`/admin/klient/${k.id}`); } else { toast(`Gick inte: ${r.fel}`); st.veckor = null; route(); }
+    const barnIds = (d.familj || []).length > 1 ? bokaBarn(d) : undefined;
+    const r = await api.admin.post(`/admin/klient/${k.id}/boka`, { v: el.dataset.v, slot: el.dataset.slot, barnIds });
+    const vem = barnIds ? d.familj.filter(x => barnIds.includes(x.id)).map(x => x.barn).join(' och ') : k.barn;
+    if (r.ok) { d.bokningar = r.bokningar; if (d.pott) await uppdatera(); st.laddat = false; st.veckor = null; toast(`Tiden är bokad åt ${vem}`); go(`/admin/klient/${k.id}`); } else { toast(`Gick inte: ${r.fel}`); st.veckor = null; route(); }
     return true;
   }
+  if (action === 'klient-boka-barn') {
+    const val = new Set(bokaBarn(d));
+    if (val.has(el.dataset.id)) val.delete(el.dataset.id); else val.add(el.dataset.id);
+    st.bokaBarn = { kid: k.id, ids: [...val] }; route(); return true;
+  }
+  if (action === 'klient-syskon-form') { st.syskonForm = !st.syskonForm; route(); return true; }
   if (action === 'klient-avboka') {
     if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Tryck igen'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = 'Avboka'; el.classList.remove('armed'); }, 4000); return true; }
+    const fore = d.bokningar.find(x => x.v === el.dataset.v && x.id === el.dataset.slot);
     const r = await api.admin.post(`/admin/klient/${k.id}/avboka`, { v: el.dataset.v, slot: el.dataset.slot });
-    if (r.ok) { d.bokningar = r.bokningar; if (d.pott) await uppdatera(); st.laddat = false; toast('Avbokad'); } else toast(`Gick inte: ${r.fel}`);
+    if (r.ok) { d.bokningar = r.bokningar; if (d.pott) await uppdatera(); st.laddat = false; toast(fore?.barnIds?.length > 1 ? `${k.barn} är struken från tiden. Syskonen tränar som vanligt.` : 'Avbokad'); } else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }
   if (action === 'klient-betald') {
@@ -542,11 +582,20 @@ async function klienterSubmitNu(kind, f, fd) {
     const btn = f.querySelector('button[type=submit]'); btn.disabled = true;
     const r = await api.admin.post('/admin/klient', { ...falt(), skicka: fd.get('skicka') === 'on' });
     btn.disabled = false;
+    // numret finns redan: oftast ett syskon (tvillingar). Öppna den klienten med formuläret Lägg till syskon framme.
+    if (!r.ok && r.finns) { toast('Numret finns redan. Lägg till barnet som syskon här.'); st.syskonForm = true; st.vald = null; go(`/admin/klient/${r.finns}`); return true; }
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
     st.nyLank = { klientId: r.klient.id, ...r }; st.laddat = false; st.vald = null; smsRakna(r);
     const vem = helt(r.klient) || r.klient.foralder || visaTel(r.klient.telefon);
     toast(r.sms?.skickat ? `${vem} är inlagd och sms:et är skickat` : `${vem} är inlagd. Skicka sms:et med koden härunder.`);
     go(`/admin/klient/${r.klient.id}`); return true;
+  }
+  if (kind === 'klient-syskon') {
+    const k = st.vald.klient;
+    const r = await api.admin.post(`/admin/klient/${k.id}/syskon`, { barn: fd.get('barn'), efternamn: fd.get('efternamn'), fodd: fd.get('fodd') });
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    st.syskonForm = false; st.laddat = false; await klientLadda(k.id);
+    toast(`${r.klient.barn} är inlagd som syskon. Föräldern loggar in som vanligt och ser båda barnen.`); route(); return true;
   }
   if (kind === 'klient-spara') {
     const k = st.vald.klient;

@@ -213,7 +213,26 @@ function renKlient(d, gammal = {}) {
     niva, nivaHistorik: hist, anteckning: ren(d.anteckning, 2000),
     status: ['ny', 'aktiv', 'paus'].includes(d.status) ? d.status : (gammal.status || 'ny'),
     pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [], inloggad: gammal.inloggad || {}, paket: gammal.paket || [], pris: gammal.pris ?? null, passLogg: gammal.passLogg || [], pott: gammal.pott || [], notiser: gammal.notiser || [],
+    huvud: gammal.huvud || null, syskon: gammal.syskon || [],
   };
+}
+// ---------- syskon (Haris 2026-11-22: "en klient som lämnar sina tvillingar till mig") ----------
+// Varje barn är en egen klient med egen nivå, egna bedömningar och filmer. Syskonen delar förälderns mobilnummer och
+// inloggning: huvudklienten (det första barnet) har tel:-nyckeln, inloggningen, priset, paketen och potten, och varje
+// syskon har huvud = huvudklientens id (huvudklienten har syskon = [id]). En bokning tillhör huvudklienten (bokad.uid)
+// och har barnIds = barnen som kommer. Carl: "samma tid, en bokning" och "ett pris för passet".
+const betalare = async (env, k) => (k?.huvud ? (await hamtaKlient(env, k.huvud)) || k : k);
+async function familj(env, k) {
+  const h = await betalare(env, k);
+  if (!h) return [];
+  return [h, ...(await Promise.all((h.syskon || []).map(id => hamtaKlient(env, id)))).filter(Boolean)];
+}
+const barnText = namn => { const n = namn.filter(Boolean); return n.length <= 1 ? (n[0] || '') : `${n.slice(0, -1).join(', ')} och ${n.at(-1)}`; };
+const bokadeBarn = b => (b?.barnIds?.length ? b.barnIds : b?.uid ? [b.uid] : []);
+// barnen som kommer: de valda ur familjen, annars bara det barn som angavs
+function valdaBarn(fam, ids, standard) {
+  const val = fam.filter(x => (Array.isArray(ids) && ids.length ? ids : [standard]).includes(x.id));
+  return val.length ? val : fam.filter(x => x.id === standard);
 }
 // Det föräldern och adminlistan får se (aldrig pin-hashen eller sms-loggens nycklar)
 const publikKlient = k => { const { pin, ...rest } = k; return { ...rest, harPin: !!pin, smsLogg: (k.smsLogg || []).map(({ tok, ...e }) => e) }; };
@@ -346,7 +365,7 @@ function publikVecka(vecka, uid) {
 // Bokade tider för ett konto, ur alla veckor
 function bokningarFor(veckor, uid) {
   const ut = [];
-  for (const w of veckor) for (const s of w.slots) if (s.bokad?.uid === uid) ut.push({ v: w.v, id: s.id, dag: s.dag, start: s.start, slut: s.slut, plats: s.plats, barn: s.bokad.barn, datum: datumFor(w.v, s.dag), mandag: mandag(w.v).toISOString().slice(0, 10), av: s.bokad.av || 'foralder',
+  for (const w of veckor) for (const s of w.slots) if (s.bokad && (s.bokad.uid === uid || s.bokad.barnIds?.includes(uid))) ut.push({ v: w.v, id: s.id, dag: s.dag, start: s.start, slut: s.slut, plats: s.plats, barn: s.bokad.barn, barnIds: bokadeBarn(s.bokad), datum: datumFor(w.v, s.dag), mandag: mandag(w.v).toISOString().slice(0, 10), av: s.bokad.av || 'foralder',
     pris: s.bokad.pris || null, swishad: s.bokad.swishad || null, betald: s.bokad.betald || null, paket: s.bokad.paket || null, pott: !!s.bokad.pott });
   return ut.sort((a, b) => (a.datum + a.start).localeCompare(b.datum + b.start));
 }
@@ -699,7 +718,8 @@ export default {
     // notiser skickas i bakgrunden, så att svaret inte väntar på Apple. tillKlient sparar också notisen på klienten
     // (anropa före sparaKlient).
     const bakgrund = pr => { try { ctx.waitUntil(Promise.resolve(pr).catch(() => {})); } catch { /* ok */ } };
-    const tillKlient = (k, typ, title, text, hash = '') => { if (!k) return; noteraKlient(k, typ, title, text, hash); bakgrund(pushTyp(env, typ, { title, text, hash, till: [k.id] })); };
+    // ett syskon har ingen egen telefon i appen: pushen går till huvudklientens (förälderns) telefon
+    const tillKlient = (k, typ, title, text, hash = '') => { if (!k) return; noteraKlient(k, typ, title, text, hash); bakgrund(pushTyp(env, typ, { title, text, hash, till: [k.huvud || k.id] })); };
     const tillHaris = (title, text, hash = '/admin/tider') => bakgrund(pushTyp(env, 'haris', { title, text, hash, admin: true }));
     const barnNamn = (k, u) => [k?.barn || u?.barn, k?.efternamn].filter(Boolean).join(' ') || k?.foralder || u?.namn || 'En förälder';
 
@@ -890,7 +910,9 @@ export default {
       const alla = veckor.filter(w => w.oppen && w.v >= nuV).sort((a, b) => a.v.localeCompare(b.v));
       const k = user.klientId ? await hamtaKlient(env, user.klientId) : null;
       const cfg = await hamtaBetalning(env);
-      return svar({ ok: true, nu: nuV, veckor: alla.map(w => publikVecka(stadaHall(w), user.uid)), betalning: publikBetalning({ ...cfg, pris: klientPris(k, cfg) }), paket: k ? paketSaldo(k, veckor) : [], pott: k ? pottSaldo(k, veckor, cfg) : null });
+      const fam = k?.syskon?.length ? await familj(env, k) : [];
+      return svar({ ok: true, nu: nuV, veckor: alla.map(w => publikVecka(stadaHall(w), user.uid)), betalning: publikBetalning({ ...cfg, pris: klientPris(k, cfg) }), paket: k ? paketSaldo(k, veckor) : [], pott: k ? pottSaldo(k, veckor, cfg) : null,
+        familj: fam.length > 1 ? fam.map(x => ({ id: x.id, barn: x.barn || 'Barnet' })) : [] });
     }
     if (p.startsWith('/boka/') && req.method === 'POST') {
       const user = await sessionUser(env, req);
@@ -922,7 +944,11 @@ export default {
         if (d.betalning === 'paket' && !pk) return fel('du har inga pass kvar i paketet', 409);
         const pott = !pk && !!kl && (d.betalning === 'pott' || !d.betalning) && pottRacker(kl, allaV, cfg);
         if (d.betalning === 'pott' && !pott) return fel('potten räcker inte till ett pass till, prata med Haris', 409);
-        s.bokad = { uid: user.uid, namn: user.namn || '', barn: ren(d.barn, 40) || user.barn || '', email: user.email || '', telefon: user.telefon || '', t: nu(), av: 'foralder', pris: pk ? null : klientPris(kl, cfg), paket: pk?.id || null, pott };
+        // syskon: föräldern kryssar i vilka barn som kommer (en bokning, ett pris)
+        const fam = kl?.syskon?.length ? await familj(env, kl) : [];
+        const valda = fam.length > 1 ? valdaBarn(fam, d.barnIds, kl.id) : [];
+        s.bokad = { uid: user.uid, namn: user.namn || '', barn: valda.length ? barnText(valda.map(x => x.barn)) : ren(d.barn, 40) || user.barn || '', email: user.email || '', telefon: user.telefon || '', t: nu(), av: 'foralder', pris: pk ? null : klientPris(kl, cfg), paket: pk?.id || null, pott };
+        if (valda.length) s.bokad.barnIds = valda.map(x => x.id);
         s.hall = null;
         await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
         if (kl) {
@@ -931,7 +957,7 @@ export default {
           else logga(kl, 'styck', `Bokade ${tidText(v, s)}${s.bokad.pris ? `, ${krText(s.bokad.pris)} med Swish` : ''}`, 0, 'foralder');
           await sparaKlient(env, kl);
         }
-        tillHaris('Ny bokning', `${barnNamn(kl, user)} bokade ${tidText(v, s)}${pk ? ' (paket)' : pott ? ' (potten)' : s.bokad.pris ? ` (${krText(s.bokad.pris)} Swish)` : ''}.`);
+        tillHaris('Ny bokning', `${s.bokad.barnIds ? `${s.bokad.barn} ${kl.efternamn || ''}`.trim() : barnNamn(kl, user)} bokade ${tidText(v, s)}${pk ? ' (paket)' : pott ? ' (potten)' : s.bokad.pris ? ` (${krText(s.bokad.pris)} Swish)` : ''}.`);
         return svar({ ok: true, slot: publikVecka(vecka, user.uid).slots.find(x => x.id === s.id) });
       }
       if (p === '/boka/swishad') {
@@ -959,12 +985,21 @@ export default {
       const veckor = await hamtaAlla(env, 'vecka:');
       const bokningar = bokningarFor(veckor, user.uid);
       for (const b of bokningar) b.kal = `/kal/${b.v}/${b.id}/${user.uid}/${await kalSig(env, b.v, b.id, user.uid)}.ics`;
-      const planer = (await hamtaAlla(env, 'plan:')).filter(x => x.uid === user.uid && x.delad).sort((a, b) => b.datum.localeCompare(a.datum));
-      const klient = user.klientId ? publikKlient(await hamtaKlient(env, user.klientId)) : null;
+      const kRad = user.klientId ? await hamtaKlient(env, user.klientId) : null;
+      // syskon: varje barns nivå, bedömningar och filmer för sig, passen och notiserna för hela familjen
+      const fam = kRad?.syskon?.length ? await familj(env, kRad) : [];
+      const famIds = fam.length ? fam.map(x => x.id) : [user.uid];
+      const planer = (await hamtaAlla(env, 'plan:')).filter(x => famIds.includes(x.uid) && x.delad).sort((a, b) => b.datum.localeCompare(a.datum));
+      const klient = kRad ? publikKlient(kRad) : null;
+      if (klient && fam.length > 1) klient.notiser = fam.flatMap(x => x.notiser || []).sort((a, b) => a.t.localeCompare(b.t)).slice(-60);
       const bedomningar = user.klientId ? ((await env.DB.get(`bed:${user.klientId}`, 'json')) || []) : [];
       const media = user.klientId ? ((await env.DB.get(`med:${user.klientId}`, 'json')) || []).filter(m => m.delad) : [];
+      const familjData = fam.length > 1 ? await Promise.all(fam.map(async x => {
+        const { id, barn, efternamn, fodd, position, niva, nivaHistorik } = x;
+        return { klient: { id, barn, efternamn, fodd, position, niva, nivaHistorik }, bedomningar: x.id === user.klientId ? bedomningar : ((await env.DB.get(`bed:${x.id}`, 'json')) || []), media: x.id === user.klientId ? media : ((await env.DB.get(`med:${x.id}`, 'json')) || []).filter(m => m.delad) };
+      })) : [];
       const cfg = await hamtaBetalning(env);
-      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
+      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, familj: familjData, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
     }
 
     // Telefonens pushkod kopplas till kontot (Carl 2026-11-13: "vi har olika login på telefonerna"). av: true kopplar loss.
@@ -986,14 +1021,21 @@ export default {
       const d = (await json()) || {};
       const k = await hamtaKlient(env, se.uid);
       const veckor = await hamtaAlla(env, 'vecka:');
-      const planer = (await hamtaAlla(env, 'plan:')).filter(x => x.uid === se.uid);
+      const syskon = k?.syskon || [];
+      const planer = (await hamtaAlla(env, 'plan:')).filter(x => x.uid === se.uid || syskon.includes(x.uid));
       if (k) {
+        // syskonen följer med: de har ingen egen inloggning
+        for (const sid of syskon) {
+          const sm = (await env.DB.get(`med:${sid}`, 'json')) || [];
+          if (env.MEDIA) for (const m of sm) if (m.key) await env.MEDIA.delete(m.key).catch(() => {});
+          await Promise.all([env.DB.delete(`klient:${sid}`), env.DB.delete(`bed:${sid}`), env.DB.delete(`med:${sid}`)]);
+        }
         const cfg = await hamtaBetalning(env);
         const pott = pottSaldo(k, veckor, cfg), kvar = paketSaldo(k, veckor).reduce((n, x) => n + x.kvar, 0);
         const media = (await env.DB.get(`med:${k.id}`, 'json')) || [];
         if (env.MEDIA) for (const m of media) if (m.key) await env.MEDIA.delete(m.key).catch(() => {});
         await Promise.all([env.DB.delete(`klient:${k.id}`), k.telefon ? env.DB.delete(`tel:${k.telefon}`) : null, env.DB.delete(`bed:${k.id}`), env.DB.delete(`med:${k.id}`), k.kod?.kod ? env.DB.delete(`kod:${k.kod.kod}`) : null]);
-        const ids = (await klientIndex(env)).filter(x => x !== k.id); await env.DB.put('klienter', JSON.stringify(ids));
+        const ids = (await klientIndex(env)).filter(x => x !== k.id && !syskon.includes(x)); await env.DB.put('klienter', JSON.stringify(ids));
         const rest = [pott && pott.saldo ? `${krText(pott.saldo)} kvar i potten` : '', kvar ? `${kvar} pass kvar i paket` : ''].filter(Boolean).join(' och ');
         const raderade = (await env.DB.get('raderade', 'json')) || [];
         raderade.push({ t: nu(), namn: [k.barn, (k.efternamn || '').slice(0, 1)].filter(Boolean).join(' ') + (k.efternamn ? '.' : ''), rest });
@@ -1094,7 +1136,7 @@ export default {
           const bed = (beds[i] || []).slice().sort((x, y) => (y.datum + y.t).localeCompare(x.datum + x.t));
           const saldo = paketSaldo(k, veckor);
           const pt = pottSaldo(k, veckor, cfgB);
-          return { ...publikKlient(k), notiser: undefined, pott: undefined, pottSaldo: pt ? pt.saldo : null, pottPass: pt ? pt.passKvar : null, paketKvar: saldo.reduce((n, x) => n + x.kvar, 0), paketObetalda: saldo.filter(x => !x.betald).length, nastaTid: b[0] || null, antalPass: planer.filter(x => x.uid === k.id).length, antalBed: bed.length, senasteBed: bed[0] ? { namn: bed[0].namn, medel: bed[0].medel, datum: bed[0].datum } : null, lank: k.kod?.kod && !k.kod.forbrukad ? lank(env, k.kod.kod) : null };
+          return { ...publikKlient(k), notiser: undefined, pott: undefined, syskonTill: k.huvud ? (klienter.find(x => x.id === k.huvud)?.barn || 'syskon') : null, syskonNamn: (k.syskon || []).map(id => klienter.find(x => x.id === id)?.barn).filter(Boolean), pottSaldo: pt ? pt.saldo : null, pottPass: pt ? pt.passKvar : null, paketKvar: saldo.reduce((n, x) => n + x.kvar, 0), paketObetalda: saldo.filter(x => !x.betald).length, nastaTid: b[0] || null, antalPass: planer.filter(x => x.uid === k.id).length, antalBed: bed.length, senasteBed: bed[0] ? { namn: bed[0].namn, medel: bed[0].medel, datum: bed[0].datum } : null, lank: k.kod?.kod && !k.kod.forbrukad ? lank(env, k.kod.kod) : null };
         }).sort((a, b) => (a.barn || a.foralder || '').localeCompare(b.barn || b.foralder || '', 'sv'));
         return svar({ ok: true, klienter: ut, raderade: (raderade || []).filter(x => Date.now() - Date.parse(x.t) < 90 * 864e5).reverse(), sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
       }
@@ -1102,7 +1144,8 @@ export default {
         const d = await json(); if (!d) return fel('trasig JSON');
         const tel = telefonNorm(d.telefon);
         if (!tel) return fel('mobilnumret ser fel ut, skriv t.ex. 070-123 45 67');
-        if (await env.DB.get(`tel:${tel}`)) return fel('det numret finns redan i registret', 409);
+        const finns = await env.DB.get(`tel:${tel}`);
+        if (finns) { const fk = await hamtaKlient(env, finns); return svar({ ok: false, fel: `det numret finns redan i registret${fk?.barn ? ` (${fk.barn})` : ''}. Är det ett syskon? Öppna ${fk?.barn || 'den klienten'} och tryck Lägg till syskon.`, finns }, 409); }
         const k = renKlient(d, { id: nyttId('k') });
         const kod = await nyKod(env, k);
         const l = lank(env, kod);
@@ -1113,40 +1156,70 @@ export default {
         const ids = await klientIndex(env); if (!ids.includes(k.id)) { ids.push(k.id); await env.DB.put('klienter', JSON.stringify(ids)); }
         return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, hamtaText: smsHamta(env, k), loggaText: smsLogga(env, k, kod), hamtaLank: hamtaLank(env), ...(await smsDag(env)) });
       }
-      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket|pris|utanfor|pott)(?:\/([a-z0-9]+))?)?$/.exec(p);
+      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket|pris|utanfor|pott|syskon)(?:\/([a-z0-9]+))?)?$/.exec(p);
       if (mk) {
-        const k = await hamtaKlient(env, mk[1]);
-        if (!k) return fel('klienten finns inte', 404);
+        const barnK = await hamtaKlient(env, mk[1]);
+        if (!barnK) return fel('klienten finns inte', 404);
         const del = mk[2], sub = mk[3];
+        // pris, paket, pott och hur en tid betalas gäller hela familjen och ligger på huvudklienten
+        const k = ['paket', 'tidpaket', 'pris', 'utanfor', 'pott'].includes(del) ? await betalare(env, barnK) : barnK;
         if (!del && req.method === 'GET') {
           const [veckor, planer, bedomningar, media] = await Promise.all([hamtaAlla(env, 'vecka:'), hamtaAlla(env, 'plan:'), env.DB.get(`bed:${k.id}`, 'json'), env.DB.get(`med:${k.id}`, 'json')]);
           const kod = giltigKod(k);
           const cfgK = await hamtaBetalning(env);
-          return svar({ ok: true, klient: publikKlient(k), pott: pottSaldo(k, veckor, cfgK), bokningar: bokningarFor(veckor, k.id), planer: planer.filter(x => x.uid === k.id).sort((a, b) => (b.datum + b.uppdaterad).localeCompare(a.datum + a.uppdaterad)),
-            bedomningar: bedomningar || [], media: media || [], paket: paketSaldo(k, veckor), paketMallar: (await hamtaBetalning(env)).paket, standardPris: (await hamtaBetalning(env)).pris, lank: kod ? lank(env, kod) : null, kod, hamtaText: smsHamta(env, k), loggaText: kod ? smsLogga(env, k, kod) : '', hamtaLank: hamtaLank(env),
+          const fam = k.huvud || k.syskon?.length ? await familj(env, k) : [];
+          const bk = fam[0] || k;
+          return svar({ ok: true, klient: publikKlient(k), pott: pottSaldo(bk, veckor, cfgK), bokningar: bokningarFor(veckor, k.id), planer: planer.filter(x => x.uid === k.id).sort((a, b) => (b.datum + b.uppdaterad).localeCompare(a.datum + a.uppdaterad)),
+            familj: fam.map(x => ({ id: x.id, barn: x.barn, efternamn: x.efternamn, fodd: x.fodd, huvud: !x.huvud })), huvudPris: bk.pris ?? null,
+            bedomningar: bedomningar || [], media: media || [], paket: paketSaldo(bk, veckor), paketMallar: cfgK.paket, standardPris: cfgK.pris, lank: kod ? lank(env, kod) : null, kod, hamtaText: smsHamta(env, k), loggaText: kod ? smsLogga(env, k, kod) : '', hamtaLank: hamtaLank(env),
             sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
         }
         if (!del && req.method === 'PUT') {
           const d = await json(); if (!d) return fel('trasig JSON');
-          const tel = telefonNorm(d.telefon);
+          // ett syskon har förälderns nummer, det ändras på huvudklienten
+          const tel = k.huvud ? k.telefon : telefonNorm(d.telefon);
           if (!tel) return fel('mobilnumret ser fel ut');
           if (tel !== k.telefon) { const annan = await env.DB.get(`tel:${tel}`); if (annan && annan !== k.id) return fel('det numret finns redan på en annan klient', 409); }
-          const ny = renKlient(d, k);
-          if (tel !== k.telefon) { await env.DB.delete(`tel:${k.telefon}`); await env.DB.put(`tel:${tel}`, k.id); ny.telefon = tel; }
+          const ny = renKlient(k.huvud ? { ...d, telefon: k.telefon } : d, k);
+          if (tel !== k.telefon) {
+            await env.DB.delete(`tel:${k.telefon}`); await env.DB.put(`tel:${tel}`, k.id); ny.telefon = tel;
+            for (const sid of k.syskon || []) { const sk = await hamtaKlient(env, sid); if (sk) { sk.telefon = tel; await sparaKlient(env, sk); } }
+          }
           await sparaKlient(env, ny);
           return svar({ ok: true, klient: publikKlient(ny) });
         }
         if (!del && req.method === 'DELETE') {
-          await Promise.all([env.DB.delete(`klient:${k.id}`), env.DB.delete(`tel:${k.telefon}`), env.DB.delete(`bed:${k.id}`), env.DB.delete(`med:${k.id}`), k.kod?.kod ? env.DB.delete(`kod:${k.kod.kod}`) : null]);
+          if (k.syskon?.length) return fel('ta bort syskonen först: den här klienten har inloggningen för hela familjen', 409);
+          await Promise.all([env.DB.delete(`klient:${k.id}`), k.huvud ? null : env.DB.delete(`tel:${k.telefon}`), env.DB.delete(`bed:${k.id}`), env.DB.delete(`med:${k.id}`), k.kod?.kod ? env.DB.delete(`kod:${k.kod.kod}`) : null]);
           const ids = (await klientIndex(env)).filter(x => x !== k.id); await env.DB.put('klienter', JSON.stringify(ids));
-          // släpp klientens kommande tider
+          if (k.huvud) { const h = await hamtaKlient(env, k.huvud); if (h) { h.syskon = (h.syskon || []).filter(x => x !== k.id); await sparaKlient(env, h); } }
+          // släpp klientens kommande tider (ett syskon tas bara bort ur familjens bokning)
           const nuV = veckaAv();
           for (const w of (await hamtaAlla(env, 'vecka:')).filter(x => x.v >= nuV)) {
             let andrad = false;
-            for (const s of w.slots) if (s.bokad?.uid === k.id) { s.bokad = null; andrad = true; }
+            for (const s of w.slots) {
+              if (s.bokad?.uid === k.id) { s.bokad = null; andrad = true; }
+              else if (s.bokad?.barnIds?.includes(k.id)) {
+                s.bokad.barnIds = s.bokad.barnIds.filter(x => x !== k.id);
+                if (!s.bokad.barnIds.length) s.bokad = null;
+                andrad = true;
+              }
+            }
             if (andrad) await env.DB.put(`vecka:${w.v}`, JSON.stringify(w));
           }
           return svar({ ok: true });
+        }
+        // Lägg till ett syskon (tvillingar): samma förälder och mobilnummer, egen nivå och egna bedömningar
+        if (del === 'syskon' && req.method === 'POST') {
+          const d = await json(); if (!d) return fel('trasig JSON');
+          const h = await betalare(env, k);
+          if (!ren(d.barn, 40)) return fel('skriv barnets förnamn');
+          const sk = renKlient({ ...d, telefon: h.telefon, foralder: h.foralder, email: h.email, efternamn: ren(d.efternamn, 40) || h.efternamn, status: h.status }, { id: nyttId('k') });
+          sk.huvud = h.id;
+          h.syskon = [...(h.syskon || []), sk.id];
+          await Promise.all([sparaKlient(env, sk), sparaKlient(env, h)]);
+          const ids = await klientIndex(env); if (!ids.includes(sk.id)) { ids.push(sk.id); await env.DB.put('klienter', JSON.stringify(ids)); }
+          return svar({ ok: true, klient: publikKlient(sk) });
         }
         const d = (await json()) || {};
         // typ: hamta (sms 1), logga (sms 2) eller bada. ny: true ger en ny inloggningslänk (den gamla slutar gälla).
@@ -1332,24 +1405,48 @@ export default {
           const vecka = stadaHall(await hamtaVecka(env, v));
           const s = vecka.slots.find(x => x.id === String(d.slot || ''));
           if (!s) return fel('tiden finns inte', 404);
+          // syskon: bokningen och betalningen ligger på huvudklienten (fk), barnIds = barnen som kommer
+          const fk = await betalare(env, k);
+          const fam = fk.syskon?.length ? await familj(env, fk) : [fk];
+          const namnPa = ids => barnText(fam.filter(x => ids.includes(x.id)).map(x => x.barn));
           if (del === 'boka') {
-            if (s.bokad) return fel(s.bokad.uid === k.id ? 'klienten har redan den tiden' : `tiden är redan bokad av ${s.bokad.barn || s.bokad.namn || 'någon annan'}`, 409);
-            if (s.hall && s.hall.tills > Date.now()) return fel('någon håller platsen just nu, prova om en minut', 409);
-            // paketet först, sedan potten, annars styckvis (Haris kan byta under klientens tider)
-            const allaV = await hamtaAlla(env, 'vecka:'), cfgB = await hamtaBetalning(env);
-            const pk = ledigtPaket(k, allaV);
-            const pott = !pk && pottRacker(k, allaV, cfgB);
-            s.bokad = { uid: k.id, namn: k.foralder, barn: k.barn, telefon: k.telefon, email: k.email, t: nu(), av: 'haris', pris: pk ? null : klientPris(k, cfgB), paket: pk?.id || null, pott };
-            s.hall = null;
-            logga(k, pk ? 'bokad' : pott ? 'pott' : 'styck', `Haris bokade ${tidText(v, s)}${pk ? ` med ett pass ur ${pk.namn}` : pott ? `, ${krText(s.bokad.pris)} ur potten` : s.bokad.pris ? `, ${krText(s.bokad.pris)}` : ''}`, pk ? -1 : 0, 'haris');
-            if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(k, 'bokning', 'Ny tid bokad', `Haris har bokat en tid åt ${k.barn || 'er'}: ${tidText(v, s)}${s.plats ? `, ${s.plats}` : ''}.${pk ? ' Passet dras från paketet.' : pott ? ` ${krText(s.bokad.pris)} dras ur potten.` : s.bokad.pris ? ` Betala ${krText(s.bokad.pris)} med Swish i appen.` : ''}`, `/boka/${v}`);
-          } else if (s.bokad?.uid === k.id) {
-            logga(k, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket ? 1 : 0, 'haris');
-            if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(k, 'bokning', 'Tiden är avbokad', `Haris har avbokat ${tidText(v, s)}.${s.bokad.paket ? ' Passet är tillbaka i paketet.' : s.bokad.pott ? ' Beloppet är tillbaka i potten.' : ''}`, `/boka/${v}`);
-            s.bokad = null;
+            const finnsMed = s.bokad && s.bokad.uid === fk.id;
+            if (finnsMed && bokadeBarn(s.bokad).includes(k.id) && !(Array.isArray(d.barnIds) && d.barnIds.some(x => !bokadeBarn(s.bokad).includes(x)))) return fel('klienten har redan den tiden', 409);
+            if (s.bokad && !finnsMed) return fel(`tiden är redan bokad av ${s.bokad.barn || s.bokad.namn || 'någon annan'}`, 409);
+            if (finnsMed) {
+              // syskonet följer med på familjens tid: samma bokning och samma pris
+              const ids = fam.map(x => x.id).filter(id => [...bokadeBarn(s.bokad), k.id, ...(Array.isArray(d.barnIds) ? d.barnIds : [])].includes(id));
+              s.bokad.barnIds = ids; s.bokad.barn = namnPa(ids);
+              logga(fk, 'styck', `Haris lade till ${k.barn} på ${tidText(v, s)}`, 0, 'haris');
+              if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Tiden är ändrad', `${s.bokad.barn} tränar ${tidText(v, s)}${s.plats ? `, ${s.plats}` : ''}.`, `/boka/${v}`);
+            } else {
+              if (s.hall && s.hall.tills > Date.now()) return fel('någon håller platsen just nu, prova om en minut', 409);
+              // paketet först, sedan potten, annars styckvis (Haris kan byta under klientens tider)
+              const allaV = await hamtaAlla(env, 'vecka:'), cfgB = await hamtaBetalning(env);
+              const pk = ledigtPaket(fk, allaV);
+              const pott = !pk && pottRacker(fk, allaV, cfgB);
+              const valda = valdaBarn(fam, d.barnIds, k.id);
+              s.bokad = { uid: fk.id, namn: fk.foralder, barn: barnText(valda.map(x => x.barn)), telefon: fk.telefon, email: fk.email, t: nu(), av: 'haris', pris: pk ? null : klientPris(fk, cfgB), paket: pk?.id || null, pott };
+              if (fam.length > 1) s.bokad.barnIds = valda.map(x => x.id);
+              s.hall = null;
+              logga(fk, pk ? 'bokad' : pott ? 'pott' : 'styck', `Haris bokade ${tidText(v, s)}${fam.length > 1 ? ` (${s.bokad.barn})` : ''}${pk ? ` med ett pass ur ${pk.namn}` : pott ? `, ${krText(s.bokad.pris)} ur potten` : s.bokad.pris ? `, ${krText(s.bokad.pris)}` : ''}`, pk ? -1 : 0, 'haris');
+              if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Ny tid bokad', `Haris har bokat en tid åt ${s.bokad.barn || 'er'}: ${tidText(v, s)}${s.plats ? `, ${s.plats}` : ''}.${pk ? ' Passet dras från paketet.' : pott ? ` ${krText(s.bokad.pris)} dras ur potten.` : s.bokad.pris ? ` Betala ${krText(s.bokad.pris)} med Swish i appen.` : ''}`, `/boka/${v}`);
+            }
+          } else if (s.bokad?.uid === fk.id && bokadeBarn(s.bokad).includes(k.id)) {
+            const kvar = bokadeBarn(s.bokad).filter(x => x !== k.id);
+            if (kvar.length && !d.alla) {
+              // bara det här barnet stryks, syskonen tränar som vanligt (priset är detsamma)
+              s.bokad.barnIds = kvar; s.bokad.barn = namnPa(kvar);
+              logga(fk, 'styck', `Haris strök ${k.barn} från ${tidText(v, s)}`, 0, 'haris');
+              if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Tiden är ändrad', `${k.barn} är struken från ${tidText(v, s)}. ${s.bokad.barn} tränar som vanligt.`, `/boka/${v}`);
+            } else {
+              logga(fk, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket ? 1 : 0, 'haris');
+              if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Tiden är avbokad', `Haris har avbokat ${tidText(v, s)}.${s.bokad.paket ? ' Passet är tillbaka i paketet.' : s.bokad.pott ? ' Beloppet är tillbaka i potten.' : ''}`, `/boka/${v}`);
+              s.bokad = null;
+            }
           }
           await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
-          await sparaKlient(env, k);
+          await sparaKlient(env, fk);
           return svar({ ok: true, vecka, bokningar: bokningarFor([vecka, ...(await hamtaAlla(env, 'vecka:')).filter(w => w.v !== v)], k.id) });
         }
         return fel('okänd klientadress', 404);

@@ -135,7 +135,7 @@ const routes = [
   [/^\/boka$/, () => bokaPage()],
   [/^\/boka\/(\d{4}-W\d{2})$/, v => bokaPage(v)],
   [/^\/med-haris\/([a-z0-9]+)$/, medHarisPage],
-  [/^\/utveckling$/, utvecklingPage],
+  [/^\/utveckling(?:\/([a-z0-9]+))?$/, utvecklingPage],
   [/^\/mina-pass$/, minaPassPage],
   [/^\/mer$/, merPage],
   [/^\/film\/([a-z0-9]+)$/, id => filmPage(id)],

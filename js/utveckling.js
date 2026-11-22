@@ -12,7 +12,8 @@ let ui = null, C = null;
 export function utvecklingInit(deps) { ui = deps; C = deps.content; }
 const nivaNamn = n => C?.game?.levels?.find(l => l.n === n)?.name || `Nivå ${n}`;
 
-export function utvecklingPage() {
+// Syskon (2026-11-22): varje barn har sin egen nivå, sina bedömningar och filmer. Knapparna överst byter barn.
+export function utvecklingPage(barnId) {
   const u = store.session?.user;
   const p = store.profile;
   if (!u) return `
@@ -22,15 +23,19 @@ export function utvecklingPage() {
   const m = minaNu();
   if (!m.hamtat) { hamtaMina().then(ui.kvar()); return `<section class="empty"><p class="muted">Hämtar…</p></section>`; }
   // hämta om i bakgrunden om kopian är gammal, så nivå och bedömningar hänger med
-  hamtaMina().then(ny => { if (ny.hamtat !== m.hamtat && location.hash.replace(/^#/, '') === '/utveckling') ui.route(); });
-  const k = m.klient;
-  const alla = m.bedomningar || [];
+  hamtaMina().then(ny => { if (ny.hamtat !== m.hamtat && location.hash.replace(/^#/, '').startsWith('/utveckling')) ui.route(); });
+  const fam = m.familj || [];
+  const vald = fam.length > 1 ? (fam.find(x => x.klient.id === barnId) || fam.find(x => x.klient.id === m.klient?.id) || fam[0]) : null;
+  const k = vald ? { ...m.klient, ...vald.klient } : m.klient;
+  const alla = (vald ? vald.bedomningar : m.bedomningar) || [];
   const typer = [...new Map(alla.map(b => [b.typ, b.namn])).entries()];
-  const media = (m.media || []).slice().sort((a, b) => (b.t || '').localeCompare(a.t || ''));
+  const media = ((vald ? vald.media : m.media) || []).slice().sort((a, b) => (b.t || '').localeCompare(a.t || ''));
+  const planer = (m.planer || []).filter(pl => !vald || !pl.uid || pl.uid === k.id);
   const namn = k?.barn || p?.name || 'Spelaren';
   return `
   <section>
     <div class="eyebrow">Utveckling</div>
+    ${fam.length > 1 ? `<div class="chips barn-val">${fam.map(x => `<a class="chip ${x.klient.id === k.id ? 'on' : ''}" href="#/utveckling/${x.klient.id}">${esc(x.klient.barn || 'Barnet')}</a>`).join('')}</div>` : ''}
     <h1>${esc(namn)}</h1>
     ${k ? `<div class="panel brand">
       <div class="section-head"><h3>Nivå hos Haris</h3><span class="small muted">${k.nivaHistorik?.length > 1 ? `senast ändrad ${fmtIso(k.nivaHistorik.at(-1).t.slice(0, 10))}` : ''}</span></div>
@@ -61,6 +66,6 @@ export function utvecklingPage() {
   </section>
   <section>
     <div class="section-head"><h2>Pass med Haris</h2><a class="small" href="#/boka">Boka ›</a></div>
-    ${m.planer?.length ? `<div class="cards">${m.planer.map(pl => `<a class="card" href="#/med-haris/${pl.id}"><div class="card-body"><div class="eyebrow">${esc(pl.datum)}</div><h3>${esc(pl.titel)}</h3><p class="desc">${pl.block.length} moment · ${pl.block.filter(b => b.resultat).length} bedömningar · ${pl.block.reduce((n, b) => n + (b.media?.length || 0) + (b.film ? 1 : 0), 0)} inspelningar</p></div></a>`).join('')}</div>` : '<p class="muted small">När Haris delat ett pass med er syns det här.</p>'}
+    ${planer.length ? `<div class="cards">${planer.map(pl => `<a class="card" href="#/med-haris/${pl.id}"><div class="card-body"><div class="eyebrow">${esc(pl.datum)}</div><h3>${esc(pl.titel)}</h3><p class="desc">${pl.block.length} moment · ${pl.block.filter(b => b.resultat).length} bedömningar · ${pl.block.reduce((n, b) => n + (b.media?.length || 0) + (b.film ? 1 : 0), 0)} inspelningar</p></div></a>`).join('')}</div>` : '<p class="muted small">När Haris delat ett pass med er syns det här.</p>'}
   </section>`;
 }

@@ -23,6 +23,11 @@ let klar = null;      // { v, slot } nyss bokad: visar Swish-knappen under tider
 let betala = null;    // { v, slot } rutan Betala passet direkt efter bokningen
 let tick = null;
 let ui = null;
+// Syskon (tvillingar, 2026-11-22): vilka barn som kommer på tiden. Alla från början, en bokning och ett pris.
+let barnVal = null;
+const familj = () => data.familj || [];
+const valdaBarn = () => (barnVal || familj().map(x => x.id)).filter(id => familj().some(x => x.id === id));
+const valdaNamn = () => { const n = familj().filter(x => valdaBarn().includes(x.id)).map(x => x.barn); return n.length <= 1 ? (n[0] || '') : `${n.slice(0, -1).join(', ')} och ${n.at(-1)}`; };
 
 export function bokaInit(deps) { ui = deps; }
 // Carl 2026-10-28: "när man trycker boka scrollas man högst upp i stället för längst ner till tiden".
@@ -39,7 +44,7 @@ export async function hamtaVeckor(tvinga = false, bakgrund = false) {
   const start = Date.now();
   const r = await api.get('/veckor', token());
   if (bakgrund && andrad >= start) return data;
-  if (r.ok) data = { nu: r.nu, veckor: r.veckor, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
+  if (r.ok) data = { nu: r.nu, veckor: r.veckor, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, familj: r.familj || [], hamtat: Date.now() };
   return data;
 }
 export async function hamtaMina(tvinga = false, bakgrund = false) {
@@ -48,7 +53,7 @@ export async function hamtaMina(tvinga = false, bakgrund = false) {
   const start = Date.now();
   const r = await api.get('/mina', token());
   if (bakgrund && andrad >= start) return mina;
-  if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
+  if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
   return mina;
 }
 export const minaNu = () => mina;
@@ -163,12 +168,15 @@ export function bokaPage(v) {
     <h3 style="margin:0">${esc(DAG[h.dag])} ${esc(h.start)}–${esc(h.slut)}${h.plats ? ` · ${esc(h.plats)}` : ''}</h3>
     <div class="xp-row" style="margin-top:8px"><span class="small muted">Bekräfta inom <b id="hallSek">60</b> s${aktivtPaket() || pottRacker() ? ' · välj hur passet betalas' : bet ? ` · ${esc(kr(bet.pris))}, betalas med Swish efter bokningen` : ''}</span></div>
     <div class="progress" style="margin-top:6px"><i id="hallBar" style="width:100%"></i></div>
+    ${familj().length > 1 ? `<div class="barn-val-ruta"><b class="small">Vem tränar?</b>
+      <div class="chips barn-val">${familj().map(x => { const on = valdaBarn().includes(x.id); return `<button type="button" class="chip ${on ? 'on' : ''}" data-action="boka-barn" data-id="${x.id}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(x.barn)}</button>`; }).join('')}</div>
+      <p class="small muted" style="margin:0">Syskonen tränar tillsammans på tiden. Passet kostar samma oavsett hur många som kommer.</p></div>` : ''}
     ${aktivtPaket() || pottRacker() ? `<div class="val-knappar">
       ${aktivtPaket() ? `<button class="btn grad" data-action="boka-bekrafta" data-betalning="paket">Använd ett av dina pass (${aktivtPaket().kvar} kvar)</button>` : ''}
       ${pottRacker() ? `<button class="btn ${aktivtPaket() ? 'secondary' : 'grad'}" data-action="boka-bekrafta" data-betalning="pott">Betala ${esc(kr(bet?.pris || pottRacker().pris))} ur potten (${esc(kr(pottRacker().ledigt))} kvar)</button>` : ''}
       ${bet ? `<button class="btn secondary" data-action="boka-bekrafta" data-betalning="swish">Swisha ${esc(kr(bet.pris))} i stället${aktivtPaket() ? ', spara passen' : ', spara potten'}</button>` : ''}
       <button class="film" data-action="boka-slapp">Ångra</button>
-    </div>` : `<div class="btn-row two"><button class="btn grad" data-action="boka-bekrafta">Boka för ${esc(barn || 'oss')}</button><button class="btn secondary" data-action="boka-slapp">Ångra</button></div>`}
+    </div>` : `<div class="btn-row two"><button class="btn grad" data-action="boka-bekrafta">Boka för ${esc((familj().length > 1 ? valdaNamn() : '') || barn || 'oss')}</button><button class="btn secondary" data-action="boka-slapp">Ångra</button></div>`}
   </section>` : ''}
   <section id="mina"></section>
   ${betalArk()}`;
@@ -304,7 +312,8 @@ async function bokaActionNu(action, el) {
   }
   if (action === 'boka-bekrafta') {
     if (!hall) return true;
-    const r = await api.post('/boka/bekrafta', { v: hall.v, slot: hall.slot, barn: store.profile?.name || '', betalning: el.dataset.betalning || undefined }, token());
+    if (familj().length > 1 && !valdaBarn().length) { ui.toast('Välj vilka barn som kommer'); return true; }
+    const r = await api.post('/boka/bekrafta', { v: hall.v, slot: hall.slot, barn: store.profile?.name || '', betalning: el.dataset.betalning || undefined, barnIds: familj().length > 1 ? valdaBarn() : undefined }, token());
     klar = r.ok ? { v: hall.v, slot: hall.slot } : null;
     hall = null; clearInterval(tick);
     await Promise.all([hamtaVeckor(true), hamtaMina(true)]);
@@ -317,6 +326,11 @@ async function bokaActionNu(action, el) {
     ritaKvar();
     if (klar && !betala) document.querySelector('.nyss-bokad')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     return true;
+  }
+  if (action === 'boka-barn') {
+    const val = new Set(valdaBarn());
+    if (val.has(el.dataset.id)) val.delete(el.dataset.id); else val.add(el.dataset.id);
+    barnVal = [...val]; ritaKvar(); return true;
   }
   if (action === 'boka-klar-stang') { klar = null; ritaKvar(); return true; }
   if (action === 'boka-ark-stang') { betala = null; ritaKvar(); toast('Du kan betala senare under Mina bokningar.'); return true; }
