@@ -11,6 +11,7 @@ import { store } from './store.js';
 import { api, API } from './api.js';
 import { swishLank, visaSwish, bokningsMeddelande, paketMeddelande, kr } from './swish.js';
 import { notisStod, pushSatt } from './notiser.js';
+import { kalSynk, kalStod, kalLage, kalAv } from './kalender.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DAG = ['', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
@@ -29,7 +30,17 @@ const familj = () => data.familj || [];
 const valdaBarn = () => (barnVal || familj().map(x => x.id)).filter(id => familj().some(x => x.id === id));
 const valdaNamn = () => { const n = familj().filter(x => valdaBarn().includes(x.id)).map(x => x.barn); return n.length <= 1 ? (n[0] || '') : `${n.slice(0, -1).join(', ')} och ${n.at(-1)}`; };
 
-export function bokaInit(deps) { ui = deps; }
+export function bokaInit(deps) {
+  ui = deps;
+  // appen tillbaka i förgrunden: hämta bokningarna, så att kalendern CAP hänger med (Haris kan ha bokat eller avbokat)
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && kalStod() && token()) hamtaMina(true, true); });
+}
+// Passen i telefonens kalender (app 1.2): efter varje hämtning av bokningarna. Första gången med ett bokat pass frågar
+// telefonen om lov. Ändrades något ritas bokningssidan om, så att raden om kalendern stämmer.
+function synkaKalender() {
+  if (!kalStod() || !mina.klient) return;
+  kalSynk(mina.bokningar, { fraga: true }).then(r => { if (r && location.hash.startsWith('#/boka')) ritaKvar(); });
+}
 // Carl 2026-10-28: "när man trycker boka scrollas man högst upp i stället för längst ner till tiden".
 // Bokningens knappar ritar om sidan utan att hoppa upp; platsen som hålls ligger kvar längst ner på skärmen.
 function ritaKvar() { const y = window.scrollY; ui.route(); window.scrollTo(0, y); requestAnimationFrame(() => window.scrollTo(0, y)); }
@@ -54,6 +65,7 @@ export async function hamtaMina(tvinga = false, bakgrund = false) {
   const r = await api.get('/mina', token());
   if (bakgrund && andrad >= start) return mina;
   if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], kalFeed: r.kalFeed || null, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
+  if (r.ok) synkaKalender();
   return mina;
 }
 export const minaNu = () => mina;
@@ -204,13 +216,24 @@ export async function fyllMina(el) {
     ${paket.length ? `<h2 ${m.pott ? 'style="margin-top:22px"' : ''}>Ditt paket</h2>${paket.map(paketKort).join('')}` : ''}
     <h2 ${paket.length || m.pott ? 'style="margin-top:22px"' : ''}>Mina bokningar</h2>
     ${bok ? `<ul class="list">${bok}</ul><p class="small muted" style="margin:6px 0 0">${store.notiser.push ? '🔔 Du får en påminnelse kvällen före varje pass.' : '🔔 Slå på notiser för CAP, så får du en påminnelse kvällen före varje pass.'}</p>` : '<p class="muted small">Inga bokade tider än.</p>'}
-    ${m.kalFeed ? `<div class="kal-feed"><a class="btn secondary block" href="${esc((API + m.kalFeed).replace(/^https?:\/\//, 'webcal://'))}">📅 Alla era pass i kalendern automatiskt</a>
-      <p class="small muted" style="margin:6px 0 0">Tryck Prenumerera och stäng av «Ta bort varningar». Sedan kommer varje pass ni bokar in i kalendern av sig självt, på Backavallen och med en påminnelse en timme före.</p></div>` : ''}
+    ${kalRuta(m)}
     ${kopPaket(m)}
     <h2 style="margin-top:22px">Pass med Haris</h2>
     ${planer ? `<div class="cards">${planer}</div>` : '<p class="muted small">När Haris delat ett pass med er syns det här, med tider, filmer och hans kommentarer.</p>'}
     ${m.klient ? `<p class="small" style="margin-top:14px"><a href="#/utveckling">📈 ${esc(m.klient.barn || 'Spelaren')}s utveckling: nivå, bedömningar och filmer ›</a></p>` : ''}`;
   el.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', ui.onAction));
+}
+
+// Kalendern under Mina bokningar. I app 1.2 skriver appen själv i kalendern CAP; annars länken till prenumerationen.
+function kalRuta(m) {
+  const lank = m.kalFeed ? `<a class="btn secondary block" href="${esc((API + m.kalFeed).replace(/^https?:\/\//, 'webcal://'))}">📅 Alla era pass i kalendern automatiskt</a>
+      <p class="small muted" style="margin:6px 0 0">Tryck Prenumerera och stäng av «Ta bort varningar». Sedan kommer varje pass ni bokar in i kalendern av sig självt, på Backavallen och med en påminnelse en timme före.</p>` : '';
+  const lage = kalLage();
+  if (lage === 'saknas') return lank ? `<div class="kal-feed">${lank}</div>` : '';
+  if (lage === 'pa') return `<div class="kal-feed"><p class="small" style="margin:0">📅 Passen läggs in i kalendern <b>CAP</b> på telefonen av sig själva, på Backavallen och med en påminnelse en timme före. <button class="film" data-action="boka-kal-av">Stäng av</button></p></div>`;
+  if (lage === 'nekad') return `<div class="kal-feed"><p class="small" style="margin:0 0 8px">📅 CAP får inte använda kalendern. Öppna Inställningar → CAP → Kalendrar och välj Full åtkomst, så läggs passen in av sig själva.</p><button class="btn secondary block" data-action="boka-kal-pa">Försök igen</button></div>`;
+  return `<div class="kal-feed"><button class="btn secondary block" data-action="boka-kal-pa">📅 Lägg in alla pass i kalendern automatiskt</button>
+      <p class="small muted" style="margin:6px 0 0">Appen lägger passen i en egen kalender, CAP, på Backavallen och med en påminnelse en timme före. Avbokade pass försvinner.</p></div>`;
 }
 
 // Carl 2026-10-28: "när man bokat så skulle man hamna direkt i Swish-appen eller få upp en ruta betala för passet".
@@ -334,6 +357,15 @@ async function bokaActionNu(action, el) {
     const val = new Set(valdaBarn());
     if (val.has(el.dataset.id)) val.delete(el.dataset.id); else val.add(el.dataset.id);
     barnVal = [...val]; ritaKvar(); return true;
+  }
+  if (action === 'boka-kal-pa') {
+    const r = await kalSynk(mina.bokningar, { tvinga: true });
+    toast(r?.ok ? `Klart! ${r.skapade ? `${r.skapade} ${r.skapade === 1 ? 'pass ligger' : 'pass ligger'} nu` : 'Passen läggs'} i kalendern CAP.` : r?.behorighet === 'nej' || r?.behorighet === 'skriv' ? 'Tillåt CAP i Inställningar → CAP → Kalendrar' : `Gick inte: ${r?.fel || 'okänt fel'}`);
+    ritaKvar(); return true;
+  }
+  if (action === 'boka-kal-av') {
+    if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Tryck igen: kalendern CAP tas bort'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = 'Stäng av'; el.classList.remove('armed'); }, 4000); return true; }
+    await kalAv(); toast('Kalendern CAP är borttagen från telefonen'); ritaKvar(); return true;
   }
   if (action === 'boka-klar-stang') { klar = null; ritaKvar(); return true; }
   if (action === 'boka-ark-stang') { betala = null; ritaKvar(); toast('Du kan betala senare under Mina bokningar.'); return true; }

@@ -41,6 +41,10 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>CAP lägger in passen ni bokar hos Haris i en egen kalender, CAP, med plats och en påminnelse en timme före. Avbokade pass tas bort. Inget annat i kalendern läses eller ändras.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>CAP lägger in passen ni bokar hos Haris i en egen kalender, CAP, med plats och en påminnelse en timme före. Avbokade pass tas bort. Inget annat i kalendern läses eller ändras.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Haris filmar moment och bedömningar under passet, så att filmen kan sparas på spelaren och delas med föräldern.</string>
 	<key>NSMicrophoneUsageDescription</key>

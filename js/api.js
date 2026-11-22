@@ -1,5 +1,6 @@
 // Klient mot CAP API (server/cap-api): konton med kod, filmer med taggar, admin.
 import { store } from './store.js';
+import { kalAvsluta } from './kalender.js';
 
 // Lokalt (localhost) kan API:t pekas om till wrangler dev med localStorage cap_api, för tester utan riktiga sms
 export const API = (() => {
@@ -90,6 +91,7 @@ export async function loggaUt() {
   if (s?.token) api.post('/auth/ut', { pushToken: store.notiser.token || undefined }, s.token);
   store.session = null;
   if (store.notiser.kopplad) store.notiser = { ...store.notiser, kopplad: null };
+  kalAvsluta();
 }
 
 // Publicerade filmer från servern, med en kopia i localStorage så att de syns offline.

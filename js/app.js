@@ -10,6 +10,7 @@ import { bokaInit, minaPassPage, bokaPage, medHarisPage, bokaAction, startHallTi
 import { tiderGlom } from './admin-tider.js';
 import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
+import { kalAvsluta } from './kalender.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
@@ -1653,6 +1654,7 @@ async function onAction(e) {
     if (!r.ok) { el.disabled = false; toast(r.fel || 'Gick inte att radera'); return; }
     store.session = null; store.guest = false;
     store.notiser = { ...store.notiser, kopplad: null };
+    kalAvsluta();
     toast('Kontot är raderat'); go('/login'); return;
   }
   if (action === 'filmer-alla') { e.preventDefault(); location.hash = location.hash.includes('alla') ? '#/filmer' : '#/filmer?alla'; route(); return; }
