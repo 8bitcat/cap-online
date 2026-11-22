@@ -201,6 +201,40 @@ if (cmd === 'bilder') {
   }
 }
 
+// En ny version efter den som är ute (1.2 = passen i kalendern, 2026-11-22): skapar versionen om den saknas (texter
+// och skärmbilder följer med från förra), skriver Nyheter och granskningsinfon (kontakten från förra versionen).
+const NYHETER = `Passen i kalendern: appen lägger passen ni bokar hos Haris i en egen kalender, CAP, med plats och en påminnelse en timme före. Avbokade och flyttade pass ändras av sig själva.
+Syskon: har ni flera barn som tränar bokar ni en tid för alla på en gång.
+Påminnelse kvällen före varje pass.`;
+const NOTES_KALENDER = `
+
+New in this version: with the user's permission the app keeps its own calendar named "CAP" with the family's booked sessions (EventKit). Full access is requested because the app also updates and removes sessions that are moved or cancelled; it only reads and changes events in its own "CAP" calendar. The permission is asked the first time the parent has a booked session: in the demo account, open "Med Haris", tap a free time and confirm the booking.`;
+if (cmd === 'uppdatering') {
+  const alla = (await get(`/v1/apps/${APP}/appStoreVersions?filter[platform]=IOS`)).data;
+  let ver = alla.find((x) => x.attributes.versionString === VERSION);
+  const forra = alla.find((x) => x.attributes.appStoreState === 'READY_FOR_SALE');
+  await steg(`version ${VERSION}`, async () => {
+    if (ver) return `finns redan (${ver.attributes.appStoreState})`;
+    ver = (await call('POST', '/v1/appStoreVersions', { data: { type: 'appStoreVersions', attributes: { platform: 'IOS', versionString: VERSION, releaseType: 'MANUAL', copyright: TEXT.copyright }, relationships: { app: { data: { type: 'apps', id: APP } } } } })).data;
+    return 'skapad';
+  });
+  await steg('Nyheter i versionen', async () => {
+    const vl = await get(`/v1/appStoreVersions/${ver.id}/appStoreVersionLocalizations`);
+    const sv = vl.data.find((x) => x.attributes.locale === 'sv');
+    await call('PATCH', `/v1/appStoreVersionLocalizations/${sv.id}`, { data: { type: 'appStoreVersionLocalizations', id: sv.id, attributes: { whatsNew: NYHETER } } });
+  });
+  await steg('granskningsinfo (kontakt från förra versionen, demokonto, kalendern)', async () => {
+    const f = forra && await tyst404(get(`/v1/appStoreVersions/${forra.id}/appStoreReviewDetail`));
+    const a = f?.data?.attributes || {};
+    if (!a.contactEmail || !a.contactPhone) return 'HOPPADES ÖVER – förra versionen saknar kontakt';
+    const d = demo();
+    const attr = { contactFirstName: a.contactFirstName, contactLastName: a.contactLastName, contactEmail: a.contactEmail, contactPhone: a.contactPhone, demoAccountName: d.namn, demoAccountPassword: d.losen, demoAccountRequired: true, notes: NOTES + NOTES_KALENDER };
+    const rd = await tyst404(get(`/v1/appStoreVersions/${ver.id}/appStoreReviewDetail`));
+    if (rd?.data) await call('PATCH', `/v1/appStoreReviewDetails/${rd.data.id}`, { data: { type: 'appStoreReviewDetails', id: rd.data.id, attributes: attr } });
+    else await call('POST', '/v1/appStoreReviewDetails', { data: { type: 'appStoreReviewDetails', attributes: attr, relationships: { appStoreVersion: { data: { type: 'appStoreVersions', id: ver.id } } } } });
+  });
+}
+
 if (cmd === 'bygge') {
   const ver = await version();
   const b = await get(`/v1/builds?filter[app]=${APP}&filter[preReleaseVersion.version]=${VERSION}&sort=-uploadedDate&limit=10`);
