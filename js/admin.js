@@ -1,6 +1,6 @@
 // Adminsidan för Haris (Carl 2026-10-21/23): klientregister, tider, pass, filmer med taggar, stigen, nyhet som push.
 import { store } from './store.js';
-import { api, laddaUppFilm, laddaUppPoster, hamtaFilmer } from './api.js';
+import { api, API, laddaUppFilm, laddaUppPoster, hamtaFilmer } from './api.js';
 import { tiderInit, tiderView, tiderAction, tiderSubmit, tiderGlom } from './admin-tider.js';
 import { swishLank, visaSwish, kr } from './swish.js';
 import { passInit, passView, passAction, passSubmit, passStopur, passStoppa, passFilVald, passGlom } from './admin-pass.js';
@@ -83,6 +83,7 @@ function merFlik() {
   <section class="cards">
     <a class="card" href="#/admin/pass"><div class="card-body"><div class="eyebrow">Pass</div><h3>Alla pass</h3><p class="desc">Passen för alla klienter i en lista. Nya pass planeras från klientens sida.</p></div></a>
   </section>
+  ${kalenderPanel()}
   ${betalningPanel()}
   ${notiserPanel()}
   ${adminsPanel()}
@@ -160,6 +161,31 @@ function bytPanel(id, rita) {
   el.replaceWith(ny);
   ny.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', ui.onAction));
   ny.querySelectorAll('form[data-form]').forEach(f => f.addEventListener('submit', ui.onSubmit));
+}
+// Bokningarna i Haris kalender (Carl 2026-11-22: "haris får varje bokning med namn på barnet/barnen i sin apple kalender").
+// En prenumeration: iPhone hämtar kalendern själv, så nya bokningar och avbokningar kommer in utan att Haris gör något.
+const webcal = u => u.replace(/^https?:\/\//, 'webcal://');
+function kalenderPanel() {
+  if (!state.kalUrl && !state.kalHamtar) {
+    state.kalHamtar = true;
+    api.admin.get('/admin/kalender').then(r => { if (r.ok) state.kalUrl = API + r.url; }).finally(() => { state.kalHamtar = false; bytPanel('kalender', kalenderPanel); });
+  }
+  const u = state.kalUrl;
+  return `
+  <section class="panel brand" id="kalender">
+    <h3>📅 Bokningarna i din kalender</h3>
+    <p class="small muted" style="margin-top:0">Varje bokning hamnar i Kalender på din iPhone med barnens namn, Backavallen som plats och en påminnelse en timme före. Nya bokningar och avbokningar kommer in av sig själva. Du lägger till kalendern en gång.</p>
+    ${u ? `<a class="btn grad block" href="${esc(webcal(u))}">Lägg till i Kalender på iPhone</a>
+    <ol class="small" style="margin:10px 0 0;padding-left:20px">
+      <li>Tryck på knappen och sedan <b>Prenumerera</b>.</li>
+      <li>Stäng av <b>Ta bort varningar</b>, annars kommer inga påminnelser. Tryck <b>Lägg till</b>.</li>
+      <li>Vill du att nya bokningar syns snabbare: Inställningar → Kalender → Konton → Hämta ny data → välj var 15:e minut.</li>
+    </ol>
+    <p class="small muted" style="margin:10px 0 4px">Fungerar inte knappen? Kopiera länken och lägg till den under Inställningar → Kalender → Konton → Lägg till konto → Annat → Lägg till prenumererad kalender.</p>
+    <div class="btn-row two" style="margin:6px 0 0"><button class="btn secondary" data-action="kopiera" data-text="${esc(u)}">Kopiera länken</button><button class="film" data-action="admin-kal-ny">Byt länk</button></div>
+    <p class="small muted" style="margin:6px 0 0">Länken visar barnens namn och föräldrarnas nummer. Dela den inte. Byt länk om någon annan har fått den. Då slutar den gamla fungera, och du lägger till kalendern på nytt.</p>`
+    : '<p class="small muted" style="margin:0">Hämtar…</p>'}
+  </section>`;
 }
 // Vilka e-postadresser som loggar in som Haris (Carl 2026-11-16: "Haris loggar in med sin e-postadress och får då
 // admin-kontot"). Lösenordet är adminlösenordet.
@@ -382,6 +408,12 @@ export async function adminAction(action, el, e) {
     const v = $('#adminplayer video'); if (!v) { toast('Ingen film att ta tiden från'); return true; }
     const row = el.closest('.step'); row.querySelector(`[data-m=${action === 'm-start' ? 'start' : 'slut'}]`).value = Math.round(v.currentTime);
     return true;
+  }
+  if (action === 'admin-kal-ny') {
+    if (!el.dataset.armed) { const t = el.textContent; el.dataset.armed = '1'; el.textContent = 'Tryck igen: den gamla länken slutar fungera'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = t; el.classList.remove('armed'); }, 4000); return true; }
+    const r = await api.admin.post('/admin/kalender', { ny: true });
+    if (r.ok) { state.kalUrl = API + r.url; toast('Ny länk. Lägg till kalendern igen och ta bort den gamla.'); } else toast(`Gick inte: ${r.fel}`);
+    ui.route(); return true;
   }
   if (action === 'kopiera') {
     const text = el.dataset.text || $('#' + el.dataset.el)?.textContent || '';

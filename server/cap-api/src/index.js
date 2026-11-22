@@ -568,17 +568,52 @@ async function kalSig(env, v, slot, uid) {
 function utcAv(dag, tid) { const g = Date.parse(`${dag}T${tid}:00Z`); return new Date(g - (Date.parse(`${lokal(new Date(g))}:00Z`) - g)); }
 const icsTid = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 const icsText = s => String(s || '').replace(/[\\;,]/g, m => `\\${m}`).replace(/\r?\n/g, '\\n');
-function icsFor(v, s) {
-  const dag = datumFor(v, s.dag);
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//8bitcat//CAP//SV', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
-    `UID:${v}-${s.id}-${s.bokad.uid}@cap.8bitcat.io`, `DTSTAMP:${icsTid(new Date())}`,
+// Carl 2026-11-22: "påminnelse att träna med cap 1 timme innan och dags att åka, plats är backavallen".
+// Platsen i kalendern är Backavallen, utom när Haris skrivit en annan plats på tiden.
+const KAL_PLATS = 'Backavallen, Hisings Backa, Göteborg';
+const kalPlats = s => (s.plats && !/backa/i.test(s.plats) ? s.plats : KAL_PLATS);
+// rader längre än 75 tecken viks enligt iCalendar (fortsättningsraden börjar med ett mellanslag)
+const vik = rad => {
+  const ut = []; let bit = '', byte = 0;
+  for (const t of rad) {
+    const n = new TextEncoder().encode(t).length;
+    if (byte + n > 73) { ut.push(bit); bit = ' '; byte = 1; }
+    bit += t; byte += n;
+  }
+  ut.push(bit);
+  return ut.join('\r\n');
+};
+// En bokad tid som kalenderhändelse. haris: rubriken är barnens namn, beskrivningen förälder, telefon och betalning.
+function kalHandelse(v, s, { haris = false } = {}) {
+  const dag = datumFor(v, s.dag), b = s.bokad;
+  const betalt = b.paket ? 'Ingår i paket' : b.pott ? `Ur potten${b.pris ? ` (${krText(b.pris)})` : ''}` : b.betald ? 'Betald' : b.swishad ? `Swishad${b.pris ? ` ${krText(b.pris)}` : ''}, inte bekräftad` : b.pris ? `Inte betald, ${krText(b.pris)}` : '';
+  const rubrik = haris ? `CAP: ${b.barn || b.namn || 'Bokad tid'}` : `Träning med CAP${b.barn ? ` (${b.barn})` : ''}`;
+  const text = haris
+    ? [b.namn ? `Förälder: ${b.namn}` : '', b.telefon ? `Telefon: ${b.telefon}` : '', betalt ? `Betalning: ${betalt}` : '', `Bokad av ${b.av === 'haris' ? 'dig' : 'föräldern'} i CAP.`].filter(Boolean).join('\n')
+    : 'Bokat i CAP. Kan ni inte komma? Avboka i appen under Med Haris.';
+  return ['BEGIN:VEVENT', `UID:cap-${v}-${s.id}-${String(b.t || '').replace(/\D/g, '')}@cap.8bitcat.io`, `DTSTAMP:${icsTid(new Date())}`,
     `DTSTART:${icsTid(utcAv(dag, s.start))}`, `DTEND:${icsTid(utcAv(dag, s.slut))}`,
-    `SUMMARY:${icsText(`Träning med Haris${s.bokad.barn ? ` (${s.bokad.barn})` : ''}`)}`,
-    s.plats ? `LOCATION:${icsText(s.plats)}` : '',
-    `DESCRIPTION:${icsText('Bokat i CAP. Avboka i appen under Med Haris om ni inte kan komma.')}`,
-    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText('Träning med Haris')}`, 'TRIGGER:-PT1H', 'END:VALARM',
-    'END:VEVENT', 'END:VCALENDAR'].filter(Boolean).join('\r\n') + '\r\n';
+    `SUMMARY:${icsText(rubrik)}`, `LOCATION:${icsText(kalPlats(s))}`, `DESCRIPTION:${icsText(text)}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(haris ? `Om en timme: ${b.barn || 'träning'} på Backavallen. Dags att åka.` : 'Träning med CAP om en timme. Dags att åka till Backavallen.')}`, 'TRIGGER:-PT1H', 'END:VALARM',
+    'END:VEVENT'];
 }
+function icsKalender(handelser, namn = '') {
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//8bitcat//CAP//SV', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    ...(namn ? [`X-WR-CALNAME:${icsText(namn)}`, 'X-WR-TIMEZONE:Europe/Stockholm', 'REFRESH-INTERVAL;VALUE=DURATION:PT15M', 'X-PUBLISHED-TTL:PT15M'] : []),
+    ...handelser.flat(), 'END:VCALENDAR'].map(vik).join('\r\n') + '\r\n';
+}
+const icsFor = (v, s) => icsKalender([kalHandelse(v, s)]);
+// Prenumeration (Carl 2026-11-22: "haris får varje bokning med namn på barnet/barnen i sin apple kalender"): alla bokade
+// tider fyra veckor bakåt och tio framåt. Hämtas med get per vecka (inga list-anrop, kalendern frågar var 15:e minut).
+async function kalFlode(env, filter, opts) {
+  const nuV = veckaAv();
+  const v0 = veckaPlus(nuV, -4);
+  const veckor = await Promise.all(Array.from({ length: 15 }, (_, i) => veckaPlus(v0, i)).map(v => env.DB.get(`vecka:${v}`, 'json')));
+  const ut = [];
+  for (const w of veckor.filter(Boolean)) for (const s of w.slots) if (s.bokad && filter(s.bokad)) ut.push(kalHandelse(w.v, s, opts));
+  return ut;
+}
+const kalSvar = ics => new Response(ics, { headers: { 'content-type': 'text/calendar; charset=utf-8', 'content-disposition': 'inline; filename="cap.ics"', 'cache-control': 'no-store', ...CORS } });
 const textSvar = (t, status) => new Response(t, { status, headers: { 'content-type': 'text/plain; charset=utf-8', ...CORS } });
 // Haris loggar in med sin e-post (Carl 2026-11-16). Tillåtna adresser: config:admins.epost (Admin → Mer) och
 // ADMIN_EPOST (kommaseparerad, för lokala tester). Lösenordet är adminlösenordet ADMIN_LOSEN.
@@ -714,7 +749,20 @@ export default {
       if (sig !== await kalSig(env, v, sid, uid)) return textSvar('Länken stämmer inte.', 403);
       const s = (await hamtaVecka(env, v)).slots.find(x => x.id === sid);
       if (s?.bokad?.uid !== uid) return textSvar('Tiden är inte bokad längre. Öppna CAP för att se era bokningar.', 404);
-      return new Response(icsFor(v, s), { headers: { 'content-type': 'text/calendar; charset=utf-8', 'content-disposition': 'inline; filename="cap-traning.ics"', 'cache-control': 'no-store', ...CORS } });
+      return kalSvar(icsFor(v, s));
+    }
+    // Haris kalender: alla bokningar (hemlig nyckel i config:kalhemlig, byts under Admin → Mer)
+    const mkh = /^\/kal\/haris\/([a-z0-9]{24,40})\.ics$/.exec(p);
+    if (req.method === 'GET' && mkh) {
+      const hemlig = await env.DB.get('config:kalhemlig');
+      if (!hemlig || mkh[1] !== hemlig) return textSvar('Länken gäller inte längre. Hämta den nya under Admin → Mer → Bokningarna i din kalender.', 403);
+      return kalSvar(icsKalender(await kalFlode(env, () => true, { haris: true }), 'CAP bokningar'));
+    }
+    // familjens kalender: deras egna bokningar
+    const mkf = /^\/kal\/familj\/([a-z0-9]{4,20})\/([0-9a-f]{18})\.ics$/.exec(p);
+    if (req.method === 'GET' && mkf) {
+      if (mkf[2] !== await kalSig(env, 'familj', 'alla', mkf[1])) return textSvar('Länken stämmer inte.', 403);
+      return kalSvar(icsKalender(await kalFlode(env, b => b.uid === mkf[1]), 'Träning med CAP'));
     }
 
     const json = async () => { try { return await req.json(); } catch { return null; } };
@@ -1002,7 +1050,8 @@ export default {
         return { klient: { id, barn, efternamn, fodd, position, niva, nivaHistorik }, bedomningar: x.id === user.klientId ? bedomningar : ((await env.DB.get(`bed:${x.id}`, 'json')) || []), media: x.id === user.klientId ? media : ((await env.DB.get(`med:${x.id}`, 'json')) || []).filter(m => m.delad) };
       })) : [];
       const cfg = await hamtaBetalning(env);
-      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, familj: familjData, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
+      const kalFeed = kRad ? `/kal/familj/${kRad.id}/${await kalSig(env, 'familj', 'alla', kRad.id)}.ics` : null;
+      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, familj: familjData, kalFeed, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
     }
 
     // Telefonens pushkod kopplas till kontot (Carl 2026-11-13: "vi har olika login på telefonerna"). av: true kopplar loss.
@@ -1491,6 +1540,13 @@ export default {
         const nuV = veckaAv();
         const veckor = (await hamtaAlla(env, 'vecka:')).filter(w => w.v >= veckaPlus(nuV, -1)).sort((a, b) => a.v.localeCompare(b.v)).map(stadaHall);
         return svar({ ok: true, nu: nuV, veckor, mandag: Object.fromEntries(veckor.map(w => [w.v, mandag(w.v).toISOString().slice(0, 10)])), schema: (await env.DB.get('config:tidschema', 'json')) || null });
+      }
+      // Haris kalenderlänk (prenumeration). ny: true byter länken, den gamla slutar fungera.
+      if (p === '/admin/kalender' && (req.method === 'GET' || req.method === 'POST')) {
+        const d = req.method === 'POST' ? ((await json()) || {}) : {};
+        let hemlig = await env.DB.get('config:kalhemlig');
+        if (!hemlig || d.ny) { hemlig = slump(32, SMA); await env.DB.put('config:kalhemlig', hemlig); }
+        return svar({ ok: true, url: `/kal/haris/${hemlig}.ics` });
       }
       // Kör påminnelserna nu (samma som schemat var 15:e minut). nu = låtsad svensk tid, bara i testläge.
       if (p === '/admin/paminnelser' && req.method === 'POST') {

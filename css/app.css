@@ -532,6 +532,7 @@ a.chip.on:hover { color: var(--brand-ink); }
 .auto-form input[type=time], .auto-form select { min-height: 40px; padding: 6px 8px; width: auto; }
 .auto-form .chips label.chip { cursor: pointer; display: inline-flex; align-items: center; }
 .kal-rad { margin-top: 6px; }
+.kal-feed { margin-top: 14px; }
 .kal-rad .kal-knapp { display: inline-block; text-decoration: none; }
 /* veckoschemat: en rad per dag med egen början och eget slut */
 .schema { display: grid; gap: 6px; margin: 4px 0 0; }

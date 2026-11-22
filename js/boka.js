@@ -53,7 +53,7 @@ export async function hamtaMina(tvinga = false, bakgrund = false) {
   const start = Date.now();
   const r = await api.get('/mina', token());
   if (bakgrund && andrad >= start) return mina;
-  if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
+  if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], kalFeed: r.kalFeed || null, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
   return mina;
 }
 export const minaNu = () => mina;
@@ -204,6 +204,8 @@ export async function fyllMina(el) {
     ${paket.length ? `<h2 ${m.pott ? 'style="margin-top:22px"' : ''}>Ditt paket</h2>${paket.map(paketKort).join('')}` : ''}
     <h2 ${paket.length || m.pott ? 'style="margin-top:22px"' : ''}>Mina bokningar</h2>
     ${bok ? `<ul class="list">${bok}</ul><p class="small muted" style="margin:6px 0 0">${store.notiser.push ? '🔔 Du får en påminnelse kvällen före varje pass.' : '🔔 Slå på notiser för CAP, så får du en påminnelse kvällen före varje pass.'}</p>` : '<p class="muted small">Inga bokade tider än.</p>'}
+    ${m.kalFeed ? `<div class="kal-feed"><a class="btn secondary block" href="${esc((API + m.kalFeed).replace(/^https?:\/\//, 'webcal://'))}">📅 Alla era pass i kalendern automatiskt</a>
+      <p class="small muted" style="margin:6px 0 0">Tryck Prenumerera och stäng av «Ta bort varningar». Sedan kommer varje pass ni bokar in i kalendern av sig självt, på Backavallen och med en påminnelse en timme före.</p></div>` : ''}
     ${kopPaket(m)}
     <h2 style="margin-top:22px">Pass med Haris</h2>
     ${planer ? `<div class="cards">${planer}</div>` : '<p class="muted small">När Haris delat ett pass med er syns det här, med tider, filmer och hans kommentarer.</p>'}
@@ -228,6 +230,7 @@ function betalArk() {
       <a class="btn swish block stor" href="${esc(swishLank(bet.swish, pris, msg))}">Betala ${esc(kr(pris))} med Swish</a>
       <p class="small muted" style="margin:10px 0 14px">Swish öppnas med Haris nummer ${esc(visaSwish(bet.swish))}, ${esc(kr(pris))} och meddelandet "${esc(msg)}" ifyllt. Kom sedan tillbaka hit och tryck Jag har swishat.</p>
       <div class="btn-row two" style="margin:0"><button class="btn grad" data-action="boka-swishad" data-v="${b.v}" data-slot="${b.id}">Jag har swishat</button><button class="btn secondary" data-action="boka-ark-stang">Betala senare</button></div>
+      ${b.kal ? `<p style="margin:14px 0 0;text-align:center">${kalKnapp(b)}</p>` : ''}
     </div>
   </div>`;
 }

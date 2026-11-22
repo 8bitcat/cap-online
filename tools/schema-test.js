@@ -144,7 +144,25 @@ const mock = http.createServer((req, res) => {
   const dagStr = (await adm('GET', '/admin/veckor')).mandag[V].replace(/-/g, '');
   koll('kalenderfilen', ics.status === 200 && (ics.headers.get('content-type') || '').startsWith('text/calendar'), `${ics.status} ${ics.headers.get('content-type')}`);
   koll('rätt tid i UTC (14:00 svensk vintertid = 13:00 UTC)', icsText.includes(`DTSTART:${dagStr}T130000Z`) && icsText.includes(`DTEND:${dagStr}T140000Z`), icsText.split('\r\n').filter(x => /^DT(START|END)/.test(x)).join(' '));
-  koll('rubrik, plats och påminnelse en timme före', icsText.includes('SUMMARY:Träning med Haris (Leo)') && icsText.includes('LOCATION:Hisings Backa') && icsText.includes('TRIGGER:-PT1H'));
+  const ofalt = icsText.replace(/\r\n /g, '');
+  koll('rubrik, Backavallen och påminnelse en timme före om att åka', ofalt.includes('SUMMARY:Träning med CAP (Leo)') && ofalt.includes('LOCATION:Backavallen\\, Hisings Backa\\, Göteborg') && ofalt.includes('TRIGGER:-PT1H') && ofalt.includes('Dags att åka till Backavallen'), ofalt.split('\r\n').filter(x => /^(SUMMARY|LOCATION|DESCRIPTION)/.test(x)).join(' | '));
+  koll('inga rader över 75 byte', icsText.split('\r\n').every(r => Buffer.byteLength(r) <= 75));
+
+  // ---- prenumerationerna: familjens och Haris ----
+  const mina = await f.evaluate(async api => { const t = JSON.parse(localStorage.getItem('caponline.v3') || '{}').session?.token; return (await fetch(api + '/mina', { headers: { authorization: 'Bearer ' + t } })).json(); }, API);
+  koll('knappen Alla era pass i kalendern', (await f.$eval('.kal-feed a', e => e.getAttribute('href')).catch(() => '')).startsWith('webcal://'));
+  const famFeed = await (await fetch(API + mina.kalFeed)).text();
+  koll('familjens kalender: båda Leos pass', (famFeed.match(/BEGIN:VEVENT/g) || []).length === 2 && famFeed.includes('X-WR-CALNAME:Träning med CAP'), `${(famFeed.match(/BEGIN:VEVENT/g) || []).length} händelser`);
+  koll('en ändrad familjelänk fungerar inte', (await fetch(API + mina.kalFeed.replace(/[0-9a-f](\.ics)$/, m => (m[0] === '0' ? '1' : '0') + '.ics'))).status === 403);
+  const hk = await adm('GET', '/admin/kalender');
+  const harisFeed = (await (await fetch(API + hk.url)).text()).replace(/\r\n /g, '');
+  koll('Haris kalender: barnets namn, förälder och telefon', harisFeed.includes('SUMMARY:CAP: Leo') && harisFeed.includes('Förälder: Maria') && harisFeed.includes('+46704445566') && harisFeed.includes('Om en timme: Leo på Backavallen'), harisFeed.split('\r\n').filter(x => /^(SUMMARY|DESCRIPTION)/.test(x)).slice(0, 2).join(' | '));
+  koll('Haris kalender uppdateras var 15:e minut', harisFeed.includes('REFRESH-INTERVAL;VALUE=DURATION:PT15M'));
+  const hk2 = await adm('POST', '/admin/kalender', { ny: true });
+  koll('Byt länk: den gamla slutar fungera', hk2.url !== hk.url && (await fetch(API + hk.url)).status === 403 && (await fetch(API + hk2.url)).status === 200);
+  await a.goto(base + 'index.html#/admin/mer'); await a.waitForSelector('#kalender a[href^="webcal://"]', { timeout: 10000 }).catch(() => {});
+  koll('Admin → Mer: Lägg till i Kalender', !!(await a.$('#kalender a[href^="webcal://"]')));
+  await (await a.$('#kalender')).screenshot({ path: path.join(UT, 'schema-4-haris-kalender.png') });
   const falsk = await fetch(kal.href.replace(/[0-9a-f](\.ics)$/, m => (m[0] === '0' ? '1' : '0') + '.ics'));
   koll('en ändrad länk fungerar inte', falsk.status === 403, String(falsk.status));
   await adm('POST', `/admin/klient/${kid}/avboka`, { v: V, slot: man14.id });
