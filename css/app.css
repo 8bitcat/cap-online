@@ -807,13 +807,11 @@ body.admin .view { max-width: 1080px; }
 body.inloggning header.top { display: none; }
 body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }
 
-/* ny version i App Store: raden under toppen (js/appversion.js) */
-.app-uppdatera { display: flex; align-items: center; gap: 10px; padding: 10px max(16px, env(safe-area-inset-left, 0px)); background: var(--brand); color: var(--brand-ink, #001514); }
-.app-uppdatera .au-text { flex: 1; min-width: 0; display: grid; line-height: 1.25; font-size: 14px; }
-.app-uppdatera .au-text span { font-size: 12.5px; opacity: .85; }
-.app-uppdatera .au-knapp { flex: none; background: #001514; color: var(--brand); font-weight: 800; font-size: 14px; padding: 8px 14px; border-radius: 999px; text-decoration: none; }
-.app-uppdatera .au-stang { flex: none; background: transparent; border: 0; color: inherit; font-size: 16px; padding: 6px; cursor: pointer; }
-body.inloggning .app-uppdatera { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+/* ny version i App Store: knappen Uppdatera i toppen, mellan loggan och notisklockan (js/appversion.js) */
+.top-uppdatera { display: inline-flex; align-items: center; gap: 5px; background: var(--brand); color: var(--brand-ink, #001514); font-weight: 800; font-size: 14px; line-height: 1; padding: 9px 13px; border-radius: 999px; text-decoration: none; white-space: nowrap; box-shadow: 0 0 0 3px rgba(0, 212, 203, .18); }
+.top-uppdatera:active { transform: scale(.97); }
+@media (prefers-reduced-motion: no-preference) { .top-uppdatera { animation: uppd-puls 2.4s ease-in-out 3; } }
+@keyframes uppd-puls { 50% { box-shadow: 0 0 0 7px rgba(0, 212, 203, .05); } }
 
 /* Inställningar (js/installningar.js): en rad per tillåtelse med läge och knapp */
 .inst-panel h3 { margin-top: 0; }
@@ -827,3 +825,4 @@ body.inloggning .app-uppdatera { padding-top: calc(10px + env(safe-area-inset-to
 .inst-chip.ja { color: var(--ok, #3ecf8e); border-color: currentColor; }
 .inst-chip.nej { color: var(--danger, #ff6b6b); border-color: currentColor; }
 .inst-chip.halv { color: var(--warn, #f5b44a); border-color: currentColor; }
+@media (max-width: 380px) { .top-uppdatera { font-size: 12.5px; padding: 8px 10px; gap: 3px; } .top-right:has(.top-uppdatera) .top-vaxla span { display: none; } }
