@@ -11,6 +11,7 @@ import { tiderGlom } from './admin-tider.js';
 import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
 import { kalAvsluta } from './kalender.js';
+import { kollaAppVersion } from './appversion.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
@@ -1830,7 +1831,8 @@ async function boot() {
       C2.Plugins.App.getLaunchUrl().then(r => oppnaLank(r?.url)).catch(() => {});
     }
   } catch { /* äldre bygge utan App-pluginet */ }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) kollaNyVersion(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { kollaNyVersion(); kollaAppVersion(); } });
+  kollaAppVersion();
   await adminInit({ toast, route, go, kvar, content: C, onAction, onSubmit, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, kvar, onAction });
   utvecklingInit({ toast, route, go, kvar, content: C });
