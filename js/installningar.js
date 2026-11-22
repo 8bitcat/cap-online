@@ -1,0 +1,118 @@
+// Inställningar (Carl 2026-11-22: "en inställningssida … där man ska kunna justera alla tillåtelser"). Samlar
+// telefonens tillåtelser (notiser, kalendern, kamera, mikrofon, bilder), påminnelserna och kontot på ett ställe.
+// En nekad tillåtelse kan bara ändras i iPhonens Inställningar; knappen Öppna Inställningar går dit (app-settings:).
+import { store } from './store.js';
+import { api, API } from './api.js';
+import { notisStod, pushSatt, paminnSatt, paminnDagar } from './notiser.js';
+import { kalStod, kalLage, kalSynk, kalAv, kalStatus } from './kalender.js';
+import { minaNu, hamtaMina } from './boka.js';
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ios = () => !!window.Capacitor?.isNativePlatform?.();
+const visaTel = t => { const d = String(t || '').replace(/^\+46/, '0').replace(/\D/g, ''); return d.length === 10 ? `${d.slice(0, 3)}-${d.slice(3, 6)} ${d.slice(6, 8)} ${d.slice(8)}` : t || ''; };
+let ui = null;
+let tillstand = null, hamtat = 0, hamtar = false;
+export function installningarInit(deps) {
+  ui = deps;
+  // tillbaka från iPhonens Inställningar: läs tillåtelserna igen
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && location.hash === '#/installningar') { hamtat = 0; ui.route(); } });
+}
+
+async function lasTillstand() {
+  const P = window.Capacitor?.Plugins || {};
+  const t = {};
+  try { t.notiser = (await P.PushNotifications?.checkPermissions())?.receive || null; } catch { /* ok */ }
+  t.kalender = await kalStatus();
+  for (const namn of ['camera', 'microphone']) { try { t[namn] = (await navigator.permissions?.query({ name: namn }))?.state || null; } catch { /* stöds inte */ } }
+  return t;
+}
+
+// granted/ja = tillåtet, denied/nej = nekat, prompt/fraga = inte frågat än
+const LAGE = { granted: ['ja', 'Tillåtet'], ja: ['ja', 'Tillåtet'], denied: ['nej', 'Nekat'], nej: ['nej', 'Nekat'], skriv: ['halv', 'Bara lägga till'], prompt: ['fraga', 'Inte frågat än'], 'prompt-with-rationale': ['fraga', 'Inte frågat än'], fraga: ['fraga', 'Inte frågat än'] };
+const chip = v => { const [k, t] = LAGE[v] || ['fraga', 'Frågas när det behövs']; return `<span class="inst-chip ${k}">${t}</span>`; };
+const OPPNA = '<a class="film" href="app-settings:">Öppna Inställningar</a>';
+
+function rad(ikon, namn, text, status, knapp) {
+  return `<div class="inst-rad"><span class="inst-ikon" aria-hidden="true">${ikon}</span><div class="inst-mitt"><b>${namn}</b><small>${text}</small></div><div class="inst-hoger">${status}${knapp ? `<div>${knapp}</div>` : ''}</div></div>`;
+}
+
+export function installningarPage() {
+  const inloggad = !!store.session?.token, m = minaNu(), k = m.klient;
+  if (inloggad && !m.hamtat) hamtaMina().then(ui.kvar());
+  if (ios() && !hamtar && Date.now() - hamtat > 3000) { hamtar = true; const om = ui.kvar(); lasTillstand().then(t => { tillstand = t; hamtat = Date.now(); hamtar = false; om(); }); }
+  const t = tillstand || {}, n = store.notiser, p = store.profile;
+
+  // notiser
+  let notisRad;
+  if (!ios()) notisRad = rad('🔔', 'Notiser', 'Notiserna kommer i iPhone-appen CAP.', '', '');
+  else if (t.notiser === 'denied') notisRad = rad('🔔', 'Notiser', 'Påminnelser före passen, nya tider och besked från Haris. Nekat på telefonen: slå på under Inställningar → CAP → Notiser.', chip('denied'), OPPNA);
+  else notisRad = rad('🔔', 'Notiser', n.push ? 'Telefonen får påminnelser före passen, nya tider och besked från Haris.' : 'Av. Slå på för att få påminnelser före passen och nya tider.', chip(t.notiser),
+    `<button class="film" data-action="inst-push" data-pa="${n.push ? '0' : '1'}">${n.push ? 'Stäng av' : 'Slå på'}</button>`);
+
+  // kalendern
+  const lage = kalLage();
+  const feed = m.kalFeed ? `<a class="film" href="${esc((API + m.kalFeed).replace(/^https?:\/\//, 'webcal://'))}">Prenumerera</a>` : '';
+  let kalRad;
+  if (kalStod()) {
+    if (t.kalender === 'nej' || t.kalender === 'skriv') kalRad = rad('📅', 'Kalendern', 'Appen lägger passen i kalendern CAP. Den behöver full åtkomst: Inställningar → CAP → Kalendrar → Full åtkomst.', chip(t.kalender), OPPNA);
+    else kalRad = rad('📅', 'Kalendern', lage === 'pa' ? 'Passen läggs i kalendern CAP med plats och en påminnelse en timme före. Avbokade tas bort.' : 'Av. Slå på så läggs passen i en egen kalender, CAP, av sig själva.', chip(t.kalender),
+      lage === 'pa' ? '<button class="film" data-action="inst-kal" data-pa="0">Stäng av</button>' : '<button class="film" data-action="inst-kal" data-pa="1">Slå på</button>');
+  } else if (ios()) kalRad = rad('📅', 'Kalendern', 'Med nya versionen av appen läggs passen i kalendern av sig själva. Tills dess: prenumerera, och stäng av «Ta bort varningar».', '', `<a class="film" href="https://apps.apple.com/se/app/cap/id6825529179">Uppdatera appen</a>${feed ? ` ${feed}` : ''}`);
+  else kalRad = rad('📅', 'Kalendern', 'Prenumerera på era pass. Tryck Prenumerera och stäng av «Ta bort varningar».', '', feed);
+
+  // kamera, mikrofon, bilder (används när Haris filmar och spelar in under passen)
+  const media = ios() ? [
+    rad('📷', 'Kamera', 'När Haris filmar moment och bedömningar under passet.', chip(t.camera), t.camera === 'denied' ? OPPNA : ''),
+    rad('🎙', 'Mikrofon', 'När Haris spelar in ljud, till exempel samtalet före och efter passet.', chip(t.microphone), t.microphone === 'denied' ? OPPNA : ''),
+    rad('🖼', 'Bilder', 'När man väljer en film från bildbiblioteket.', chip(null), ''),
+  ].join('') : '';
+
+  const paminn = k?.installningar?.paminnelse !== false;
+  return `
+  <a class="back" href="#/mer">‹ Mer</a>
+  <section><div class="eyebrow">Inställningar</div><h1>Inställningar</h1></section>
+  <section class="panel inst-panel">
+    <h3>Tillåtelser på telefonen</h3>
+    ${notisRad}${kalRad}${media}
+    ${ios() ? `<a class="btn secondary block" href="app-settings:" style="margin-top:12px">⚙️ Öppna iPhonens inställningar för CAP</a>
+    <p class="small muted" style="margin:6px 0 0">Där slår du på eller av notiser, kalendrar, kamera, mikrofon och bilder. Kommer du tillbaka hit visas det nya läget.</p>` : ''}
+  </section>
+  ${inloggad && k ? `<section class="panel inst-panel">
+    <h3>Påminnelser</h3>
+    <label class="toggle"><input type="checkbox" data-action="inst-paminn" ${paminn ? 'checked' : ''}><span><b>Kvällen före passet</b><small>En notis kl 18 dagen före varje bokat pass (två timmar före om tiden bokades senare).</small></span></label>
+    ${notisStod() ? `<label class="toggle"><input type="checkbox" data-action="notis-paminn" ${n.paminn ? 'checked' : ''}><span><b>Träna själv</b><small>${esc(paminnDagar(p?.freq).join(', '))} kl 17, utifrån ${esc(p?.freq || '2')} pass i veckan.</small></span></label>` : ''}
+    <p class="small" style="margin:8px 0 0"><a href="#/notiser">Notiserna från Haris ›</a></p>
+  </section>` : ''}
+  <section class="panel inst-panel">
+    <h3>Konto</h3>
+    ${inloggad ? `<p class="small" style="margin:0 0 10px">Inloggad som ${esc(store.session.user?.namn || 'förälder')}${store.session.user?.telefon ? ` · ${esc(visaTel(store.session.user.telefon))}` : ''}${k?.barn ? ` · ${esc(k.barn)}` : ''}</p>
+    <div class="btn-row two" style="margin:0"><a class="btn secondary" href="#/losen">🔑 Byt lösenord</a><button class="btn secondary" data-action="logga-ut">Logga ut</button></div>
+    <p class="small" style="margin:12px 0 0"><a href="#/radera">Radera mitt konto</a></p>`
+    : '<a class="btn grad block" href="#/login">Logga in</a>'}
+  </section>`;
+}
+
+export async function installningarAction(action, el) {
+  const { toast } = ui;
+  const om = () => { hamtat = 0; ui.route(); };
+  if (action === 'inst-push') {
+    const r = await pushSatt(el.dataset.pa === '1');
+    toast(r.ok ? (el.dataset.pa === '1' ? 'Notiserna slås på…' : 'Notiserna är av') : r.fel === 'nekad' ? 'Nekat på telefonen. Tryck Öppna Inställningar.' : `Gick inte: ${r.fel}`);
+    setTimeout(om, 1500); return true;
+  }
+  if (action === 'inst-kal') {
+    if (el.dataset.pa === '1') {
+      const m = minaNu().hamtat ? minaNu() : await hamtaMina(true);
+      const r = await kalSynk(m.bokningar, { tvinga: true });
+      toast(r?.ok ? 'Passen läggs nu i kalendern CAP' : r?.behorighet === 'nej' || r?.behorighet === 'skriv' ? 'Nekat på telefonen. Tryck Öppna Inställningar.' : `Gick inte: ${r?.fel || 'okänt fel'}`);
+    } else { await kalAv(); toast('Kalendern CAP är borttagen från telefonen'); }
+    om(); return true;
+  }
+  if (action === 'inst-paminn') {
+    const r = await api.put('/mina/installningar', { paminnelse: el.checked }, store.session?.token);
+    if (r.ok) { const m = minaNu(); if (m.klient) m.klient.installningar = r.installningar; toast(el.checked ? 'Du får en påminnelse kvällen före varje pass' : 'Påminnelsen kvällen före är av'); }
+    else { el.checked = !el.checked; toast(`Gick inte: ${r.fel}`); }
+    return true;
+  }
+  return false;
+}

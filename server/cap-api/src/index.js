@@ -22,6 +22,7 @@
 //   GET  /mina            Bearer                    → {klient, bokningar, planer, bedomningar, media, betalning, paket}
 //   POST /mina/paket {mall} · /mina/paket/swishad {id, angra} · /mina/paket/angra {id}   paket på barnet (klippkort)
 //   POST /mina/push {token, av}  Bearer               telefonens pushkod kopplas till kontot (notiser till rätt förälder)
+//   PUT  /mina/installningar {paminnelse}  Bearer       förälderns inställningar (klient.installningar)
 //   POST /mina/radera {pushToken} Bearer              radera mitt konto (App Store 5.1.1(v)); Haris får en notis
 //   /veckor och /mina skickar med pott {saldo, ledigt, bokat, passKvar, pris, bokade, historik} när barnet har en pott
 // Betalning (Carl 2026-10-27): Swish Företag har inget API. Appen öppnar Swish med Haris nummer, priset och ett
@@ -216,7 +217,7 @@ function renKlient(d, gammal = {}) {
     niva, nivaHistorik: hist, anteckning: ren(d.anteckning, 2000),
     status: ['ny', 'aktiv', 'paus'].includes(d.status) ? d.status : (gammal.status || 'ny'),
     pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [], inloggad: gammal.inloggad || {}, paket: gammal.paket || [], pris: gammal.pris ?? null, passLogg: gammal.passLogg || [], pott: gammal.pott || [], notiser: gammal.notiser || [],
-    huvud: gammal.huvud || null, syskon: gammal.syskon || [],
+    huvud: gammal.huvud || null, syskon: gammal.syskon || [], installningar: gammal.installningar || {},
   };
 }
 // ---------- syskon (Haris 2026-11-22: "en klient som lämnar sina tvillingar till mig") ----------
@@ -546,6 +547,8 @@ async function paminnelser(env, nuL = lokal()) {
       if (!nar || nuL < nar.nar) continue;
       const nyckel = `pam:${v}:${s.id}:${b.t || ''}`;
       if (await env.DB.get(nyckel)) continue;
+      // föräldern kan stänga av påminnelsen under Inställningar (Carl 2026-11-22)
+      if ((await env.DB.get(`klient:${b.uid}`, 'json'))?.installningar?.paminnelse === false) continue;
       await env.DB.put(nyckel, '1', { expirationTtl: 14 * 86400 });
       const title = nar.imorgon ? 'Träning med Haris i morgon' : 'Träning med Haris i dag';
       const text = `${b.barn || 'Ni'} tränar ${nar.imorgon ? 'i morgon' : 'i dag'}, ${tidText(v, s)}–${s.slut}${s.plats ? `, ${s.plats}` : ''}. Vi ses!`;
@@ -1053,6 +1056,17 @@ export default {
       return svar({ ok: true, bokningar, planer, klient, bedomningar, media, familj: familjData, kalFeed, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
     }
 
+    // Förälderns inställningar (Carl 2026-11-22: "en inställningssida"): paminnelse = notisen kvällen före passet
+    if (p === '/mina/installningar' && req.method === 'PUT') {
+      const user = await sessionUser(env, req);
+      if (!user?.klientId) return fel('inte inloggad', 401);
+      const d = await json(); if (!d) return fel('trasig JSON');
+      const k = await hamtaKlient(env, user.klientId);
+      if (!k) return fel('kontot finns inte', 404);
+      k.installningar = { ...(k.installningar || {}), ...(typeof d.paminnelse === 'boolean' ? { paminnelse: d.paminnelse } : {}) };
+      await sparaKlient(env, k);
+      return svar({ ok: true, installningar: k.installningar });
+    }
     // Telefonens pushkod kopplas till kontot (Carl 2026-11-13: "vi har olika login på telefonerna"). av: true kopplar loss.
     if (p === '/mina/push' && req.method === 'POST') {
       const user = await sessionUser(env, req);

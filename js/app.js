@@ -12,6 +12,7 @@ import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
 import { kalAvsluta } from './kalender.js';
 import { kollaAppVersion } from './appversion.js';
+import { installningarInit, installningarPage, installningarAction } from './installningar.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
@@ -166,6 +167,7 @@ const routes = [
   [/^\/foralder\/([\w-]+)$/, guideChapter],
   [/^\/nasta-steg$/, nextStep],
   [/^\/notiser$/, notiserPage],
+  [/^\/installningar$/, installningarPage],
   [/^\/radera$/, raderaPage],
   [/^\/stig$/, stigHome],
   [/^\/stig\/([\w-]+)$/, stigNode],
@@ -714,6 +716,7 @@ function merPage() {
     ${rad('/bibliotek', '📚', 'Biblioteket', 'Passen, loggade pass och planerade pass')}
     ${rad('/filmer', '🎬', 'Filmer från Haris', 'Alla publicerade filmer med taggar')}
     ${rad('/foralder', '💛', 'Föräldraguiden', 'Kommunikation, feedback, motivation')}
+    ${rad('/installningar', '⚙️', 'Inställningar', 'Tillåtelser, notiser, kalendern och kontot')}
     ${rad('/notiser', '🔔', 'Notiser', 'Påminnelser och nyheter från Haris')}
     ${rad('/start/1', '✏️', 'Ändra barnets namn och födelseår', 'Position, drömspelare och mål finns på spelarkortet')}
     ${store.session?.user?.klientId ? rad('/losen', '🔑', 'Byt lösenord', 'Du loggar in med ditt mobilnummer och lösenordet') : ''}
@@ -1642,6 +1645,7 @@ async function onAction(e) {
   const { action, id } = el.dataset;
   const paAdmin = location.hash.replace(/^#/, '').startsWith('/admin');
   if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov)-/.test(action))) { await adminAction(action, el, e); return; }
+  if (action.startsWith('inst-')) { await installningarAction(action, el); return; }
   if (action.startsWith('boka-')) { await bokaAction(action, el); return; }
   if (action === 'gast') { e.preventDefault(); store.guest = true; store.proto = 'app'; toast('Du provar utan konto'); go('/'); return; }
   if (action === 'sms-ny' || action === 'sms-andra') { const path = location.hash.replace(/^#/, '') || '/'; await kontoAction(action, el, { toast, render: html => { view.innerHTML = html; afterRender(path); } }); return; }
@@ -1836,6 +1840,7 @@ async function boot() {
   await adminInit({ toast, route, go, kvar, content: C, onAction, onSubmit, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, kvar, onAction });
   utvecklingInit({ toast, route, go, kvar, content: C });
+  installningarInit({ toast, route, go, kvar });
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
   api.get('/config/stig').then(r => { if (r.ok && r.config) { tillampaStigConfig(r.config); const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/stig')) route(); } });
   document.addEventListener('cap:notiser', e => { if (/notiser/.test(location.hash)) { toast(e.detail?.ok ? 'Telefonen får notiser från Haris' : 'Kunde inte registrera telefonen'); route(); } });

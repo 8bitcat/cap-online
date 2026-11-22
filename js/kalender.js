@@ -16,6 +16,8 @@ function tillagg() {
   } catch { return null; }
 }
 export const kalStod = () => !!tillagg();
+// telefonens tillstånd för kalendern: ja | fraga | nej | skriv (bara lägga till), null utan tillägget
+export async function kalStatus() { const p = tillagg(); if (!p) return null; try { return (await p.status())?.behorighet || null; } catch { return null; } }
 // pa: synkar · av: föräldern stängde av · nekad: telefonen sa nej
 export const kalLage = () => { const s = las(); return !kalStod() ? 'saknas' : s.nekad ? 'nekad' : s.av ? 'av' : s.pa ? 'pa' : 'ny'; };
 

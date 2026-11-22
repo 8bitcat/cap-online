@@ -814,3 +814,16 @@ body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }
 .app-uppdatera .au-knapp { flex: none; background: #001514; color: var(--brand); font-weight: 800; font-size: 14px; padding: 8px 14px; border-radius: 999px; text-decoration: none; }
 .app-uppdatera .au-stang { flex: none; background: transparent; border: 0; color: inherit; font-size: 16px; padding: 6px; cursor: pointer; }
 body.inloggning .app-uppdatera { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+
+/* Inställningar (js/installningar.js): en rad per tillåtelse med läge och knapp */
+.inst-panel h3 { margin-top: 0; }
+.inst-rad { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.inst-rad:first-of-type { border-top: 0; }
+.inst-ikon { font-size: 20px; line-height: 1.3; }
+.inst-mitt { display: grid; gap: 2px; min-width: 0; }
+.inst-mitt small { color: var(--muted, #9aa5b1); font-size: 13px; line-height: 1.35; }
+.inst-hoger { display: grid; gap: 6px; justify-items: end; text-align: right; }
+.inst-chip { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line); color: var(--muted, #9aa5b1); }
+.inst-chip.ja { color: var(--ok, #3ecf8e); border-color: currentColor; }
+.inst-chip.nej { color: var(--danger, #ff6b6b); border-color: currentColor; }
+.inst-chip.halv { color: var(--warn, #f5b44a); border-color: currentColor; }
