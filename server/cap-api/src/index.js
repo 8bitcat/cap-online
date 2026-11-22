@@ -569,9 +569,8 @@ function utcAv(dag, tid) { const g = Date.parse(`${dag}T${tid}:00Z`); return new
 const icsTid = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 const icsText = s => String(s || '').replace(/[\\;,]/g, m => `\\${m}`).replace(/\r?\n/g, '\\n');
 // Carl 2026-11-22: "påminnelse att träna med cap 1 timme innan och dags att åka, plats är backavallen".
-// Platsen i kalendern är Backavallen, utom när Haris skrivit en annan plats på tiden.
-const KAL_PLATS = 'Backavallen, Hisings Backa, Göteborg';
-const kalPlats = s => (s.plats && !/backa/i.test(s.plats) ? s.plats : KAL_PLATS);
+// Platsen i kalendern är den Haris skrivit på tiden (live: "Backavallen, Gratts Arena"), annars Backavallen.
+const kalPlats = s => (s.plats ? `${s.plats}${/göteborg/i.test(s.plats) ? '' : ', Göteborg'}` : 'Backavallen, Göteborg');
 // rader längre än 75 tecken viks enligt iCalendar (fortsättningsraden börjar med ett mellanslag)
 const vik = rad => {
   const ut = []; let bit = '', byte = 0;
@@ -604,11 +603,11 @@ function icsKalender(handelser, namn = '') {
 }
 const icsFor = (v, s) => icsKalender([kalHandelse(v, s)]);
 // Prenumeration (Carl 2026-11-22: "haris får varje bokning med namn på barnet/barnen i sin apple kalender"): alla bokade
-// tider fyra veckor bakåt och tio framåt. Hämtas med get per vecka (inga list-anrop, kalendern frågar var 15:e minut).
+// tider en vecka bakåt och tio framåt. Hämtas med get per vecka (inga list-anrop, kalendern frågar var 15:e minut).
 async function kalFlode(env, filter, opts) {
   const nuV = veckaAv();
-  const v0 = veckaPlus(nuV, -4);
-  const veckor = await Promise.all(Array.from({ length: 15 }, (_, i) => veckaPlus(v0, i)).map(v => env.DB.get(`vecka:${v}`, 'json')));
+  const v0 = veckaPlus(nuV, -1);
+  const veckor = await Promise.all(Array.from({ length: 12 }, (_, i) => veckaPlus(v0, i)).map(v => env.DB.get(`vecka:${v}`, 'json')));
   const ut = [];
   for (const w of veckor.filter(Boolean)) for (const s of w.slots) if (s.bokad && filter(s.bokad)) ut.push(kalHandelse(w.v, s, opts));
   return ut;

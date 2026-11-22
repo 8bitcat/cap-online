@@ -145,7 +145,7 @@ const mock = http.createServer((req, res) => {
   koll('kalenderfilen', ics.status === 200 && (ics.headers.get('content-type') || '').startsWith('text/calendar'), `${ics.status} ${ics.headers.get('content-type')}`);
   koll('rätt tid i UTC (14:00 svensk vintertid = 13:00 UTC)', icsText.includes(`DTSTART:${dagStr}T130000Z`) && icsText.includes(`DTEND:${dagStr}T140000Z`), icsText.split('\r\n').filter(x => /^DT(START|END)/.test(x)).join(' '));
   const ofalt = icsText.replace(/\r\n /g, '');
-  koll('rubrik, Backavallen och påminnelse en timme före om att åka', ofalt.includes('SUMMARY:Träning med CAP (Leo)') && ofalt.includes('LOCATION:Backavallen\\, Hisings Backa\\, Göteborg') && ofalt.includes('TRIGGER:-PT1H') && ofalt.includes('Dags att åka till Backavallen'), ofalt.split('\r\n').filter(x => /^(SUMMARY|LOCATION|DESCRIPTION)/.test(x)).join(' | '));
+  koll('rubrik, Backavallen och påminnelse en timme före om att åka', ofalt.includes('SUMMARY:Träning med CAP (Leo)') && ofalt.includes('LOCATION:Hisings Backa\\, Göteborg') && ofalt.includes('TRIGGER:-PT1H') && ofalt.includes('Dags att åka till Backavallen'), ofalt.split('\r\n').filter(x => /^(SUMMARY|LOCATION|DESCRIPTION)/.test(x)).join(' | '));
   koll('inga rader över 75 byte', icsText.split('\r\n').every(r => Buffer.byteLength(r) <= 75));
 
   // ---- prenumerationerna: familjens och Haris ----
