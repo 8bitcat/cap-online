@@ -12,7 +12,7 @@ import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
 import { kalAvsluta } from './kalender.js';
 import { kollaAppVersion } from './appversion.js';
-import { installningarInit, installningarPage, installningarAction } from './installningar.js';
+import { installningarInit, installningarPage, installningarAction, introPage, INTRO } from './installningar.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
@@ -168,6 +168,7 @@ const routes = [
   [/^\/nasta-steg$/, nextStep],
   [/^\/notiser$/, notiserPage],
   [/^\/installningar$/, installningarPage],
+  [/^\/kom-igang$/, introPage],
   [/^\/radera$/, raderaPage],
   [/^\/stig$/, stigHome],
   [/^\/stig\/([\w-]+)$/, stigNode],
@@ -1742,7 +1743,8 @@ async function onSubmit(e) {
       const r = await sparaBarn({ barn: name, efternamn, fodd });
       if (!r.ok && !r.offline) toast(`Kunde inte spara hos Haris: ${r.fel || 'okänt fel'}`);
     }
-    if (isNew) { paminnUppdatera(); celebrate(before, `Välkommen, ${name}!`); go('/'); }
+    // nytt konto: sista steget samlar alla frågor om lov (notiser, kalendern, påminnelser) på en sida
+    if (isNew) { paminnUppdatera(); celebrate(before, `Välkommen, ${name}!`); go(store.notiser.intro ? '/' : INTRO); }
     else { toast('Sparat'); go('/spelarkort'); }
   } else if (kind === 'wiz2') {
     store.draft = { ...store.draft, position: fd.get('position'), foot: fd.get('foot'), experience: fd.get('experience'), drom: fd.get('drom') || '' };

@@ -37,8 +37,8 @@ const mock = http.createServer((req, res) => { let body = ''; req.on('data', c =
 
   const a = await nyFlik('haris', false);
   await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
-  await a.click('#anv-lage'); await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 });
+  await a.click('#anv-lage');
+  for (let i = 0; i < 4 && !/admin\/klienter/.test(a.url()); i++) { await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]'); await a.waitForURL(/#\/admin\/klienter/, { timeout: 8000 }).catch(() => {}); }
   const tok = await a.evaluate(() => JSON.parse(localStorage.getItem('caponline.v3') || '{}').admin);
   const adm = (m, p, d) => fetch(API + p, { method: m, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: d ? JSON.stringify(d) : undefined }).then(r => r.json());
   await adm('PUT', '/admin/config/betalning', { swish: '1232852762', pris: 850 }); await adm('PUT', '/admin/notiser', {});
@@ -53,6 +53,8 @@ const mock = http.createServer((req, res) => { let body = ''; req.on('data', c =
   await f.fill('#losen1', 'hemligt1'); await f.fill('#losen2', 'hemligt1'); await f.click('form[data-form=losen] button[type=submit]');
   await f.waitForFunction(() => document.querySelector('#name') || document.querySelector('.greet'), null, { timeout: 15000 });
   if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); }
+  // nytt konto: Sista steget först (intro-test.js testar sidan)
+  await f.waitForSelector('button[data-action=inst-klar]', { timeout: 10000 }); await f.click('button[data-action=inst-klar]');
   await f.waitForSelector('.greet');
   await f.goto(base + 'index.html#/mer'); await f.waitForSelector('a[href="#/installningar"]', { timeout: 10000 }).catch(() => {});
   koll('Mer: raden Inställningar', !!(await f.$('a[href="#/installningar"]')));

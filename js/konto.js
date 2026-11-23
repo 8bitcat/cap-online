@@ -185,7 +185,7 @@ export async function kontoSubmit(kind, f, fd, { toast, go, render }) {
     const r = await sattLosen(l1);
     if (!r.ok) { ater(); render(losenPage({ fel: r.fel || 'Gick inte att spara lösenordet' })); return; }
     toast(forsta ? 'Lösenordet är sparat. Välkommen till CAP!' : 'Lösenordet är bytt');
-    go(store.profile ? '/' : '/start/1'); return;
+    go(!store.profile ? '/start/1' : forsta && !store.notiser?.intro ? '/kom-igang' : '/'); return;
   }
   ater();
 }

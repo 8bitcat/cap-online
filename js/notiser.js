@@ -93,6 +93,8 @@ export async function pushAuto() {
   const P = pushP();
   if (!P || pagar || store.notiser.av) return;
   if (!store.session?.token && !store.admin) return; // fråga inte på välkomstsidan
+  // inte heller medan kontot skapas: frågorna kommer samlade på sidan Sista steget (installningar.js)
+  if (/^#\/(losen|start|kom-igang|k\/)/.test(location.hash)) return;
   const n = store.notiser;
   if (n.push && n.token && n.kopplad === kontoNyckel() && Date.now() - (n.regT || 0) < 864e5) return;
   pagar = true;

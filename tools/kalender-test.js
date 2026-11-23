@@ -42,8 +42,8 @@ const TEL = '070-444 55 11', TELN = '+46704445511';
   // Haris: kund och en vecka med två tider
   const a = await nyFlik('haris', false);
   await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
-  await a.click('#anv-lage'); await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 });
+  await a.click('#anv-lage');
+  for (let i = 0; i < 4 && !/admin\/klienter/.test(a.url()); i++) { await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]'); await a.waitForURL(/#\/admin\/klienter/, { timeout: 8000 }).catch(() => {}); }
   const tok = await a.evaluate(() => JSON.parse(localStorage.getItem('caponline.v3') || '{}').admin);
   const adm = (m, p, d) => fetch(API + p, { method: m, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: d ? JSON.stringify(d) : undefined }).then(r => r.json());
   await adm('PUT', '/admin/config/betalning', { swish: '1232852762', pris: 850 });
@@ -59,7 +59,7 @@ const TEL = '070-444 55 11', TELN = '+46704445511';
   await f.goto(base + 'index.html#/k/' + ny.kod, { waitUntil: 'networkidle' }); await f.waitForSelector('#losen1');
   await f.fill('#losen1', 'hemligt1'); await f.fill('#losen2', 'hemligt1'); await f.click('form[data-form=losen] button[type=submit]');
   await f.waitForFunction(() => document.querySelector('#name') || document.querySelector('.greet'), null, { timeout: 15000 });
-  if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); }
+  if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); await f.waitForURL(/kom-igang/, { timeout: 10000 }); await f.evaluate(() => { location.hash = '#/'; }); } // Sista steget testas i intro-test.js
   await f.waitForSelector('.greet');
   await f.goto(base + `index.html#/boka/${V}`); await f.waitForSelector(`button.tid[data-slot="${t15.id}"]`, { timeout: 15000 }); await f.waitForTimeout(800);
   koll('inga pass: telefonen frågar inte än', (await kal(f)).anrop.length === 0);

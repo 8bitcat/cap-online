@@ -58,6 +58,8 @@ export async function kalSynk(bokningar, { fraga = false, tvinga = false } = {})
   })();
   return pagar;
 }
+// Sista steget hoppades över: fråga inte av sig självt när första passet bokas (knappen på Boka finns kvar)
+export function kalFragat() { const s = las(); if (!s.pa) spara({ ...s, fragat: true }); }
 // Stäng av: CAP-kalendern tas bort från telefonen
 export async function kalAv() {
   const p = tillagg();

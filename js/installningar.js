@@ -4,7 +4,7 @@
 import { store } from './store.js';
 import { api, API } from './api.js';
 import { notisStod, pushSatt, paminnSatt, paminnDagar } from './notiser.js';
-import { kalStod, kalLage, kalSynk, kalAv, kalStatus } from './kalender.js';
+import { kalStod, kalLage, kalSynk, kalAv, kalStatus, kalFragat } from './kalender.js';
 import { minaNu, hamtaMina } from './boka.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -92,9 +92,70 @@ export function installningarPage() {
   </section>`;
 }
 
+// Sista steget när kontot skapas (Carl 2026-11-23: "så att alla frågor kommer i början när man skapar ett konto, borde
+// vara en sida med allting"). Kommer efter barnets namn och födelseår. Telefonen frågar om lov här, en sak i taget, och
+// sedan frågar appen inte mer av sig själv. Allt går att ändra under Mer → Inställningar.
+export const INTRO = '/kom-igang';
+export function introPage() {
+  const inloggad = !!store.session?.token, m = minaNu(), n = store.notiser, p = store.profile;
+  if (inloggad && !m.hamtat) hamtaMina().then(ui.kvar());
+  if (ios() && !hamtar && Date.now() - hamtat > 3000) { hamtar = true; const om = ui.kvar(); lasTillstand().then(t => { tillstand = t; hamtat = Date.now(); hamtar = false; om(); }); }
+  const t = tillstand || {};
+  const pa = '<span class="inst-chip ja">På</span>';
+  const knapp = (action, text = 'Slå på') => `<button class="film" data-action="${action}" data-pa="1">${text}</button>`;
+  const rader = [];
+  if (ios()) {
+    const notisPa = n.push || t.notiser === 'granted';
+    rader.push(rad('🔔', 'Notiser', 'Påminnelse kvällen före varje pass, när Haris öppnar nya tider och besked från Haris.',
+      t.notiser === 'denied' ? chip('denied') : notisPa ? pa : '', t.notiser === 'denied' ? OPPNA : notisPa ? '' : knapp('inst-push')));
+  }
+  const feed = m.kalFeed ? `<a class="film" href="${esc((API + m.kalFeed).replace(/^https?:\/\//, 'webcal://'))}">Prenumerera</a>` : '';
+  if (kalStod()) {
+    const nej = t.kalender === 'nej' || t.kalender === 'skriv';
+    rader.push(rad('📅', 'Kalendern', 'Passen läggs i en egen kalender, CAP, med plats och en påminnelse en timme före: dags att åka. Avbokade tas bort.',
+      nej ? chip(t.kalender) : kalLage() === 'pa' ? pa : '', nej ? OPPNA : kalLage() === 'pa' ? '' : knapp('inst-kal')));
+  } else rader.push(rad('📅', 'Kalendern', 'Prenumerera på era pass, så hamnar de i telefonens kalender. Tryck Prenumerera och stäng av «Ta bort varningar».', '', feed));
+  if (notisStod()) rader.push(rad('⚽', 'Träna hemma', `En påminnelse kl 17 på ${esc(paminnDagar(p?.freq).join(' och '))}, dagarna att träna själva.`,
+    n.paminn ? pa : '', n.paminn ? '' : knapp('inst-trana')));
+  const allt = ios() && (!(n.push || t.notiser === 'granted') || (kalStod() && kalLage() !== 'pa') || (notisStod() && !n.paminn));
+  return `
+  <section class="wiz">
+    <img class="hero-logo" src="assets/cap-logo.png" alt="">
+    <div class="eyebrow">Sista steget</div>
+    <h1>Missa inget pass</h1>
+    <p class="muted">${ios() ? 'Telefonen frågar om lov för varje sak. Tryck Tillåt när den frågar.' : 'Notiserna kommer i iPhone-appen CAP. Här kan du lägga passen i kalendern.'} Du kan ändra allt senare under Mer → Inställningar.</p>
+  </section>
+  <section class="panel inst-panel">
+    ${allt ? '<button class="btn grad block" data-action="inst-allt" style="margin-bottom:6px">Slå på allt</button>' : ''}
+    ${rader.join('')}
+    ${ios() ? '<p class="small muted" style="margin:10px 0 0">Kameran och mikrofonen frågar telefonen om först när du filmar.</p>' : '<p class="small" style="margin:10px 0 0"><a href="#/app">Hämta appen till telefonen ›</a></p>'}
+  </section>
+  <section class="btn-row"><button class="btn ${allt ? 'secondary' : 'grad'} block" data-action="inst-klar">${allt ? 'Hoppa över' : 'Klart'} ›</button></section>`;
+}
+
 export async function installningarAction(action, el) {
   const { toast } = ui;
   const om = () => { hamtat = 0; ui.route(); };
+  if (action === 'inst-allt') {
+    el.disabled = true; el.textContent = 'Telefonen frågar…';
+    const n = store.notiser;
+    if (!n.push) await pushSatt(true);
+    if (kalStod() && kalLage() !== 'pa') { const m = minaNu().hamtat ? minaNu() : await hamtaMina(true); await kalSynk(m.bokningar, { tvinga: true }); }
+    if (notisStod() && !store.notiser.paminn) await paminnSatt(true);
+    toast('Klart. Ändra när du vill under Mer → Inställningar');
+    setTimeout(om, 1200); return true;
+  }
+  if (action === 'inst-trana') {
+    const r = await paminnSatt(true);
+    toast(r.ok ? `Påminnelse kl 17 på ${r.dagar.join(' och ')}` : r.fel === 'nekad' ? 'Nekat på telefonen. Slå på notiser först.' : `Gick inte: ${r.fel}`);
+    om(); return true;
+  }
+  if (action === 'inst-klar') {
+    // frågat färdigt: appen ber inte om lov på egen hand efter det här
+    store.notiser = { ...store.notiser, fragat: true, intro: true };
+    kalFragat();
+    ui.go('/'); return true;
+  }
   if (action === 'inst-push') {
     const r = await pushSatt(el.dataset.pa === '1');
     toast(r.ok ? (el.dataset.pa === '1' ? 'Notiserna slås på…' : 'Notiserna är av') : r.fel === 'nekad' ? 'Nekat på telefonen. Tryck Öppna Inställningar.' : `Gick inte: ${r.fel}`);

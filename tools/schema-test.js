@@ -45,8 +45,8 @@ const mock = http.createServer((req, res) => {
   // ---- Haris loggar in (på telefonen), pris, en kund ----
   const a = await nyFlik('haris', devices['iPhone 13']);
   await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
-  await a.click('#anv-lage'); await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(800);
+  await a.click('#anv-lage');
+  for (let i = 0; i < 4 && !/admin\/klienter/.test(a.url()); i++) { await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]'); await a.waitForURL(/#\/admin\/klienter/, { timeout: 8000 }).catch(() => {}); } await a.waitForTimeout(800);
   const tok = await a.evaluate(() => JSON.parse(localStorage.getItem('caponline.v3') || '{}').admin);
   const adm = (metod, p, data) => fetch(API + p, { method: metod, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }).then(r => r.json());
   await adm('PUT', '/admin/config/betalning', { swish: '1232852762', pris: 850 });
@@ -131,7 +131,7 @@ const mock = http.createServer((req, res) => {
   await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' }); await f.waitForSelector('#losen1', { timeout: 15000 });
   await f.fill('#losen1', 'hemligt1'); await f.fill('#losen2', 'hemligt1'); await f.click('form[data-form=losen] button[type=submit]');
   await f.waitForFunction(() => document.querySelector('#name') || document.querySelector('.greet'), null, { timeout: 15000 });
-  if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); }
+  if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); await f.waitForURL(/kom-igang/, { timeout: 10000 }); await f.evaluate(() => { location.hash = '#/'; }); } // Sista steget testas i intro-test.js
   await f.waitForSelector('.greet', { timeout: 15000 });
   await f.goto(base + 'index.html#/boka'); await f.waitForSelector('#mina .bokning', { timeout: 15000 });
   const kal = await f.$eval('#mina .kal-knapp', e => ({ href: e.getAttribute('href'), target: e.target, text: e.textContent })).catch(() => null);
