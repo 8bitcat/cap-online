@@ -205,24 +205,36 @@ if (cmd === 'bilder') {
 // och skärmbilder följer med från förra), skriver Nyheter och granskningsinfon (kontakten från förra versionen).
 const NYHETER = `Passen i kalendern: appen lägger passen ni bokar hos Haris i en egen kalender, CAP, med plats och en påminnelse en timme före – dags att åka. Avbokade och flyttade pass ändras av sig själva.
 
+Träningsblock: fler steg på stigen med filmer, tider och frågor från Haris. Köp en gång, gäller hela familjen.
+
 Påminnelse kvällen före varje bokat pass.
 
 Syskon: har ni flera barn som tränar hos Haris bokar ni en tid för alla på en gång.
 
 Inställningar: under Mer finns nu alla tillåtelser på ett ställe – notiser, kalendern, kamera och påminnelser.
 
-Kom igång: nya konton får alla frågor på en sida direkt, med knappen Slå på allt.
+Kom igång: alla frågor om lov på en sida, med knappen Slå på allt – notiser, kalendern, kamera och mikrofon.
 
 Uppdatera: när det finns en ny version visas en knapp överst i appen som tar dig direkt till App Store.`;
 const NOTES_KALENDER = `
 
-New in this version: with the user's permission the app keeps its own calendar named "CAP" with the family's booked sessions (EventKit). Full access is requested because the app also updates and removes sessions that are moved or cancelled; it only reads and changes events in its own "CAP" calendar. The permission is asked the first time the parent has a booked session: in the demo account, open "Med Haris", tap a free time and confirm the booking. All permissions can also be reviewed under "Mer" → "Inställningar" (Settings), which links to the app's page in the iOS Settings app.`;
+New in this version: with the user's permission the app keeps its own calendar named "CAP" with the family's booked sessions (EventKit). Full access is requested because the app also updates and removes sessions that are moved or cancelled; it only reads and changes events in its own "CAP" calendar. The permission is asked the first time the parent has a booked session: in the demo account, open "Med Haris", tap a free time and confirm the booking. All permissions can also be reviewed under "Mer" → "Inställningar" (Settings), which links to the app's page in the iOS Settings app.
+
+In-app purchases (new): six non-consumable "Träningsblock" (training blocks) that unlock more steps of the in-app training path. In the demo account open "Mer" → "Träningsblock", or "Träna själv" → a locked 🔒 step. "Återställ köp" (Restore Purchases) is on the same page. In-person sessions with the coach are not sold in the app (paid by Swish, guideline 3.1.3(e)).
+
+Camera and microphone: parents film the training-path tasks ("Film till Haris") with the phone and send them to the coach; filming with sound needs both. They are requested on the "Missa inget pass" page after sign-up, with an explanation, or when filming.`;
 if (cmd === 'uppdatering') {
   const alla = (await get(`/v1/apps/${APP}/appStoreVersions?filter[platform]=IOS`)).data;
   let ver = alla.find((x) => x.attributes.versionString === VERSION);
   const forra = alla.find((x) => x.attributes.appStoreState === 'READY_FOR_SALE');
   await steg(`version ${VERSION}`, async () => {
     if (ver) return `finns redan (${ver.attributes.appStoreState})`;
+    // en version som inte skickats in än byter bara nummer (1.2 → 1.3)
+    const vantar = alla.find((x) => ['PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED', 'REJECTED'].includes(x.attributes.appStoreState));
+    if (vantar) {
+      ver = (await call('PATCH', `/v1/appStoreVersions/${vantar.id}`, { data: { type: 'appStoreVersions', id: vantar.id, attributes: { versionString: VERSION } } })).data;
+      return `bytt ${vantar.attributes.versionString} → ${VERSION}`;
+    }
     ver = (await call('POST', '/v1/appStoreVersions', { data: { type: 'appStoreVersions', attributes: { platform: 'IOS', versionString: VERSION, releaseType: 'MANUAL', copyright: TEXT.copyright }, relationships: { app: { data: { type: 'apps', id: APP } } } } })).data;
     return 'skapad';
   });
