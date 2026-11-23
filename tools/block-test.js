@@ -31,8 +31,9 @@ const mock = http.createServer((req, res) => { let body = ''; req.on('data', c =
   let fel = 0;
   const koll = (namn, ok, extra = '') => { console.log(`${ok ? '✓' : '✗'} ${namn}${extra ? ` | ${extra}` : ''}`); if (!ok) fel++; };
   const txLista = {};
-  const nyFlik = async (namn, { app = true, version = '1.3', lagring = null } = {}) => {
+  const nyFlik = async (namn, { app = true, version = '1.3', lagring = null, ejSalj = [] } = {}) => {
     const ctx = await b.newContext({ ...devices['iPhone 13'], locale: 'sv-SE' });
+    await ctx.addInitScript(e => { window.__ejSalj = e; }, ejSalj);
     await ctx.exposeFunction('__tx', p => { const t = jws(p); (txLista[namn] ||= []).push(t); return t; });
     await ctx.addInitScript(([api, app, version, lagring]) => {
       try { localStorage.setItem('cap_api', api); if (lagring && !sessionStorage.getItem('lagrat')) { for (const [k, v] of Object.entries(lagring)) localStorage.setItem(k, v); sessionStorage.setItem('lagrat', '1'); } } catch {}
@@ -48,7 +49,7 @@ const mock = http.createServer((req, res) => { let body = ''; req.on('data', c =
           media: async () => ({ kamera: lage.kamera, mikrofon: lage.mikrofon }), mediaFraga: async ({ typ }) => { window.__fragor.push(typ); lage[typ] = 'ja'; return { ok: true, behorighet: 'ja' }; } },
         App: { getInfo: async () => ({ version }), addListener: () => ({ catch() {} }), getLaunchUrl: async () => ({}) },
         NativePurchases: {
-          getProducts: async ({ productIdentifiers }) => ({ products: productIdentifiers.map(id => ({ identifier: id, priceString: ({ niva2: '129,00 kr', niva3: '149,00 kr', matchfart: '199,00 kr', position: '249,00 kr', stigen: '499,00 kr', plus: '999,00 kr' })[id.split('.').pop()] })) }),
+          getProducts: async ({ productIdentifiers }) => ({ products: productIdentifiers.filter(id => !(window.__ejSalj || []).includes(id.split('.').pop())).map(id => ({ identifier: id, priceString: ({ niva2: '129,00 kr', niva3: '149,00 kr', matchfart: '199,00 kr', position: '249,00 kr', stigen: '499,00 kr', plus: '999,00 kr' })[id.split('.').pop()] })) }),
           purchaseProduct: async ({ productIdentifier }) => { const t = await window.__tx(productIdentifier.split('.').pop()); kopta.push(t); return t; },
           restorePurchases: async () => {}, getPurchases: async () => ({ purchases: kopta.concat(window.__andraKop || []) }), addListener: async () => lyssn,
         },
@@ -97,6 +98,12 @@ const mock = http.createServer((req, res) => { let body = ''; req.on('data', c =
   const forsta = await f.$$eval('.stig-node:not(.ejkopt)', r => r.length);
   koll('stigen: etapp 1 öppen, resten låst', forsta >= 6 && kopNoder >= 10, `${forsta} öppna, ${kopNoder} låsta`);
   await f.screenshot({ path: path.join(UT, 'block-stig.png'), fullPage: true });
+
+  // 2b) ett köp som Apple inte säljer än (inte godkänt): ingen köpknapp, «Kommer snart»
+  const ej = await nyFlik('ejsalj', { ejSalj: ['niva3'], lagring: await f.evaluate(() => Object.fromEntries(Object.entries(localStorage))) });
+  await ej.goto(base + 'index.html#/block', { waitUntil: 'networkidle' }); await ej.waitForSelector('[data-action=block-kop]'); await ej.waitForTimeout(800);
+  koll('ej godkänt köp: Kommer snart, övriga har knapp', !(await ej.$('[data-action=block-kop][data-id=niva3]')) && (await ej.$eval('#block-niva3', e => e.textContent)).includes('Kommer snart') && !!(await ej.$('[data-action=block-kop][data-id=niva2]')));
+  await ej.context().close();
 
   // 3) butiken: sex block med Apples priser, köp Nivå 2
   await f.goto(base + 'index.html#/block'); await f.waitForSelector('.block-kort'); await f.waitForTimeout(800);

@@ -63,6 +63,8 @@ async function hamtaPriser() {
   return priser;
 }
 const prisText = b => priser?.[sku(b.id)] || kr(b.pris);
+// Apple svarade men har inte produkten (t.ex. ännu inte godkänd i App Store) – visa ingen köpknapp som inte går att använda
+const saljsInte = b => !!priser && Object.keys(priser).length > 0 && !priser[sku(b.id)];
 
 async function skicka(tx) {
   if (!tx?.jwsRepresentation) return { ok: false, fel: 'Apple skickade inget kvitto' };
@@ -126,6 +128,7 @@ export function blockPage(valt) {
     return `<div class="panel block-kort ${ag ? 'agt' : ''} ${valt === b.id ? 'valt' : ''}" id="block-${b.id}">
       <div class="block-rad"><span class="block-ikon" aria-hidden="true">${b.ikon}</span><div class="block-mitt"><b>${esc(b.namn)}</b><small>${esc(b.text)}</small></div></div>
       <div class="block-fot">${ag ? '<span class="inst-chip ja">✓ Ert</span>'
+        : app && saljsInte(b) ? '<span class="small muted">Kommer snart</span>'
         : app ? `<button class="btn grad" data-action="block-kop" data-id="${b.id}" ${upptagen ? 'disabled' : ''}>${upptagen === b.id ? 'Köper…' : `Köp ${esc(prisText(b))}`}</button>`
         : `<span class="small muted">${kr(b.pris)}</span>`}</div>
     </div>`;
