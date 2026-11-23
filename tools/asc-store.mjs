@@ -203,12 +203,20 @@ if (cmd === 'bilder') {
 
 // En ny version efter den som är ute (1.2 = passen i kalendern, 2026-11-22): skapar versionen om den saknas (texter
 // och skärmbilder följer med från förra), skriver Nyheter och granskningsinfon (kontakten från förra versionen).
-const NYHETER = `Passen i kalendern: appen lägger passen ni bokar hos Haris i en egen kalender, CAP, med plats och en påminnelse en timme före. Avbokade och flyttade pass ändras av sig själva.
-Syskon: har ni flera barn som tränar bokar ni en tid för alla på en gång.
-Påminnelse kvällen före varje pass.`;
+const NYHETER = `Passen i kalendern: appen lägger passen ni bokar hos Haris i en egen kalender, CAP, med plats och en påminnelse en timme före – dags att åka. Avbokade och flyttade pass ändras av sig själva.
+
+Påminnelse kvällen före varje bokat pass.
+
+Syskon: har ni flera barn som tränar hos Haris bokar ni en tid för alla på en gång.
+
+Inställningar: under Mer finns nu alla tillåtelser på ett ställe – notiser, kalendern, kamera och påminnelser.
+
+Kom igång: nya konton får alla frågor på en sida direkt, med knappen Slå på allt.
+
+Uppdatera: när det finns en ny version visas en knapp överst i appen som tar dig direkt till App Store.`;
 const NOTES_KALENDER = `
 
-New in this version: with the user's permission the app keeps its own calendar named "CAP" with the family's booked sessions (EventKit). Full access is requested because the app also updates and removes sessions that are moved or cancelled; it only reads and changes events in its own "CAP" calendar. The permission is asked the first time the parent has a booked session: in the demo account, open "Med Haris", tap a free time and confirm the booking.`;
+New in this version: with the user's permission the app keeps its own calendar named "CAP" with the family's booked sessions (EventKit). Full access is requested because the app also updates and removes sessions that are moved or cancelled; it only reads and changes events in its own "CAP" calendar. The permission is asked the first time the parent has a booked session: in the demo account, open "Med Haris", tap a free time and confirm the booking. All permissions can also be reviewed under "Mer" → "Inställningar" (Settings), which links to the app's page in the iOS Settings app.`;
 if (cmd === 'uppdatering') {
   const alla = (await get(`/v1/apps/${APP}/appStoreVersions?filter[platform]=IOS`)).data;
   let ver = alla.find((x) => x.attributes.versionString === VERSION);
