@@ -23,8 +23,49 @@ async function lasTillstand() {
   const t = {};
   try { t.notiser = (await P.PushNotifications?.checkPermissions())?.receive || null; } catch { /* ok */ }
   t.kalender = await kalStatus();
-  for (const namn of ['camera', 'microphone']) { try { t[namn] = (await navigator.permissions?.query({ name: namn }))?.state || null; } catch { /* stöds inte */ } }
+  Object.assign(t, await mediaLage());
   return t;
+}
+
+// Kameran och mikrofonen (Carl 2026-11-23: "allt annat som appen kräver"): föräldrarna filmar stegen i stigen och
+// skickar till Haris, och en film med ljud kräver båda. App 1.3 frågar via CapKalender (AVFoundation), äldre appar
+// via webbläsarens getUserMedia, som iOS också visar som appens fråga.
+const kalP = () => { try { const C = window.Capacitor; return C?.isNativePlatform?.() && C.isPluginAvailable?.('CapKalender') ? C.Plugins.CapKalender : null; } catch { return null; } };
+async function mediaLage() {
+  try { const r = await kalP()?.media(); if (r?.kamera) return { kamera: r.kamera, mikrofon: r.mikrofon }; } catch { /* äldre app */ }
+  const ut = {};
+  for (const [n, k] of [['camera', 'kamera'], ['microphone', 'mikrofon']]) {
+    try { const st = (await navigator.permissions?.query({ name: n }))?.state; ut[k] = st === 'granted' ? 'ja' : st === 'denied' ? 'nej' : st === 'prompt' ? 'fraga' : null; } catch { ut[k] = null; }
+  }
+  return ut;
+}
+async function mediaFraga() {
+  try { const P = kalP(); const a = await P.mediaFraga({ typ: 'kamera' }); const b = await P.mediaFraga({ typ: 'mikrofon' }); return !!(a?.ok && b?.ok); } catch { /* äldre app */ }
+  try { const st = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); st.getTracks().forEach(x => x.stop()); return true; } catch { return false; }
+}
+const mediaPa = t => t.kamera === 'ja' && t.mikrofon === 'ja';
+const mediaNej = t => t.kamera === 'nej' || t.mikrofon === 'nej';
+// något som går att slå på härifrån (det nekade måste ändras i iPhonens Inställningar)
+function nagotAv(t) {
+  const n = store.notiser;
+  return (!(n.push || t.notiser === 'granted') && t.notiser !== 'denied') || (kalStod() && kalLage() !== 'pa' && t.kalender !== 'nej' && t.kalender !== 'skriv') || (!mediaPa(t) && !mediaNej(t)) || (notisStod() && !n.paminn);
+}
+const appVersion = async () => { try { return (await window.Capacitor?.Plugins?.App?.getInfo())?.version || ''; } catch { return ''; } };
+
+// De som redan har appen (Carl 2026-11-23: "för de som redan har appen ska de gå till inställningssidan för att få
+// allting"): första gången appen startar i en ny version skickas föräldern till Inställningar, en gång, om något
+// går att slå på. Nya konton får sidan Sista steget i stället.
+let nyVersion = false;
+export async function kollaNyaTillatelser() {
+  if (!ios() || !store.session?.token || !store.profile) return;
+  if (/^#\/(losen|start|kom-igang|k\/|installningar|login)/.test(location.hash)) return;
+  const ver = await appVersion();
+  if (!ver || store.notiser.introVer === ver) return;
+  const t = await lasTillstand();
+  store.notiser = { ...store.notiser, introVer: ver, intro: true };
+  if (!nagotAv(t)) return;
+  tillstand = t; hamtat = Date.now(); nyVersion = true;
+  ui.go('/installningar');
 }
 
 // granted/ja = tillåtet, denied/nej = nekat, prompt/fraga = inte frågat än
@@ -62,8 +103,8 @@ export function installningarPage() {
 
   // kamera, mikrofon, bilder (används när Haris filmar och spelar in under passen)
   const media = ios() ? [
-    rad('📷', 'Kamera', 'När Haris filmar moment och bedömningar under passet.', chip(t.camera), t.camera === 'denied' ? OPPNA : ''),
-    rad('🎙', 'Mikrofon', 'När Haris spelar in ljud, till exempel samtalet före och efter passet.', chip(t.microphone), t.microphone === 'denied' ? OPPNA : ''),
+    rad('📷', 'Kamera', 'När ni filmar stegen i stigen och skickar till Haris.', chip(t.kamera), t.kamera === 'nej' ? OPPNA : t.kamera === 'ja' ? '' : '<button class="film" data-action="inst-media">Slå på</button>'),
+    rad('🎙', 'Mikrofon', 'Ljudet i filmerna ni skickar till Haris.', chip(t.mikrofon), t.mikrofon === 'nej' ? OPPNA : t.mikrofon === 'ja' ? '' : '<button class="film" data-action="inst-media">Slå på</button>'),
     rad('🖼', 'Bilder', 'När man väljer en film från bildbiblioteket.', chip(null), ''),
   ].join('') : '';
 
@@ -72,7 +113,9 @@ export function installningarPage() {
   <a class="back" href="#/mer">‹ Mer</a>
   <section><div class="eyebrow">Inställningar</div><h1>Inställningar</h1></section>
   <section class="panel inst-panel">
+    ${nyVersion ? '<div class="note" style="margin:0 0 10px"><b>Nytt i appen.</b> Slå på det som är av, så får ni påminnelserna, passen i kalendern och kan filma till Haris.</div>' : ''}
     <h3>Tillåtelser på telefonen</h3>
+    ${ios() && tillstand && nagotAv(t) ? '<button class="btn grad block" data-action="inst-allt" style="margin-bottom:6px">Slå på allt</button>' : ''}
     ${notisRad}${kalRad}${media}
     ${ios() ? `<a class="btn secondary block" href="app-settings:" style="margin-top:12px">⚙️ Öppna iPhonens inställningar för CAP</a>
     <p class="small muted" style="margin:6px 0 0">Där slår du på eller av notiser, kalendrar, kamera, mikrofon och bilder. Kommer du tillbaka hit visas det nya läget.</p>` : ''}
@@ -115,9 +158,11 @@ export function introPage() {
     rader.push(rad('📅', 'Kalendern', 'Passen läggs i en egen kalender, CAP, med plats och en påminnelse en timme före: dags att åka. Avbokade tas bort.',
       nej ? chip(t.kalender) : kalLage() === 'pa' ? pa : '', nej ? OPPNA : kalLage() === 'pa' ? '' : knapp('inst-kal')));
   } else rader.push(rad('📅', 'Kalendern', 'Prenumerera på era pass, så hamnar de i telefonens kalender. Tryck Prenumerera och stäng av «Ta bort varningar».', '', feed));
+  if (ios()) rader.push(rad('🎥', 'Kamera och mikrofon', 'När ni filmar stegen i stigen och skickar filmen till Haris.',
+    mediaNej(t) ? chip('nej') : mediaPa(t) ? pa : '', mediaNej(t) ? OPPNA : mediaPa(t) ? '' : knapp('inst-media')));
   if (notisStod()) rader.push(rad('⚽', 'Träna hemma', `En påminnelse kl 17 på ${esc(paminnDagar(p?.freq).join(' och '))}, dagarna att träna själva.`,
     n.paminn ? pa : '', n.paminn ? '' : knapp('inst-trana')));
-  const allt = ios() && (!(n.push || t.notiser === 'granted') || (kalStod() && kalLage() !== 'pa') || (notisStod() && !n.paminn));
+  const allt = ios() && nagotAv(t);
   return `
   <section class="wiz">
     <img class="hero-logo" src="assets/cap-logo.png" alt="">
@@ -128,7 +173,7 @@ export function introPage() {
   <section class="panel inst-panel">
     ${allt ? '<button class="btn grad block" data-action="inst-allt" style="margin-bottom:6px">Slå på allt</button>' : ''}
     ${rader.join('')}
-    ${ios() ? '<p class="small muted" style="margin:10px 0 0">Kameran och mikrofonen frågar telefonen om först när du filmar.</p>' : '<p class="small" style="margin:10px 0 0"><a href="#/app">Hämta appen till telefonen ›</a></p>'}
+    ${ios() ? '' : '<p class="small" style="margin:10px 0 0"><a href="#/app">Hämta appen till telefonen ›</a></p>'}
   </section>
   <section class="btn-row"><button class="btn ${allt ? 'secondary' : 'grad'} block" data-action="inst-klar">${allt ? 'Hoppa över' : 'Klart'} ›</button></section>`;
 }
@@ -141,9 +186,17 @@ export async function installningarAction(action, el) {
     const n = store.notiser;
     if (!n.push) await pushSatt(true);
     if (kalStod() && kalLage() !== 'pa') { const m = minaNu().hamtat ? minaNu() : await hamtaMina(true); await kalSynk(m.bokningar, { tvinga: true }); }
+    const t0 = tillstand || await lasTillstand();
+    if (!mediaPa(t0) && !mediaNej(t0)) await mediaFraga();
     if (notisStod() && !store.notiser.paminn) await paminnSatt(true);
+    nyVersion = false;
     toast('Klart. Ändra när du vill under Mer → Inställningar');
     setTimeout(om, 1200); return true;
+  }
+  if (action === 'inst-media') {
+    const ok = await mediaFraga();
+    toast(ok ? 'Kameran och mikrofonen är på' : 'Nekat på telefonen. Tryck Öppna Inställningar.');
+    om(); return true;
   }
   if (action === 'inst-trana') {
     const r = await paminnSatt(true);
@@ -153,6 +206,7 @@ export async function installningarAction(action, el) {
   if (action === 'inst-klar') {
     // frågat färdigt: appen ber inte om lov på egen hand efter det här
     store.notiser = { ...store.notiser, fragat: true, intro: true };
+    appVersion().then(v => { if (v) store.notiser = { ...store.notiser, introVer: v }; });
     kalFragat();
     ui.go('/'); return true;
   }

@@ -13,3 +13,4 @@ Thumbs.db
 
 # App Store-skärmbilder (tools/skarmbilder.js), laddas upp i App Store Connect
 docs/appstore/
+tools/.testkedja/

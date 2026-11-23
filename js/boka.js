@@ -12,6 +12,7 @@ import { api, API } from './api.js';
 import { swishLank, visaSwish, bokningsMeddelande, paketMeddelande, kr } from './swish.js';
 import { notisStod, pushSatt } from './notiser.js';
 import { kalSynk, kalStod, kalLage, kalAv } from './kalender.js';
+import { blockFranMina } from './block.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DAG = ['', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
@@ -65,7 +66,7 @@ export async function hamtaMina(tvinga = false, bakgrund = false) {
   const r = await api.get('/mina', token());
   if (bakgrund && andrad >= start) return mina;
   if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], kalFeed: r.kalFeed || null, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
-  if (r.ok) synkaKalender();
+  if (r.ok) { synkaKalender(); blockFranMina(r); }
   return mina;
 }
 export const minaNu = () => mina;

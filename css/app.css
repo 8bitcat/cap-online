@@ -826,3 +826,17 @@ body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }
 .inst-chip.nej { color: var(--danger, #ff6b6b); border-color: currentColor; }
 .inst-chip.halv { color: var(--warn, #f5b44a); border-color: currentColor; }
 @media (max-width: 380px) { .top-uppdatera { font-size: 12.5px; padding: 8px 10px; gap: 3px; } .top-right:has(.top-uppdatera) .top-vaxla span { display: none; } }
+
+/* Träningsblocken (köp i appen, 2026-11-23) */
+.block-lista { display: grid; gap: 10px; }
+.block-kort { margin: 0; }
+.block-kort.valt { outline: 2px solid var(--brand); }
+.block-kort.agt { opacity: .85; }
+.block-rad { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: start; }
+.block-ikon { font-size: 26px; line-height: 1; }
+.block-mitt b { display: block; }
+.block-mitt small { display: block; color: var(--muted, #9aa5b1); margin-top: 2px; }
+.block-fot { display: flex; justify-content: flex-end; margin-top: 10px; }
+.block-fot .btn { min-width: 140px; }
+.stig-node.ejkopt { opacity: .55; }
+.stig-node.ejkopt .stig-dot { filter: grayscale(1); }

@@ -69,12 +69,34 @@
 //      öppnar Meddelanden med texten ifylld) och föräldrarna loggar in med en egen kod. SMS_TEST=1 (bara lokalt i
 //      wrangler dev) lägger sms:en i en utkorg i KV i stället: GET /admin/smsut. Leveransstatus kommer tillbaka från
 //      46elks till POST /sms/status och syns på klienten (smsLogg). APP_LANK_IOS = länken till appen (TestFlight/App Store).
+// Köp i appen: POST /mina/kop {jws} → {block, kop}. /mina ger block = det familjen låst upp. Se apple.js.
+
+import { kollaTransaktion } from './apple.js';
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' };
 const svar = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...CORS } });
 const fel = (text, status = 400) => svar({ ok: false, fel: text }, status);
 const KOD_TECKEN = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const SMA = 'abcdefghijklmnopqrstuvwxyz0123456789';
+
+// ---------- träningsblocken (köp i appen, Carl 2026-11-23: "ja till alla produkter") ----------
+// Engångsköp i App Store. Ett köp gäller hela familjen (läggs på huvudklienten, som priset och paketen) och följer
+// kontot, inte telefonen. Vilka steg i stigen ett block låser upp står i stigen (nod.block, admin → Stigen).
+const APP_BUNDLE = 'se.completeathletic.caponline';
+const BLOCK = [
+  { id: 'niva2', namn: 'Nivå 2: Passa och dribbla', pris: 129, ger: ['niva2'] },
+  { id: 'niva3', namn: 'Nivå 3: Finter och koordination', pris: 149, ger: ['niva3'] },
+  { id: 'matchfart', namn: 'Nivå 4–5: Matchfart', pris: 199, ger: ['matchfart'] },
+  { id: 'position', namn: 'Positionsblocket', pris: 249, ger: ['position'] },
+  { id: 'stigen', namn: 'Hela stigen', pris: 499, ger: ['niva2', 'niva3', 'matchfart', 'position'] },
+  { id: 'plus', namn: 'CAP Hemma Plus', pris: 999, ger: ['niva2', 'niva3', 'matchfart', 'position', 'plus'] },
+];
+const blockSku = id => `${APP_BUNDLE}.block.${id}`;
+function blockFor(k) {
+  const s = new Set();
+  for (const x of k?.kop || []) if (!x.aterkallad) for (const g of BLOCK.find(b => b.id === x.id)?.ger || []) s.add(g);
+  return [...s];
+}
 const slump = (n, tecken = KOD_TECKEN) => { const a = crypto.getRandomValues(new Uint8Array(n)); return [...a].map(b => tecken[b % tecken.length]).join(''); };
 const tokenNy = () => slump(40, SMA);
 const nyttId = (p = '') => p + Date.now().toString(36) + slump(4, SMA);
@@ -217,7 +239,7 @@ function renKlient(d, gammal = {}) {
     niva, nivaHistorik: hist, anteckning: ren(d.anteckning, 2000),
     status: ['ny', 'aktiv', 'paus'].includes(d.status) ? d.status : (gammal.status || 'ny'),
     pin: gammal.pin || null, kod: gammal.kod || null, vilLank: gammal.vilLank || null, smsLogg: gammal.smsLogg || [], inloggad: gammal.inloggad || {}, paket: gammal.paket || [], pris: gammal.pris ?? null, passLogg: gammal.passLogg || [], pott: gammal.pott || [], notiser: gammal.notiser || [],
-    huvud: gammal.huvud || null, syskon: gammal.syskon || [], installningar: gammal.installningar || {},
+    huvud: gammal.huvud || null, syskon: gammal.syskon || [], installningar: gammal.installningar || {}, kop: gammal.kop || [],
   };
 }
 // ---------- syskon (Haris 2026-11-22: "en klient som lämnar sina tvillingar till mig") ----------
@@ -680,6 +702,7 @@ function renStigConfig(d) {
       if (n.mal) ut.mal = Math.max(0, Math.round(+n.mal));
       if (n.krav) ut.krav = n.krav === 'tid' ? 'tid' : 'video';
       if (n.fardighet) ut.fardighet = ren(n.fardighet, 40);
+      if (n.block) ut.block = ren(n.block, 20).replace(/[^a-z0-9]/g, '');
       return ut;
     }).filter(n => n.titel),
   }));
@@ -1053,7 +1076,41 @@ export default {
       })) : [];
       const cfg = await hamtaBetalning(env);
       const kalFeed = kRad ? `/kal/familj/${kRad.id}/${await kalSig(env, 'familj', 'alla', kRad.id)}.ics` : null;
-      return svar({ ok: true, bokningar, planer, klient, bedomningar, media, familj: familjData, kalFeed, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
+      const betK = kRad ? await betalare(env, kRad) : null;
+      return svar({ ok: true, block: blockFor(betK), kopta: (betK?.kop || []).filter(x => !x.aterkallad).map(x => x.id), bokningar, planer, klient, bedomningar, media, familj: familjData, kalFeed, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
+    }
+
+    // Köp i appen: appen skickar Apples signerade transaktion efter ett köp och vid Återställ köp
+    if (p === '/mina/kop' && req.method === 'POST') {
+      const user = await sessionUser(env, req);
+      if (!user?.klientId) return fel('inte inloggad', 401);
+      const d = await json(); if (!d?.jws) return fel('ingen transaktion');
+      let t;
+      try { t = await kollaTransaktion(d.jws, env.TEST_LAGE && env.TEST_ROT ? { rot: env.TEST_ROT } : {}); }
+      catch (e) {
+        await env.DB.put(`kopfel:${Date.now()}`, JSON.stringify({ t: nu(), uid: user.uid, fel: String(e?.message || e) }), { expirationTtl: 60 * 60 * 24 * 60 });
+        return fel(`Köpet kunde inte kontrolleras (${e?.message || e})`);
+      }
+      if (t.bundleId !== APP_BUNDLE) return fel('köpet hör till en annan app');
+      const b = BLOCK.find(x => blockSku(x.id) === t.productId);
+      if (!b) return fel('okänd produkt');
+      const k = await betalare(env, await hamtaKlient(env, user.klientId));
+      if (!k) return fel('kontot finns inte', 404);
+      const otx = String(t.originalTransactionId || t.transactionId || '');
+      if (!otx) return fel('köpet saknar nummer');
+      const agare = await env.DB.get(`kop:${otx}`);
+      // ett raderat konto släpper köpet: nästa konto på samma Apple-konto får det vid Återställ köp
+      if (agare && agare !== k.id && await hamtaKlient(env, agare)) return fel('Köpet är redan kopplat till ett annat CAP-konto. Logga in med det kontot.', 409);
+      k.kop = k.kop || [];
+      let rad = k.kop.find(x => x.tx === otx);
+      const ny = !rad && !t.revocationDate;
+      if (t.revocationDate) { if (rad) rad.aterkallad = new Date(t.revocationDate).toISOString(); }
+      else if (!rad) { rad = { id: b.id, tx: otx, t: nu(), pris: b.pris, miljo: t.environment === 'Production' ? 'skarp' : 'test' }; k.kop.push(rad); }
+      else delete rad.aterkallad;
+      if (agare !== k.id) await env.DB.put(`kop:${otx}`, k.id);
+      if (ny) tillHaris(`${barnNamn(k)} köpte ${b.namn}`, b.id === 'plus' ? 'Ingår: ett personligt hemmaprogram. Gör det under Pass och dela det med familjen.' : `${b.pris} kr i App Store.`, `/admin/klient/${k.id}`);
+      await sparaKlient(env, k);
+      return svar({ ok: true, ny, block: blockFor(k), kopta: k.kop.filter(x => !x.aterkallad).map(x => x.id) });
     }
 
     // Förälderns inställningar (Carl 2026-11-22: "en inställningssida"): paminnelse = notisen kvällen före passet

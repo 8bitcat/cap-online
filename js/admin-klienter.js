@@ -2,6 +2,7 @@
 // länken som sms, bokar tider åt befintliga kunder, höjer och sänker nivån, planerar pass för personen och ser
 // bedömningarna över tid som diagram. Samma sida på datorn och i appen.
 import { api } from './api.js';
+import { BLOCK } from './block.js';
 import { diagram, sammanfattning } from './diagram.js';
 import { betalStatus, kr } from './swish.js';
 import { vantande, lokalUrl, laddaUppVantande, taBortLokal, r2Pa, sattR2 } from './media.js';
@@ -195,6 +196,7 @@ function klientSida() {
   </section>
   ${k.huvud ? '' : pottPanel(d)}
   ${k.huvud ? '' : paketPanel(d)}
+  ${k.huvud ? '' : kopPanel(k)}
   <section>
     <div class="section-head"><h2>Tider</h2><a class="small" href="#/admin/klient/${k.id}/boka">Boka ›</a></div>
     ${kommande.length ? `<ul class="list">${kommande.map(b => tidRad(b, true)).join('')}</ul>` : '<p class="muted small">Ingen kommande tid. Boka en åt familjen, så ser de den i appen.</p>'}
@@ -266,6 +268,13 @@ function pottPanel(d) {
     ${p && pris ? `<div class="pott-snabb"><button type="button" class="film" data-action="klient-pott-snabb" data-belopp="${pris}" data-text="Pass utanför bokningen">Dra ett pass utanför bokningen (${esc(kr(pris))})</button></div>` : ''}
     ${hist.length ? `<details class="pass-historik" open><summary>Historik (${hist.length})</summary><ul class="logg pott-logg">${hist.slice(0, 60).map(r => `<li><span class="logg-dat">${esc(fmtNar(r.nar))}</span><span class="logg-text">${esc(r.text)}<small class="muted"> · saldo ${esc(kr(r.saldo))}</small>${r.id ? ` <button type="button" class="film" data-action="klient-pott-bort" data-id="${r.id}" title="Ta bort raden">✕</button>` : ''}</span><span class="logg-antal ${r.belopp > 0 ? 'plus' : 'minus'}">${r.belopp > 0 ? '+' : '−'}${esc(kr(Math.abs(r.belopp)))}</span></li>`).join('')}</ul></details>` : ''}
   </section>`;
+}
+// Träningsblocken familjen köpt i appen (App Store). Hemma Plus: Haris gör ett personligt hemmaprogram under Pass.
+function kopPanel(k) {
+  const kop = (k.kop || []).filter(x => !x.aterkallad);
+  if (!kop.length) return '';
+  return `<section class="panel"><h3>Köpt i appen</h3><ul class="list">${kop.map(x => { const b = BLOCK.find(y => y.id === x.id); return `<li class="row"><span class="grow">${b?.ikon || '🔓'} <b>${esc(b?.namn || x.id)}</b>${x.miljo === 'test' ? ' <span class="small muted">(test)</span>' : ''}<div class="small muted">${esc(String(x.t).slice(0, 10))} · ${x.pris} kr i App Store</div></span></li>`; }).join('')}</ul>
+    ${kop.some(x => x.id === 'plus') ? `<p class="small" style="margin:8px 0 0">Hemma Plus ingår ett personligt hemmaprogram. <a href="#/admin/pass/ny/${k.id}">Gör passet ›</a></p>` : ''}</section>`;
 }
 function paketPanel(d) {
   const k = d.klient, lista = (d.paket || []).slice().reverse(), mallar = d.paketMallar || [], standard = d.standardPris;

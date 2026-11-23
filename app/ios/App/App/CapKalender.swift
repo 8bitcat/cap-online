@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Capacitor
 import EventKit
+import AVFoundation
 
 // Passen i telefonens kalender (Carl 2026-11-22: "vi gör ett nytt bygge som gör så att de prenumererar på
 // kalenderflödet"). iOS låter inte en app lägga till en prenumererad kalender, men med föräldrarnas tillstånd kan
@@ -11,6 +12,8 @@ import EventKit
 //   status()                      → {behorighet: ja|fraga|nej|skriv, harKalender}
 //   synka({handelser, fraga})     → {ok, behorighet, skapade, andrade, borttagna}   fraga: false = be inte om tillstånd
 //   avsluta()                     → tar bort CAP-kalendern (utloggning, raderat konto, avstängt)
+//   media()                       → {kamera, mikrofon}: ja|fraga|nej   (app 1.3, frågorna på sidan Sista steget)
+//   mediaFraga({typ})             → {ok, behorighet}   typ: kamera|mikrofon
 @objc(CapKalenderPlugin)
 public class CapKalenderPlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "CapKalenderPlugin"
@@ -18,7 +21,9 @@ public class CapKalenderPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "status", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "synka", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "avsluta", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "avsluta", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "media", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "mediaFraga", returnType: CAPPluginReturnPromise)
     ]
     private let store = EKEventStore()
     private let nyckel = "capKalenderId"
@@ -142,6 +147,26 @@ public class CapKalenderPlugin: CAPPlugin, CAPBridgedPlugin {
             store.reset()
             call.resolve(["ok": false, "behorighet": behorighet(), "fel": error.localizedDescription])
         }
+    }
+
+    // Kameran och mikrofonen (Carl 2026-11-23: "allt annat som appen kräver"): föräldrarna filmar stegen i stigen,
+    // Haris filmar och spelar in under passen. Att filma med ljud kräver både kamera och mikrofon.
+    private func mediaLage(_ t: AVMediaType) -> String {
+        switch AVCaptureDevice.authorizationStatus(for: t) {
+        case .authorized: return "ja"
+        case .notDetermined: return "fraga"
+        default: return "nej"
+        }
+    }
+
+    @objc func media(_ call: CAPPluginCall) {
+        call.resolve(["kamera": mediaLage(.video), "mikrofon": mediaLage(.audio)])
+    }
+
+    @objc func mediaFraga(_ call: CAPPluginCall) {
+        let t: AVMediaType = call.getString("typ") == "mikrofon" ? .audio : .video
+        if mediaLage(t) != "fraga" { call.resolve(["ok": mediaLage(t) == "ja", "behorighet": mediaLage(t)]); return }
+        AVCaptureDevice.requestAccess(for: t) { ok in call.resolve(["ok": ok, "behorighet": ok ? "ja" : "nej"]) }
     }
 
     @objc func avsluta(_ call: CAPPluginCall) {

@@ -12,7 +12,8 @@ import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
 import { kalAvsluta } from './kalender.js';
 import { kollaAppVersion } from './appversion.js';
-import { installningarInit, installningarPage, installningarAction, introPage, INTRO } from './installningar.js';
+import { installningarInit, installningarPage, installningarAction, introPage, INTRO, kollaNyaTillatelser } from './installningar.js';
+import { blockInit, blockPage, blockAction, blockStart, harBlock, nodBlock, blockNamn, blockKop } from './block.js';
 
 const view = document.getElementById('view');
 const nav = document.querySelector('.tabs');
@@ -169,6 +170,7 @@ const routes = [
   [/^\/notiser$/, notiserPage],
   [/^\/installningar$/, installningarPage],
   [/^\/kom-igang$/, introPage],
+  [/^\/block(?:\/([a-z0-9]+))?$/, blockPage],
   [/^\/radera$/, raderaPage],
   [/^\/stig$/, stigHome],
   [/^\/stig\/([\w-]+)$/, stigNode],
@@ -717,6 +719,7 @@ function merPage() {
     ${rad('/bibliotek', '📚', 'Biblioteket', 'Passen, loggade pass och planerade pass')}
     ${rad('/filmer', '🎬', 'Filmer från Haris', 'Alla publicerade filmer med taggar')}
     ${rad('/foralder', '💛', 'Föräldraguiden', 'Kommunikation, feedback, motivation')}
+    ${rad('/block', '🔓', 'Träningsblock', 'Fler steg på stigen: nivå 2–5, positionen och Hemma Plus')}
     ${rad('/installningar', '⚙️', 'Inställningar', 'Tillåtelser, notiser, kalendern och kontot')}
     ${rad('/notiser', '🔔', 'Notiser', 'Påminnelser och nyheter från Haris')}
     ${rad('/start/1', '✏️', 'Ändra barnets namn och födelseår', 'Position, drömspelare och mål finns på spelarkortet')}
@@ -1422,6 +1425,9 @@ function stigLage() {
   let oppet = true, nasta = null;
   const rader = noder.map(n => {
     const klar = stigKlar(n);
+    // träningsblock som inte är köpt: steget syns men hoppas över, så att resten av stigen inte stannar
+    const block = nodBlock(n);
+    if (!klar && !harBlock(block)) return { ...n, klar, state: 'kop', block };
     const state = klar ? 'done' : oppet ? (nasta ? 'open' : 'next') : 'locked';
     if (!klar && oppet && !nasta) nasta = n;
     if (!klar) oppet = false;
@@ -1457,7 +1463,7 @@ function stigSummering() {
     </div>
     <div class="progress" style="margin-top:12px"><i style="width:${pct}%"></i></div>
     <div class="xp-row" style="margin-top:6px"><span><b>${L.klara} av ${L.total} steg</b> · ${xp()} XP</span><span class="small muted">⏱ ${tider} tider låsta · 🎥 ${filmer} ${filmer === 1 ? 'film' : 'filmer'} hos Haris</span></div>
-    ${L.nasta ? `<a class="btn block" href="#/stig/${L.nasta.id}" style="margin-top:12px">Nästa: ${STIG_IKON[L.nasta.typ]} ${esc(L.nasta.titel)}</a>` : '<p class="small" style="margin:10px 0 0">Hela stigen är klar!</p>'}
+    ${L.nasta ? `<a class="btn block" href="#/stig/${L.nasta.id}" style="margin-top:12px">Nästa: ${STIG_IKON[L.nasta.typ]} ${esc(L.nasta.titel)}</a>` : (L.rader.some(r => r.state === 'kop') ? '<a class="btn grad block" href="#/block" style="margin-top:12px">🔓 Fler steg: träningsblocken</a>' : '<p class="small" style="margin:10px 0 0">Hela stigen är klar!</p>')}
   </section>`;
 }
 
@@ -1469,6 +1475,7 @@ function stigHome() {
   const rows = L.rader.map((n, i) => {
     let head = '';
     if (n.etapp !== etapp) { etapp = n.etapp; const d = levelDef(etapp); head = `<div class="stig-etapp ${L.rader.filter(r => r.etapp === etapp).every(r => r.klar) ? 'done' : ''}"><span class="lvl-n">${etapp}</span><div><b>Etapp ${etapp} · ${esc(d.name)}</b><div class="small muted">${esc(d.tagline)}</div></div></div>`; }
+    if (n.state === 'kop') { const k = blockKop(n.block); return `${head}<a class="stig-node ejkopt ${i % 2 ? 'r' : 'l'} typ-${n.typ}" href="#/block/${k?.id || ''}"><span class="stig-dot">🔒</span><span class="stig-label"><b>${esc(n.titel)}</b><small>Ingår i ${esc(blockNamn(n.block) || 'ett block')}</small></span></a>`; }
     if (n.typ === 'grind') return `${head}<a class="stig-grind ${n.state}" href="#/stig/${n.id}"><span class="stig-grind-ic">${n.klar ? '✓' : n.state === 'locked' ? '🔒' : '🚧'}</span><span><b>${esc(n.titel)}</b><div class="small">${n.klar ? 'Öppen · film skickad till Haris' : n.state === 'locked' ? 'Låst tills stegen ovanför är klara' : esc(n.desc)}</div></span></a>`;
     const side = i % 2 ? 'r' : 'l';
     const extra = n.typ === 'tid' && stigBast(n.id) != null ? `<span class="stig-bast">${fmtSek(stigBast(n.id))}${n.mal && stigBast(n.id) <= n.mal ? ' ⭐' : ''}</span>` : '';
@@ -1488,6 +1495,14 @@ function stigNode(id) {
   const L = stigLage();
   const n = L.rader.find(x => x.id === id);
   if (!n) return go('/stig');
+  if (n.state === 'kop') {
+    const k = blockKop(n.block), d0 = levelDef(n.etapp);
+    return `<a class="back" href="#/stig">‹ Stigen</a>
+    <section><div class="eyebrow">${STIG_IKON[n.typ]} Etapp ${n.etapp} · ${esc(d0.name)}</div><h1>${esc(n.titel)}</h1><p class="muted">${esc(n.desc || '')}</p>
+      <div class="chips"><span class="chip">🔒 Ingår i ${esc(blockNamn(n.block))}</span></div></section>
+    <section class="panel brand"><h3>Lås upp steget</h3><p class="small muted">Steget ingår i blocket <b>${esc(blockNamn(n.block))}</b>${k ? `, från ${k.pris} kr` : ''}. Ni köper en gång och har det sedan för alltid.</p>
+      <a class="btn grad block" href="#/block/${k?.id || ''}">Visa träningsblocken</a></section>`;
+  }
   const last = n.state === 'locked';
   const d = levelDef(n.etapp);
   const head = `
@@ -1647,6 +1662,7 @@ async function onAction(e) {
   const paAdmin = location.hash.replace(/^#/, '').startsWith('/admin');
   if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov)-/.test(action))) { await adminAction(action, el, e); return; }
   if (action.startsWith('inst-')) { await installningarAction(action, el); return; }
+  if (action.startsWith('block-')) { await blockAction(action, el); return; }
   if (action.startsWith('boka-')) { await bokaAction(action, el); return; }
   if (action === 'gast') { e.preventDefault(); store.guest = true; store.proto = 'app'; toast('Du provar utan konto'); go('/'); return; }
   if (action === 'sms-ny' || action === 'sms-andra') { const path = location.hash.replace(/^#/, '') || '/'; await kontoAction(action, el, { toast, render: html => { view.innerHTML = html; afterRender(path); } }); return; }
@@ -1839,10 +1855,13 @@ async function boot() {
   } catch { /* äldre bygge utan App-pluginet */ }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { kollaNyVersion(); kollaAppVersion(); } });
   kollaAppVersion();
+  setTimeout(kollaNyaTillatelser, 800);
   await adminInit({ toast, route, go, kvar, content: C, onAction, onSubmit, stigUppdaterad: tillampaStigConfig });
   bokaInit({ toast, route, go, kvar, onAction });
   utvecklingInit({ toast, route, go, kvar, content: C });
   installningarInit({ toast, route, go, kvar });
+  blockInit({ toast, route, go, kvar });
+  blockStart();
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
   api.get('/config/stig').then(r => { if (r.ok && r.config) { tillampaStigConfig(r.config); const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/stig')) route(); } });
   document.addEventListener('cap:notiser', e => { if (/notiser/.test(location.hash)) { toast(e.detail?.ok ? 'Telefonen får notiser från Haris' : 'Kunde inte registrera telefonen'); route(); } });

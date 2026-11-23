@@ -1,11 +1,13 @@
 // Admin → Stigen: listorna i prototyp 4 (drömspelare) och stegen per etapp. Sparas på servern och
 // används av Träna själv. Tomma listor = appens standard (data/content.json).
 import { api, filmerNu } from './api.js';
+import { BLOCK, nodBlock } from './block.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const TYP = { film: 'Pass ur appen', block: 'Film kommer / film från biblioteket', fraga: 'Frågetecken (text)', tid: 'Ta tid', video: 'Film till Haris', grind: 'Grind (film till Haris)' };
+const blockText = id => id === 'gratis' ? 'Gratis' : (BLOCK.find(b => b.id === id)?.namn || id);
 const POS = [['mv', 'MV'], ['back', 'Back'], ['mitt', 'Mitt'], ['anf', 'Anf']];
 
 let st = { cfg: null, laddat: false, etapp: 1 };
@@ -39,7 +41,7 @@ export function stigAdminView() {
   <section>
     <div class="section-head"><h2>Stegen</h2><span class="small muted">${cfg.etapper.reduce((a, x) => a + x.noder.length, 0)} steg</span></div>
     <div class="chips">${cfg.etapper.map(x => `<button class="chip ${x.n === st.etapp ? 'brand on' : ''}" data-action="stig-etapp" data-n="${x.n}">Etapp ${x.n}</button>`).join('')}</div>
-    <p class="small muted">Ordningen uppifrån och ner är stigen. Ett tomt block kan kopplas till en film ur biblioteket, då blir det ett riktigt steg med ▶. Position tom = alla.</p>
+    <p class="small muted">Träningsblocken: varje steg ingår i ett block som familjen köper i appen (Hela stigen och Hemma Plus ger alla). Standard är etapp 1 gratis, etapp 2 Nivå 2, etapp 3 Nivå 3, etapp 4–5 Matchfart och steg för en position Positionsblocket. Ordningen uppifrån och ner är stigen. Ett tomt block kan kopplas till en film ur biblioteket, då blir det ett riktigt steg med ▶. Position tom = alla.</p>
     <div class="list" id="nodlista" data-n="${e.n}">${e.noder.map((n, i) => `<div class="step nodrad" data-i="${i}">
       <span class="num">${i + 1}</span>
       <div style="display:grid;gap:6px">
@@ -50,6 +52,11 @@ export function stigAdminView() {
           ${POS.map(([id, t]) => `<label class="small"><input type="checkbox" data-n="pos" value="${id}" ${(n.position || []).includes(id) ? 'checked' : ''} style="accent-color:var(--brand)"> ${t}</label>`).join('')}
           <label class="small">mål <input type="number" data-n="mal" value="${n.mal || ''}" min="0" style="width:64px" placeholder="s"> s</label>
         </div>
+        <label class="small" style="display:flex;gap:6px;align-items:center">Ingår i <select data-n="block" style="flex:1">
+          <option value="">Standard: ${esc(blockText(nodBlock({ ...n, block: '', etapp: e.n })))}</option>
+          <option value="gratis" ${n.block === 'gratis' ? 'selected' : ''}>Gratis</option>
+          ${BLOCK.filter(b => b.ger.length === 1).map(b => `<option value="${b.id}" ${n.block === b.id ? 'selected' : ''}>${esc(b.namn)} (${b.pris} kr)</option>`).join('')}
+        </select></label>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           <select data-n="session" style="flex:1;min-width:140px"><option value="">Pass ur appen: inget</option>${C.sessions.map(s => `<option value="${s.id}" ${n.session === s.id ? 'selected' : ''}>${esc(s.title)}</option>`).join('')}</select>
           <select data-n="filmId" style="flex:1;min-width:140px"><option value="">Film ur biblioteket: ingen</option>${filmer.map(f => `<option value="${f.id}" ${n.filmId === f.id ? 'selected' : ''}>${esc(f.titel)}</option>`).join('')}</select>
@@ -74,6 +81,7 @@ function lasAllt() {
     const mal = +v('mal'); if (mal) n.mal = mal; else delete n.mal;
     const s = v('session'); if (s) n.session = s; else delete n.session;
     const f = v('filmId'); if (f) n.filmId = f; else delete n.filmId;
+    const bl = v('block'); if (bl) n.block = bl; else delete n.block;
     const t = v('text'); if (t !== undefined) n.text = t.split('\n').map(x => x.trim()).filter(Boolean);
     if (!n.position.length) delete n.position;
     if (n.typ === 'grind' && !n.krav) n.krav = 'video';

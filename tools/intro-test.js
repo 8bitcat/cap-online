@@ -20,12 +20,12 @@ const mock = http.createServer((req, res) => { req.on('data', () => {}); req.on(
       try { localStorage.setItem('cap_api', api); } catch {}
       if (!app) return;
       window.__fragor = [];
-      const lage = { push: 'prompt', kal: 'fraga' };
+      const lage = { push: 'prompt', kal: 'fraga', kamera: 'fraga', mikrofon: 'fraga' };
       const lyssn = { remove() {} };
       window.Capacitor = { isNativePlatform: () => true, isPluginAvailable: n => ['PushNotifications', 'LocalNotifications', 'App'].concat(kal ? ['CapKalender'] : []).includes(n), Plugins: {
         PushNotifications: { checkPermissions: async () => ({ receive: lage.push }), requestPermissions: async () => { window.__fragor.push('notiser:' + location.hash); lage.push = 'granted'; return { receive: 'granted' }; }, addListener: async () => lyssn, register: async () => {} },
         LocalNotifications: { checkPermissions: async () => ({ display: lage.push }), requestPermissions: async () => { lage.push = 'granted'; return { display: 'granted' }; }, getPending: async () => ({ notifications: [] }), cancel: async () => {}, schedule: async () => { window.__fragor.push('trana'); } },
-        CapKalender: { status: async () => ({ behorighet: lage.kal }), synka: async ({ fraga }) => { if (lage.kal === 'fraga' && fraga) { window.__fragor.push('kalender:' + location.hash); lage.kal = 'ja'; } return { ok: lage.kal === 'ja', behorighet: lage.kal, skapade: 0 }; }, avsluta: async () => ({ ok: true }) },
+        CapKalender: { status: async () => ({ behorighet: lage.kal }), synka: async ({ fraga }) => { if (lage.kal === 'fraga' && fraga) { window.__fragor.push('kalender:' + location.hash); lage.kal = 'ja'; } return { ok: lage.kal === 'ja', behorighet: lage.kal, skapade: 0 }; }, avsluta: async () => ({ ok: true }), media: async () => ({ kamera: lage.kamera, mikrofon: lage.mikrofon }), mediaFraga: async ({ typ }) => { window.__fragor.push(typ); lage[typ] = 'ja'; return { ok: true }; } },
         App: { getInfo: async () => ({ version: kal ? '1.2' : '1.1' }), addListener: () => ({ catch() {} }), getLaunchUrl: async () => ({}) },
       } };
     }, [API, app, kal]);
@@ -61,11 +61,12 @@ const mock = http.createServer((req, res) => { req.on('data', () => {}); req.on(
   koll('raderna Notiser, Kalendern, Träna hemma', ['Notiser', 'Kalendern', 'Träna hemma'].every(n => rubriker.includes(n)), rubriker.join(','));
   koll('knappen Slå på allt', !!(await f.$('button[data-action=inst-allt]')));
   await f.screenshot({ path: path.join(UT, 'intro-fore.png'), fullPage: true });
-  await f.click('button[data-action=inst-allt]'); await f.waitForTimeout(2500);
+  await f.click('button[data-action=inst-allt]');
+  await f.waitForFunction(() => window.__fragor.includes('trana'), null, { timeout: 10000 }).catch(() => {}); await f.waitForTimeout(1800);
   const fr = await f.evaluate(() => window.__fragor);
-  koll('Slå på allt: notiser, kalendern, träna hemma', fr.some(x => x.startsWith('notiser:#/kom-igang')) && fr.some(x => x.startsWith('kalender:#/kom-igang')) && fr.includes('trana'), JSON.stringify(fr));
+  koll('Slå på allt: notiser, kalendern, kamera, mikrofon, träna hemma', fr.some(x => x.startsWith('notiser:#/kom-igang')) && fr.some(x => x.startsWith('kalender:#/kom-igang')) && fr.includes('kamera') && fr.includes('mikrofon') && fr.includes('trana'), JSON.stringify(fr));
   const chips = await f.$$eval('.inst-rad', r => r.map(x => x.querySelector('b').textContent + '=' + (x.querySelector('.inst-chip')?.textContent || '')));
-  koll('alla tre På', chips.filter(c => c.endsWith('=På')).length === 3, chips.join(' '));
+  koll('alla fyra På', chips.filter(c => c.endsWith('=På')).length === 4, chips.join(' '));
   koll('knappen blir Klart', (await f.textContent('button[data-action=inst-klar]')).includes('Klart'));
   await f.screenshot({ path: path.join(UT, 'intro-efter.png'), fullPage: true });
   await f.click('button[data-action=inst-klar]'); await f.waitForSelector('.greet', { timeout: 10000 });
