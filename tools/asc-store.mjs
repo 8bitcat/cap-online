@@ -203,24 +203,22 @@ if (cmd === 'bilder') {
 
 // En ny version efter den som är ute (1.2 = passen i kalendern, 2026-11-22): skapar versionen om den saknas (texter
 // och skärmbilder följer med från förra), skriver Nyheter och granskningsinfon (kontakten från förra versionen).
-const NYHETER = `Passen i kalendern: appen lägger passen ni bokar hos Haris i en egen kalender, CAP, med plats och en påminnelse en timme före – dags att åka. Avbokade och flyttade pass ändras av sig själva.
+const NYHETER = `Påminnelser: en notis dagen före passet och en när det är dags att åka. Restiden väljer du under Inställningar. Ligger passen i kalendern CAP kommer påminnelserna därifrån, med adress och vägbeskrivning.
 
-Träningsblock: fler steg på stigen med filmer, tider och frågor från Haris. Köp en gång, gäller hela familjen.
+Passen med Haris: Haris kan filma och mäta tiden under passet och dela det med er. Ni ser tiden direkt på filmen, kan jämföra med första gången och kommentera varje moment.
 
-Påminnelse kvällen före varje bokat pass.
+Syskon: lägg till syskon själv under Inställningar → Barn på kontot.
 
-Syskon: har ni flera barn som tränar hos Haris bokar ni en tid för alla på en gång.
+Avbokning: avboka senast 24 timmar före. Avbokar du senare blir tiden ledig för andra, men passet räknas.
 
-Inställningar: under Mer finns nu alla tillåtelser på ett ställe – notiser, kalendern, kamera och påminnelser.
-
-Kom igång: alla frågor om lov på en sida, med knappen Slå på allt – notiser, kalendern, kamera och mikrofon.
-
-Uppdatera: när det finns en ny version visas en knapp överst i appen som tar dig direkt till App Store.`;
+Rättat: appen kunde fastna inzoomad efter att man skrivit i en ruta.`;
 const NOTES_KALENDER = `
 
 New in this version: with the user's permission the app keeps its own calendar named "CAP" with the family's booked sessions (EventKit). Full access is requested because the app also updates and removes sessions that are moved or cancelled; it only reads and changes events in its own "CAP" calendar. The permission is asked the first time the parent has a booked session: in the demo account, open "Med Haris", tap a free time and confirm the booking. All permissions can also be reviewed under "Mer" → "Inställningar" (Settings), which links to the app's page in the iOS Settings app.
 
 In-app purchases (new): six non-consumable "Träningsblock" (training blocks) that unlock more steps of the in-app training path. In the demo account open "Mer" → "Träningsblock", or "Träna själv" → a locked 🔒 step. "Återställ köp" (Restore Purchases) is on the same page. In-person sessions with the coach are not sold in the app (paid by Swish, guideline 3.1.3(e)).
+
+Version 1.4: reminders 24 hours before a booked session and when it is time to leave (two alarms on the event in the app's own "CAP" calendar, and the place is geocoded with CLGeocoder for the event's map; no location permission is used). The coach can film moments during a session; the app compresses the video (AVFoundation) before uploading it. Choosing an existing video uses the system photo picker (PHPicker).
 
 Camera and microphone: parents film the training-path tasks ("Film till Haris") with the phone and send them to the coach; filming with sound needs both. They are requested on the "Missa inget pass" page after sign-up, with an explanation, or when filming.`;
 if (cmd === 'uppdatering') {
@@ -235,7 +233,7 @@ if (cmd === 'uppdatering') {
       ver = (await call('PATCH', `/v1/appStoreVersions/${vantar.id}`, { data: { type: 'appStoreVersions', id: vantar.id, attributes: { versionString: VERSION } } })).data;
       return `bytt ${vantar.attributes.versionString} → ${VERSION}`;
     }
-    ver = (await call('POST', '/v1/appStoreVersions', { data: { type: 'appStoreVersions', attributes: { platform: 'IOS', versionString: VERSION, releaseType: 'MANUAL', copyright: TEXT.copyright }, relationships: { app: { data: { type: 'apps', id: APP } } } } })).data;
+    ver = (await call('POST', '/v1/appStoreVersions', { data: { type: 'appStoreVersions', attributes: { platform: 'IOS', versionString: VERSION, releaseType: 'AFTER_APPROVAL', copyright: TEXT.copyright }, relationships: { app: { data: { type: 'apps', id: APP } } } } })).data;
     return 'skapad';
   });
   await steg('Nyheter i versionen', async () => {
@@ -252,6 +250,25 @@ if (cmd === 'uppdatering') {
     const rd = await tyst404(get(`/v1/appStoreVersions/${ver.id}/appStoreReviewDetail`));
     if (rd?.data) await call('PATCH', `/v1/appStoreReviewDetails/${rd.data.id}`, { data: { type: 'appStoreReviewDetails', id: rd.data.id, attributes: attr } });
     else await call('POST', '/v1/appStoreReviewDetails', { data: { type: 'appStoreReviewDetails', attributes: attr, relationships: { appStoreVersion: { data: { type: 'appStoreVersions', id: ver.id } } } } });
+  });
+}
+
+// Skicka in versionen till granskning och släpp den automatiskt när Apple godkänt (Carl 2026-11-24: "släpp om det
+// krävs en ny app släpp ut den automatiskt"). Bygget ska vara kopplat (bygge) och texterna ifyllda (uppdatering).
+if (cmd === 'skicka') {
+  const alla = (await get(`/v1/apps/${APP}/appStoreVersions?filter[platform]=IOS`)).data;
+  const ver = alla.find((x) => x.attributes.versionString === VERSION);
+  if (!ver) { console.log(`version ${VERSION} finns inte, kör uppdatering först`); process.exit(2); }
+  await steg('släpps automatiskt efter godkännandet', async () => {
+    await call('PATCH', `/v1/appStoreVersions/${ver.id}`, { data: { type: 'appStoreVersions', id: ver.id, attributes: { releaseType: 'AFTER_APPROVAL' } } });
+  });
+  await steg(`version ${VERSION} till granskning`, async () => {
+    const utkast = (await get(`/v1/apps/${APP}/reviewSubmissions?filter[platform]=IOS&filter[state]=READY_FOR_REVIEW`)).data[0];
+    const sub = utkast || (await call('POST', '/v1/reviewSubmissions', { data: { type: 'reviewSubmissions', attributes: { platform: 'IOS' }, relationships: { app: { data: { type: 'apps', id: APP } } } } })).data;
+    await call('POST', '/v1/reviewSubmissionItems', { data: { type: 'reviewSubmissionItems', relationships: { reviewSubmission: { data: { type: 'reviewSubmissions', id: sub.id } }, appStoreVersion: { data: { type: 'appStoreVersions', id: ver.id } } } } })
+      .catch((e) => { if (!/already|ENTITY_ERROR.RELATIONSHIP.INVALID|duplicate/i.test(e.message)) throw e; });
+    await call('PATCH', `/v1/reviewSubmissions/${sub.id}`, { data: { type: 'reviewSubmissions', id: sub.id, attributes: { submitted: true } } });
+    return `inskickad (${sub.id})`;
   });
 }
 

@@ -115,14 +115,16 @@ function lista() {
 }
 function kort(k) {
   const n = k.nastaTid;
+  // syskon: inloggning, pott och paket är familjens (huvudklientens)
+  const h = k.huvud ? st.klienter.find(x => x.id === k.huvud) : null, f = h || k;
   return `<a class="klient-card ${k.vilLank ? 'flagg' : ''}" href="#/admin/klient/${k.id}">
     <span class="kc-niva" title="Nivå ${k.niva}">${k.niva}</span>
     <span class="kc-body">
       <b>${esc(helt(k) || '(namn saknas)')}${k.fodd ? ` <span class="muted small">${esc(alder(k.fodd))}</span>` : ''}</b>
       <span class="small muted">${esc(k.foralder || '')}${k.foralder ? ' · ' : ''}${esc(visaTel(k.telefon))} · ${esc(POS[k.position] || '')}${k.lag ? ` · ${esc(k.lag)}` : ''}${k.syskonTill ? ` · syskon till ${esc(k.syskonTill)}` : k.syskonNamn?.length ? ` · syskon ${esc(k.syskonNamn.join(', '))}` : ''}</span>
-      <span class="small kc-rad">${n ? `📅 ${DAG[n.dag]} ${fmtIso(n.datum)} ${esc(n.start)}` : '📅 Ingen tid bokad'}${k.pottSaldo != null ? ` · 💰 ${esc(kr(k.pottSaldo))} (${k.pottPass} pass)` : ''}${k.paketKvar ? ` · 🎟 ${k.paketKvar} pass kvar` : ''}${k.paketObetalda ? ' · <span style="color:var(--warn)">paket obetalt</span>' : ''}${k.senasteBed ? ` · 📊 ${esc(k.senasteBed.namn)} ${fmtSek(k.senasteBed.medel)}` : ''}${k.antalPass ? ` · ${k.antalPass} pass` : ''}</span>
+      <span class="small kc-rad">${n ? `📅 ${DAG[n.dag]} ${fmtIso(n.datum)} ${esc(n.start)}` : '📅 Ingen tid bokad'}${f.pottSaldo != null ? ` · 💰 ${esc(kr(f.pottSaldo))} (${f.pottPass} pass)` : ''}${f.paketKvar ? ` · 🎟 ${f.paketKvar} pass kvar` : ''}${f.paketObetalda ? ' · <span style="color:var(--warn)">paket obetalt</span>' : ''}${k.senasteBed ? ` · 📊 ${esc(k.senasteBed.namn)} ${fmtSek(k.senasteBed.medel)}` : ''}${k.antalPass ? ` · ${k.antalPass} pass` : ''}</span>
     </span>
-    <span class="kc-flagg">${k.syskonTill ? `<span class="muted">Loggar in via ${esc(k.syskonTill)}</span>` : k.vilLank ? '⚠ Ny länk' : k.inloggad?.app ? '<span style="color:var(--ok)">I appen ✓</span>' : !k.senast ? '<span class="muted">Ej inloggad än</span>' : '<span class="muted">Inte i appen än</span>'}</span>
+    <span class="kc-flagg">${f.vilLank ? '⚠ Ny länk' : f.inloggad?.app ? '<span style="color:var(--ok)">I appen ✓</span>' : !f.senast ? '<span class="muted">Ej inloggad än</span>' : '<span class="muted">Inte i appen än</span>'}${k.syskonTill ? `<br><span class="muted small">via ${esc(k.syskonTill)}</span>` : ''}</span>
   </a>`;
 }
 
@@ -195,7 +197,7 @@ function klientSida() {
   </section>
   <div class="admin-grid">
   <div>
-  ${k.huvud ? '' : lankPanel(d)}
+  ${k.huvud ? (d.huvud ? familjNot(d) + lankPanel({ ...d, ...d.huvud }) : '') : lankPanel(d)}
   ${syskonPanel(d)}
   <section class="panel">
     <div class="section-head"><h3>Nivå</h3><span class="small muted">${k.nivaHistorik?.length > 1 ? `ändrad ${k.nivaHistorik.length - 1} ${k.nivaHistorik.length === 2 ? 'gång' : 'gånger'}` : ''}</span></div>
@@ -207,9 +209,9 @@ function klientSida() {
     <div class="niva-skala">${[1, 2, 3, 4, 5].map(n => `<i class="${n <= k.niva ? 'on' : ''}"></i>`).join('')}</div>
     ${k.nivaHistorik?.length > 1 ? `<p class="small muted" style="margin:10px 0 0">${k.nivaHistorik.slice(-3).reverse().map(h => `${esc(h.t.slice(0, 10))}: nivå ${h.niva}${h.kommentar ? ` (${esc(h.kommentar)})` : ''}`).join(' · ')}</p>` : ''}
   </section>
-  ${k.huvud ? '' : pottPanel(d)}
-  ${k.huvud ? '' : paketPanel(d)}
-  ${k.huvud ? '' : kopPanel(k)}
+  ${pottPanel(d)}
+  ${paketPanel(d)}
+  ${kopPanel(k.huvud ? d.huvud?.klient || k : k)}
   <section>
     <div class="section-head"><h2>Tider</h2><a class="small" href="#/admin/klient/${k.id}/boka">Boka ›</a></div>
     ${kommande.length ? `<ul class="list">${kommande.map(b => tidRad(b, true)).join('')}</ul>` : '<p class="muted small">Ingen kommande tid. Boka en åt familjen, så ser de den i appen.</p>'}
@@ -243,7 +245,7 @@ function syskonPanel(d) {
   const andra = fam.filter(x => x.id !== k.id);
   return `<section class="panel" id="syskon">
     <h3>Syskon</h3>
-    ${k.huvud && h ? `<p class="small" style="margin:0 0 8px">${esc(k.barn || 'Barnet')} är syskon till <a href="#/admin/klient/${h.id}">${esc(h.barn || 'huvudklienten')}</a>. Inloggning, pris, paket och pott sköts på <a href="#/admin/klient/${h.id}">${esc(h.barn || 'den')}s sida</a>.</p>` : ''}
+    ${k.huvud && h ? `<p class="small" style="margin:0 0 8px">${esc(k.barn || 'Barnet')} är syskon till <a href="#/admin/klient/${h.id}">${esc(h.barn || 'huvudklienten')}</a>. Inloggning, paket och pott är familjens och syns här och på <a href="#/admin/klient/${h.id}">${esc(h.barn || 'den')}s sida</a>. Priset sätts på ${esc(h.barn || 'den')}s sida.</p>` : ''}
     ${andra.length ? `<ul class="list small">${andra.map(x => `<li class="row"><a class="grow" href="#/admin/klient/${x.id}"><b>${esc([x.barn, x.efternamn].filter(Boolean).join(' '))}</b>${x.fodd ? ` <span class="muted">${esc(alder(x.fodd))}</span>` : ''}${x.huvud ? ' <span class="muted">· inloggning och betalning</span>' : ''}</a></li>`).join('')}</ul>` : `<p class="small muted" style="margin:0 0 8px">Har föräldern fler barn som tränar, till exempel tvillingar? Lägg till dem här. De loggar in med samma mobilnummer, och föräldern kryssar i vilka barn som kommer när hen bokar. Ett pass kostar samma pris oavsett hur många barn som kommer.</p>`}
     ${st.syskonForm ? `<form data-form="klient-syskon" class="rad-form" style="margin-top:8px">
       <div class="auto-rad" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -283,6 +285,11 @@ function pottPanel(d) {
   </section>`;
 }
 // Träningsblocken familjen köpt i appen (App Store). Hemma Plus: Haris gör ett personligt hemmaprogram under Pass.
+// Syskonets sida visar familjens inloggning, pott, paket och köp (de ligger på huvudklienten och gäller alla barnen)
+function familjNot(d) {
+  const h = (d.familj || []).find(x => x.huvud), namn = (d.familj || []).map(x => x.barn).filter(Boolean);
+  return h ? `<p class="small muted" style="margin:0 0 6px">Inloggning, pott, paket och köp gäller hela familjen (${esc(namn.join(' och '))}) och ändras här eller på <a href="#/admin/klient/${h.id}">${esc(h.barn)}s sida</a>.</p>` : '';
+}
 function kopPanel(k) {
   const kop = (k.kop || []).filter(x => !x.aterkallad);
   if (!kop.length) return '';

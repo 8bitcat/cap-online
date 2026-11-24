@@ -89,7 +89,7 @@ const mock = http.createServer((req, res) => {
   koll('Mias sida visar familjens tid', miaSida.bokningar.some(x => x.id === s1.id && x.barnIds.includes(mia)));
   await a.goto(base + `index.html#/admin/klient/${mia}`); await a.waitForSelector('#syskon');
   const miaText = norm(await a.$eval('main, #app, body', e => e.textContent));
-  koll('Mias sida: ingen inloggning, pott eller paket, länk till Leo', !(await a.$('#inloggning')) && !(await a.$('#pott')) && !(await a.$('#pass')) && miaText.includes('Inloggning, pris, paket och pott sköts på Leos sida'));
+  koll('Mias sida: familjens inloggning, pott och paket som på Leos sida (Haris 11-24)', !!(await a.$('#inloggning')) && miaText.includes('gäller hela familjen (Leo och Mia)') && miaText.includes('Priset sätts på Leos sida'), miaText.slice(0, 200));
   koll('tiden står som Leo och Mia tillsammans', miaText.includes('Leo och Mia tillsammans'));
   // stryk Mia från tiden: Leo tränar kvar, samma pris
   await a.click(`button[data-action=klient-avboka][data-slot="${s1.id}"]`); await a.waitForTimeout(200);

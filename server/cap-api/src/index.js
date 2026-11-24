@@ -1395,6 +1395,9 @@ export default {
           const bk = fam[0] || k;
           return svar({ ok: true, klient: publikKlient(k), pott: pottSaldo(bk, veckor, cfgK), bokningar: bokningarFor(veckor, k.id), planer: planer.filter(x => x.uid === k.id).sort((a, b) => (b.datum + b.uppdaterad).localeCompare(a.datum + a.uppdaterad)),
             familj: fam.map(x => ({ id: x.id, barn: x.barn, efternamn: x.efternamn, fodd: x.fodd, huvud: !x.huvud })), huvudPris: bk.pris ?? null,
+            // syskon (Haris 2026-11-24: "det finns inte likadana funktioner på profilerna"): inloggningen och köpen är
+            // familjens och ligger på huvudklienten; syskonets sida visar och ändrar dem där
+            ...(k.huvud && bk.id !== k.id ? { huvud: { klient: publikKlient(bk), kod: giltigKod(bk), lank: giltigKod(bk) ? lank(env, giltigKod(bk)) : null, hamtaText: smsHamta(env, bk), loggaText: giltigKod(bk) ? smsLogga(env, bk, giltigKod(bk)) : '' } } : {}),
             bedomningar: bedomningar || [], media: media || [], paket: paketSaldo(bk, veckor), paketMallar: cfgK.paket, standardPris: cfgK.pris, lank: kod ? lank(env, kod) : null, kod, hamtaText: smsHamta(env, k), loggaText: kod ? smsLogga(env, k, kod) : '', hamtaLank: hamtaLank(env),
             sms: smsPa(env), r2: !!env.MEDIA, ...(await smsDag(env)) });
         }
