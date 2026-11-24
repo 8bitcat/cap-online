@@ -23,15 +23,23 @@ export const kalLage = () => { const s = las(); return !kalStod() ? 'saknas' : s
 
 const platsFor = b => (b.plats ? `${b.plats}${/göteborg/i.test(b.plats) ? '' : ', Göteborg'}` : 'Backavallen, Göteborg');
 const idag = () => new Date().toLocaleDateString('sv-SE');
+// Larmen (Carl 2026-11-24: "en notis kommer 24h innan, och att man får en notis när det är dags att åka"): 24 timmar
+// före och familjens restid före (45 min om inget annat är valt under Inställningar). Äldre appar (1.2–1.3) kan bara ha
+// ett larm, paminnMin, och får då "dags att åka".
+const RESTID = 45;
+export const kalRestid = () => { const r = +las().restid; return r >= 5 && r <= 180 ? r : RESTID; };
+export function sattRestid(n) { const r = Math.round(+n); if (!(r >= 5 && r <= 180)) return; const s = las(); if (s.restid !== r) spara({ ...s, restid: r }); }
 function handelser(bokningar) {
+  const restid = kalRestid();
   return (bokningar || []).filter(b => b.datum >= idag()).map(b => ({
     id: `${b.v}-${b.id}`,
     titel: `Träning med CAP${b.barn ? ` (${b.barn})` : ''}`,
     start: new Date(`${b.datum}T${b.start}:00`).toISOString(),
     slut: new Date(`${b.datum}T${b.slut}:00`).toISOString(),
     plats: platsFor(b),
-    anteckning: 'Påminnelsen kommer en timme före: dags att åka till Backavallen. Kan ni inte komma? Avboka i appen under Med Haris.',
-    paminnMin: 60,
+    anteckning: `Påminnelser: dagen före och ${restid} minuter före, när det är dags att åka. Restiden ändrar du under Inställningar i CAP. Kan ni inte komma? Avboka i appen under Med Haris, senast 24 timmar före.`,
+    paminnMin: restid,
+    larm: [1440, restid],
   }));
 }
 
@@ -51,8 +59,10 @@ export async function kalSynk(bokningar, { fraga = false, tvinga = false } = {})
   pagar = (async () => {
     try {
       const r = await p.synka({ handelser: lista, fraga: fraga || tvinga });
-      if (r?.ok) spara({ pa: true, sig, t: Date.now(), fragat: true });
+      if (r?.ok) spara({ ...las(), pa: true, av: false, sig, t: Date.now(), fragat: true });
       else spara({ ...las(), fragat: true, nekad: r?.behorighet === 'nej' || r?.behorighet === 'skriv' });
+      // servern skickar inga påminnelsenotiser när båda larmen ligger i kalendern (app 1.4 svarar larm: true)
+      document.dispatchEvent(new CustomEvent('cap:kalender', { detail: { larm: !!(r?.ok && r.larm) } }));
       return r;
     } catch (e) { return { ok: false, fel: String(e?.message || e) }; } finally { pagar = null; }
   })();
@@ -65,6 +75,7 @@ export async function kalAv() {
   const p = tillagg();
   spara({ ...las(), pa: false, av: true, sig: '' });
   if (p) { try { await p.avsluta(); } catch { /* ok */ } }
+  document.dispatchEvent(new CustomEvent('cap:kalender', { detail: { larm: false } }));
 }
 // Utloggning och raderat konto: kalendern tas bort, och nästa förälder på telefonen får frågan på nytt
 export async function kalAvsluta() {

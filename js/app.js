@@ -13,7 +13,7 @@ import { utvecklingInit, utvecklingPage } from './utveckling.js';
 import { api } from './api.js';
 import { kalAvsluta } from './kalender.js';
 import { kollaAppVersion } from './appversion.js';
-import { installningarInit, installningarPage, installningarAction, introPage, INTRO, kollaNyaTillatelser } from './installningar.js';
+import { installningarInit, installningarPage, installningarAction, installningarSubmit, introPage, INTRO, kollaNyaTillatelser } from './installningar.js';
 import { blockInit, blockPage, blockAction, blockStart, harBlock, nodBlock, blockNamn, blockKop } from './block.js';
 
 const view = document.getElementById('view');
@@ -249,6 +249,8 @@ function afterRender(path) {
   const active = activeTab(path);
   $$('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.tab === active));
   $$('[data-action]', view).forEach(el => el.addEventListener('click', onAction));
+  // rullistor m.m.: data-action-change körs när värdet ändras (t.ex. restiden under Inställningar)
+  $$('[data-action-change]', view).forEach(el => el.addEventListener('change', () => onAction({ currentTarget: el, preventDefault() {}, aktion: el.dataset.actionChange })));
   $$('form[data-form]', view).forEach(f => f.addEventListener('submit', onSubmit));
   $$('.player:not(.manuell)', view).forEach(wirePlayer);
   kopplaJamfor(view);
@@ -1660,7 +1662,7 @@ function armed(el, label) {
 
 async function onAction(e) {
   const el = e.currentTarget;
-  const { action, id } = el.dataset;
+  const { id } = el.dataset, action = e.aktion || el.dataset.action;
   const paAdmin = location.hash.replace(/^#/, '').startsWith('/admin');
   if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov|idag|fb)-/.test(action))) { await adminAction(action, el, e); return; }
   if (action.startsWith('inst-')) { await installningarAction(action, el); return; }
@@ -1724,6 +1726,7 @@ async function onSubmit(e) {
   const fd = new FormData(f);
   const kind = f.dataset.form;
   if (kind.startsWith('admin') || kind.startsWith('tid-') || kind.startsWith('pass-') || kind.startsWith('klient-')) { await adminSubmit(kind, f, fd); return; }
+  if (kind.startsWith('inst-')) { await installningarSubmit(kind, f, fd); return; }
   if (['login', 'glomt', 'losen'].includes(kind)) {
     const path = location.hash.replace(/^#/, '') || '/';
     await kontoSubmit(kind, f, fd, { toast, go, render: html => { view.innerHTML = html; afterRender(path); } });
@@ -1867,7 +1870,7 @@ async function boot() {
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
   api.get('/config/stig').then(r => { if (r.ok && r.config) { tillampaStigConfig(r.config); const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/stig')) route(); } });
   document.addEventListener('cap:notiser', e => { if (/notiser/.test(location.hash)) { toast(e.detail?.ok ? 'Telefonen får notiser från Haris' : 'Kunde inte registrera telefonen'); route(); } });
-  document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); veckorGlom(); adminUppdatera(); const om = kvar(); hamtaMina(true).then(om); });
+  document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); veckorGlom(); adminUppdatera({ igen: 10 }); const om = kvar(); hamtaMina(true).then(om); });
   window.addEventListener('hashchange', route);
   route();
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.ai$/.test(location.hostname)) {

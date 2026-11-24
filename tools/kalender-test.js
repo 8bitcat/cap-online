@@ -72,7 +72,7 @@ const TEL = '070-444 55 11', TELN = '+46704445511';
   let k = await kal(f);
   const h = k.anrop[0]?.handelser?.[0];
   koll('efter bokningen: frågar om lov och lägger in passet', k.anrop[0]?.fraga === true && k.anrop[0].handelser.length === 1, JSON.stringify(k.anrop[0] || {}).slice(0, 120));
-  koll('händelsen: rubrik, plats, påminnelse 60 min', h?.titel === 'Träning med CAP (Leo)' && h.plats === 'Backavallen, Gratts Arena, Göteborg' && h.paminnMin === 60 && /Backavallen/.test(h.anteckning));
+  koll('händelsen: rubrik, plats, larm dagen före och 45 min före (dags att åka)', h?.titel === 'Träning med CAP (Leo)' && h.plats === 'Backavallen, Gratts Arena, Göteborg' && h.paminnMin === 45 && h.larm?.join() === '1440,45' && /dags att åka/.test(h.anteckning), JSON.stringify(h?.larm));
   const man = (await adm('GET', '/admin/veckor')).mandag[V];
   const tis = new Date(Date.parse(`${man}T12:00:00Z`) + 864e5).toISOString().slice(0, 10);
   koll('rätt tid (15:00 svensk tid)', h?.start === new Date(`${tis}T15:00:00+01:00`).toISOString() && h.slut === new Date(`${tis}T16:00:00+01:00`).toISOString(), `${h?.start} – ${h?.slut}`);

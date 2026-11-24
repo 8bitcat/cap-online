@@ -11,7 +11,7 @@ import { store } from './store.js';
 import { api, API } from './api.js';
 import { swishLank, visaSwish, bokningsMeddelande, paketMeddelande, kr } from './swish.js';
 import { notisStod, pushSatt } from './notiser.js';
-import { kalSynk, kalStod, kalLage, kalAv } from './kalender.js';
+import { kalSynk, kalStod, kalLage, kalAv, sattRestid } from './kalender.js';
 import { blockFranMina } from './block.js';
 import { filmMedTid, serieJamfor, fmtDag } from './passfilm.js';
 
@@ -36,6 +36,12 @@ export function bokaInit(deps) {
   ui = deps;
   // appen tillbaka i förgrunden: hämta bokningarna, så att kalendern CAP hänger med (Haris kan ha bokat eller avbokat)
   document.addEventListener('visibilitychange', () => { if (!document.hidden && kalStod() && token()) hamtaMina(true, true); });
+  // larmen i kalendern (24 h + dags att åka) ersätter påminnelsenotiserna, så att ingen får dubbelt
+  document.addEventListener('cap:kalender', e => {
+    const larm = !!e.detail?.larm, k = mina.klient;
+    if (!token() || !k || !!k.installningar?.kalender === larm) return;
+    api.put('/mina/installningar', { kalender: larm }, token()).then(r => { if (r.ok && mina.klient) mina.klient.installningar = r.installningar; });
+  });
 }
 // Passen i telefonens kalender (app 1.2): efter varje hämtning av bokningarna. Första gången med ett bokat pass frågar
 // telefonen om lov. Ändrades något ritas bokningssidan om, så att raden om kalendern stämmer.
@@ -51,6 +57,13 @@ const token = () => store.session?.token;
 // bakgrund: svaret kastas om föräldern hann boka, avboka eller köpa under tiden (annars skrev den gamla kopian
 // över bokningen, t.ex. "9 pass kvar" fast det var 8)
 let andrad = 0;
+// Avbokar man mindre än 24 timmar före räknas passet (Carl 2026-11-24). Ångrar man en bokning inom 15 minuter går man fri.
+function senAvbokning(v, slot) {
+  const b = (mina.bokningar || []).find(x => x.v === v && x.id === slot);
+  if (!b?.datum) return false;
+  const start = new Date(`${b.datum}T${b.start}:00`).getTime(), bokat = b.bokadT ? Date.parse(b.bokadT) : 0;
+  return start - Date.now() < 864e5 && Date.now() - bokat > 15 * 60e3;
+}
 export async function hamtaVeckor(tvinga = false, bakgrund = false) {
   if (!token()) return data;
   if (!tvinga && Date.now() - data.hamtat < 15000) return data;
@@ -67,7 +80,7 @@ export async function hamtaMina(tvinga = false, bakgrund = false) {
   const r = await api.get('/mina', token());
   if (bakgrund && andrad >= start) return mina;
   if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], kalFeed: r.kalFeed || null, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
-  if (r.ok) { synkaKalender(); blockFranMina(r); }
+  if (r.ok) { sattRestid(r.klient?.installningar?.restid); synkaKalender(); blockFranMina(r); }
   return mina;
 }
 export const minaNu = () => mina;
@@ -157,12 +170,12 @@ export function bokaPage(v) {
     <h1>Boka en tid</h1>
     ${notisStod() && !store.notiser.push && !store.notiser.bokaNej ? `<div class="panel notis-fraga">
       <b>🔔 Få en notis när Haris öppnar nya tider</b>
-      <p class="small muted" style="margin:2px 0 10px">Då ser du direkt när det går att boka, och du får en påminnelse kvällen före varje pass.</p>
+      <p class="small muted" style="margin:2px 0 10px">Då ser du direkt när det går att boka, och du får en påminnelse dagen före och när det är dags att åka.</p>
       <div class="btn-row two" style="margin:0"><button class="btn grad" data-action="boka-notis">Slå på notiser</button><button class="btn secondary" data-action="boka-notis-nej">Inte nu</button></div>
     </div>` : ''}
     ${data.pott ? `<a class="saldo-ruta" href="#/mina-pass"><span><b>${esc(kr(data.pott.saldo))}</b> i potten · ${data.pott.passKvar} pass kvar</span><span class="small">Historik ›</span></a>` : ''}
     ${(data.paket || []).length ? `<a class="saldo-ruta" href="#/mina-pass"><span><b>${(data.paket || []).reduce((n, p) => n + p.kvar, 0)}</b> pass kvar</span><span class="small">Mina pass och historik ›</span></a>` : ''}
-    <p class="muted small">Tryck på en ledig tid så hålls den i 60 sekunder åt dig. Bekräfta innan tiden går ut. Röda tider är redan bokade.${aktivtPaket() || pottRacker() ? ` När du bokar väljer du om passet ${aktivtPaket() ? 'tas från dina pass' : 'betalas ur potten'} eller med Swish.` : bet ? ` Ett pass kostar ${esc(kr(bet.pris))} och betalas med Swish.${bet.paket?.length ? ' Paket med fler pass finns längre ner.' : ''}` : ''}</p>
+    <p class="muted small">Tryck på en ledig tid så hålls den i 60 sekunder åt dig. Bekräfta innan tiden går ut. Röda tider är redan bokade. Avboka senast 24 timmar före, annars räknas passet.${aktivtPaket() || pottRacker() ? ` När du bokar väljer du om passet ${aktivtPaket() ? 'tas från dina pass' : 'betalas ur potten'} eller med Swish.` : bet ? ` Ett pass kostar ${esc(kr(bet.pris))} och betalas med Swish.${bet.paket?.length ? ' Paket med fler pass finns längre ner.' : ''}` : ''}</p>
     <div class="vecka-nav">
       <a class="btn secondary ${kanBak ? '' : 'disabled'}" href="#/boka/${foreg}" ${kanBak ? '' : 'aria-disabled="true" tabindex="-1"'}>‹</a>
       <div class="vecka-titel"><b>Vecka ${Number(v.split('-W')[1])}</b><div class="small muted">${fmtDatum(m)} – ${fmtDatum(s)}${v === nu ? ' · denna vecka' : ''}</div></div>
@@ -420,9 +433,13 @@ async function bokaActionNu(action, el) {
     await hamtaVeckor(true); ritaKvar(); return true;
   }
   if (action === 'boka-avboka') {
-    if (!el.dataset.armed) { el.dataset.armed = '1'; const t = el.textContent; el.textContent = 'Tryck igen för att avboka'; el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = t; el.classList.remove('armed'); }, 4000); return true; }
+    if (!el.dataset.armed) {
+      el.dataset.armed = '1'; const t = el.textContent;
+      el.textContent = senAvbokning(v, slot) ? 'Under 24 h kvar: passet räknas. Tryck igen' : 'Tryck igen för att avboka';
+      el.classList.add('armed'); setTimeout(() => { delete el.dataset.armed; el.textContent = t; el.classList.remove('armed'); }, 5000); return true;
+    }
     const r = await api.post('/boka/avboka', { v, slot }, token());
-    toast(r.ok ? 'Avbokad' : (r.fel || 'Gick inte'));
+    toast(!r.ok ? (r.fel || 'Gick inte') : r.sen ? `Avbokad. Mindre än 24 timmar kvar: ${r.sen}` : 'Avbokad');
     await Promise.all([hamtaVeckor(true), hamtaMina(true)]); ritaKvar(); return true;
   }
   return false;

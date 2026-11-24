@@ -3,6 +3,21 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-11-24 – påminnelser 24 h + dags att åka, sen avbokning, syskon, zoom, Haris ser bokningar direkt
+
+- **Påminnelser** (Carl: "en notis kommer 24h innan, och att man får en notis när det är dags att åka"):
+  - **Tider:** 24 timmar före och passets start minus familjens restid. Restiden är 45 min från början och väljs under Inställningar (`installningar.restid`).
+  - **Kalendern i appen (1.4):** två larm (`larm: [1440, restid]`), och platsen får koordinater via CLGeocoder.
+  - **Kalenderfilen:** två VALARM.
+  - **Notiserna:** samma tider. De skickas inte när larmen ligger i kalendern (`installningar.kalender`, som sätts av appen när tillägget svarar `larm: true`).
+- **Sen avbokning** (Carl: "man får inte pengarna tillbaka om man avbokar om det är mindre än 24 timmar kvar, men passet kan fortfarande bli öppet"):
+  - Tiden blir ledig, men passet räknas. Paketet tappar passet (`tidigare` + 1) och potten dras.
+  - Swish betalas inte tillbaka. Är passet obetalt hamnar det i `klient.senAvbokat`.
+  - **(antagande)** Den som ångrar en bokning inom 15 minuter går fri. Haris egna avbokningar ger fortfarande alltid pengarna tillbaka.
+- **Syskon:** föräldern lägger till ett syskon själv under Inställningar → Barn på kontot (`POST /mina/syskon`). Haris får en notis. Haris rapporterade att en förälder inte kunde koppla ett syskon.
+- **Zoom:** rutorna är minst 16 px på pekskärm, och sidan har `maximum-scale=1`. iPhone zoomade in i rutor på 14 px och fastnade.
+- **Haris ser nya bokningar direkt:** Idag, Tider och Klienter hämtar på nytt när en notis kommer, när appen kommer tillbaka och var 20:e sekund. Sidan ritas bara om vid en ändring och när Haris inte rört skärmen på 10 s (`js/lugnt.js`), så att inget han fyller i försvinner.
+
 ## 2026-11-24 – 1.4: passen med film (Idag, filmbank, kommentarer, komprimering)
 
 Carl: Haris ska planera pass utifrån bokningen, filma moment så att appen vet

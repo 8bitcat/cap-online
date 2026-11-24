@@ -58,7 +58,7 @@ const mock = http.createServer((req, res) => {
 
   // ---- veckoschemat: egna tider per dag ----
   await a.goto(base + 'index.html#/admin/tider'); await a.waitForSelector('.vecka-nav', { timeout: 10000 });
-  await a.click('.vecka-nav button[data-action=tid-vecka]:last-child'); await a.waitForSelector('#schema');
+  await a.click('.vecka-nav button[data-action=tid-vecka]:last-child'); await a.waitForSelector('#schema'); await a.waitForTimeout(1500); // kundlistan laddas och sidan ritas om en gång (Haris landar på Idag sedan 1.4)
   koll('rätt vecka i titeln', norm(await a.$eval('.vecka-titel b', e => e.textContent)) === `Vecka ${Number(V.split('-W')[1])}`);
   const satt = async (d, pa, start, slut) => {
     const cb = await a.$(`input[name=pa${d}]`); if ((await cb.isChecked()) !== pa) await cb.click();
@@ -108,21 +108,23 @@ const mock = http.createServer((req, res) => {
   const gammal = await adm('POST', `/admin/vecka/${V2}/auto`, { dagar: [1, 3], start: '16:00', slut: '18:00', langd: 60, plats: 'X' });
   koll('gamla autosätt-formatet', gammal.ok && gammal.vecka.slots.length === 4, `${gammal.vecka?.slots.length}`);
 
-  // ---- påminnelsen kvällen före (veckan efter nästa, så att bokningen alltid görs före kvällen före) ----
+  // ---- påminnelserna: 24 timmar före och dags att åka (Carl 2026-11-24; veckan efter nästa, så att bokningen görs före) ----
   const v2man = gammal.vecka.slots.find(s => s.dag === 1 && s.start === '16:00');
   await adm('POST', `/admin/klient/${kid}/boka`, { v: V2, slot: v2man.id });
   const mandagDatum = new Date(Date.parse(`${(await adm('GET', '/admin/veckor')).mandag[V2]}T12:00:00Z`));
   const sondag = new Date(mandagDatum.getTime() - 864e5).toISOString().slice(0, 10);
   pushLogg.length = 0;
-  const p1 = await adm('POST', '/admin/paminnelser', { nu: `${sondag}T17:55` });
-  koll('ingen påminnelse före kl 18 kvällen före', p1.ok && p1.skickade === 0, JSON.stringify(p1));
-  const p2 = await adm('POST', '/admin/paminnelser', { nu: `${sondag}T18:05` });
+  const p1 = await adm('POST', '/admin/paminnelser', { nu: `${sondag}T15:55` });
+  koll('ingen påminnelse före 24 timmar', p1.ok && p1.skickade === 0, JSON.stringify(p1));
+  const p2 = await adm('POST', '/admin/paminnelser', { nu: `${sondag}T16:05` });
   const pm = pushLogg.find(x => x.path === '/skicka');
-  koll('påminnelsen går ut kl 18 kvällen före', p2.skickade === 1, JSON.stringify(p2).slice(0, 200));
+  koll('påminnelsen går ut 24 timmar före', p2.skickade === 1, JSON.stringify(p2).slice(0, 200));
   koll('bara till Leos förälder', JSON.stringify(pm?.till) === JSON.stringify([kid]) && !pm?.foraldrar, JSON.stringify(pm || {}).slice(0, 200));
-  koll('texten', pm?.title === 'Träning med Haris i morgon' && /^Leo tränar i morgon, mån \d+ \w+ kl 16:00–17:00, X\. Vi ses!$/.test(pm?.text || ''), pm?.text);
-  const p3 = await adm('POST', '/admin/paminnelser', { nu: `${sondag}T18:20` });
+  koll('texten', pm?.title === 'Träning med Haris i morgon' && /^Leo tränar i morgon, mån \d+ \w+ kl 16:00–17:00, X\.$/.test(pm?.text || ''), pm?.text);
+  const p3 = await adm('POST', '/admin/paminnelser', { nu: `${sondag}T16:20` });
   koll('ingen dubbel påminnelse', p3.skickade === 0, JSON.stringify(p3));
+  const p45 = await adm('POST', '/admin/paminnelser', { nu: `${mandagDatum.toISOString().slice(0, 10)}T15:20` });
+  koll('dags att åka 45 min före', p45.skickade === 1 && p45.paminnelser[0]?.title === 'Dags att åka till träningen', JSON.stringify(p45).slice(0, 200));
   const p4 = await adm('POST', '/admin/paminnelser', { nu: `${mandagDatum.toISOString().slice(0, 10)}T16:30` });
   koll('ingen påminnelse när passet redan börjat', p4.skickade === 0);
 
@@ -145,7 +147,7 @@ const mock = http.createServer((req, res) => {
   koll('kalenderfilen', ics.status === 200 && (ics.headers.get('content-type') || '').startsWith('text/calendar'), `${ics.status} ${ics.headers.get('content-type')}`);
   koll('rätt tid i UTC (14:00 svensk vintertid = 13:00 UTC)', icsText.includes(`DTSTART:${dagStr}T130000Z`) && icsText.includes(`DTEND:${dagStr}T140000Z`), icsText.split('\r\n').filter(x => /^DT(START|END)/.test(x)).join(' '));
   const ofalt = icsText.replace(/\r\n /g, '');
-  koll('rubrik, Backavallen och påminnelse en timme före om att åka', ofalt.includes('SUMMARY:Träning med CAP (Leo)') && ofalt.includes('LOCATION:Hisings Backa\\, Göteborg') && ofalt.includes('TRIGGER:-PT1H') && ofalt.includes('Dags att åka till Backavallen'), ofalt.split('\r\n').filter(x => /^(SUMMARY|LOCATION|DESCRIPTION)/.test(x)).join(' | '));
+  koll('rubrik, plats och larm dagen före + dags att åka', ofalt.includes('SUMMARY:Träning med CAP (Leo)') && ofalt.includes('LOCATION:Hisings Backa\\, Göteborg') && ofalt.includes('TRIGGER:-P1D') && ofalt.includes('TRIGGER:-PT45M') && ofalt.includes('Dags att åka till Hisings Backa'), ofalt.split('\r\n').filter(x => /^(SUMMARY|LOCATION|DESCRIPTION)/.test(x)).join(' | '));
   koll('inga rader över 75 byte', icsText.split('\r\n').every(r => Buffer.byteLength(r) <= 75));
 
   // ---- prenumerationerna: familjens och Haris ----
@@ -156,7 +158,7 @@ const mock = http.createServer((req, res) => {
   koll('en ändrad familjelänk fungerar inte', (await fetch(API + mina.kalFeed.replace(/[0-9a-f](\.ics)$/, m => (m[0] === '0' ? '1' : '0') + '.ics'))).status === 403);
   const hk = await adm('GET', '/admin/kalender');
   const harisFeed = (await (await fetch(API + hk.url)).text()).replace(/\r\n /g, '');
-  koll('Haris kalender: barnets namn, förälder och telefon', harisFeed.includes('SUMMARY:CAP: Leo') && harisFeed.includes('Förälder: Maria') && harisFeed.includes('+46704445566') && harisFeed.includes('Om en timme: Leo på Backavallen'), harisFeed.split('\r\n').filter(x => /^(SUMMARY|DESCRIPTION)/.test(x)).slice(0, 2).join(' | '));
+  koll('Haris kalender: barnets namn, förälder och telefon', harisFeed.includes('SUMMARY:CAP: Leo') && harisFeed.includes('Förälder: Maria') && harisFeed.includes('+46704445566') && harisFeed.includes('Om en timme: Leo på '), harisFeed.split('\r\n').filter(x => /^(SUMMARY|DESCRIPTION)/.test(x)).slice(0, 2).join(' | '));
   koll('Haris kalender uppdateras var 15:e minut', harisFeed.includes('REFRESH-INTERVAL;VALUE=DURATION:PT15M'));
   const hk2 = await adm('POST', '/admin/kalender', { ny: true });
   koll('Byt länk: den gamla slutar fungera', hk2.url !== hk.url && (await fetch(API + hk.url)).status === 403 && (await fetch(API + hk2.url)).status === 200);

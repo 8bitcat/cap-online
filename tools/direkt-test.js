@@ -36,8 +36,8 @@ const mock = http.createServer((req, res) => { req.resume(); req.on('end', () =>
   koll('Tider: Nils syns inte innan', !(await a.textContent('main')).includes('Nils'));
   await adm('POST', `/admin/klient/${ny.klient.id}/boka`, { v: V, slot: s1 });
   await a.evaluate(() => document.dispatchEvent(new CustomEvent('cap:push', { detail: { title: 'Ny bokning', body: 'Nils Exempel bokade' } })));
-  const medNotis = await a.waitForFunction(() => document.querySelector('main').textContent.includes('Nils'), null, { timeout: 5000 }).then(() => true, () => false);
-  koll('notisen kommer: bokningen syns på Tider direkt', medNotis);
+  const medNotis = await a.waitForFunction(() => document.querySelector('main').textContent.includes('Nils'), null, { timeout: 15000 }).then(() => true, () => false);
+  koll('notisen kommer: bokningen syns på Tider (direkt, eller när Haris slutat trycka)', medNotis);
 
   // Idag framme, bokning utan notis: syns inom 20 s
   await a.goto(base + 'index.html#/admin/idag', { waitUntil: 'networkidle' }); await a.waitForTimeout(1200);

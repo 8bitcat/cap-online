@@ -4,7 +4,7 @@
 import { store } from './store.js';
 import { api, API } from './api.js';
 import { notisStod, pushSatt, paminnSatt, paminnDagar } from './notiser.js';
-import { kalStod, kalLage, kalSynk, kalAv, kalStatus, kalFragat } from './kalender.js';
+import { kalStod, kalLage, kalSynk, kalAv, kalStatus, kalFragat, kalRestid, sattRestid } from './kalender.js';
 import { minaNu, hamtaMina } from './boka.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,6 +56,35 @@ const appVersion = async () => { try { return (await window.Capacitor?.Plugins?.
 // allting"): första gången appen startar i en ny version skickas föräldern till Inställningar, en gång, om något
 // går att slå på. Nya konton får sidan Sista steget i stället.
 let nyVersion = false;
+// Barnen på kontot, och Lägg till syskon (Haris 2026-11-24: "En förälder kunde inte koppla ett syskon")
+function barnPanel() {
+  const m = minaNu(), fam = m.familj?.length ? m.familj.map(x => x.klient) : m.klient ? [m.klient] : [];
+  const ar = new Date().getFullYear();
+  return `<section class="panel inst-panel" id="barnen">
+    <h3>Barn på kontot</h3>
+    <ul class="list small" style="margin:0 0 10px">${fam.map(x => `<li>⚽ <b>${esc(x.barn || 'Barnet')}</b>${x.fodd ? ` · född ${esc(x.fodd)}` : ''}</li>`).join('')}</ul>
+    <details${barnOppen ? ' open' : ''}><summary class="small"><b>➕ Lägg till syskon</b></summary>
+      <form data-form="inst-syskon" style="margin-top:8px">
+        <div class="field"><label for="syskonBarn">Förnamn</label><input type="text" id="syskonBarn" name="barn" autocomplete="off" required maxlength="40"></div>
+        <div class="field"><label for="syskonFodd">Födelseår</label><select id="syskonFodd" name="fodd"><option value="">Välj</option>${Array.from({ length: 16 }, (_, i) => ar - 4 - i).map(y => `<option>${y}</option>`).join('')}</select></div>
+        <p class="small muted" style="margin:0 0 8px">Syskonet får en egen nivå och egna resultat hos Haris, och ni bokar, betalar och loggar in som förut.</p>
+        <button class="btn grad block" type="submit">Lägg till</button>
+      </form>
+    </details>
+  </section>`;
+}
+let barnOppen = false;
+export async function installningarSubmit(kind, f, fd) {
+  if (kind !== 'inst-syskon') return false;
+  const knapp = f.querySelector('button[type=submit]'); if (knapp) knapp.disabled = true;
+  const r = await api.post('/mina/syskon', { barn: fd.get('barn'), fodd: fd.get('fodd') }, store.session?.token);
+  if (knapp) knapp.disabled = false;
+  if (!r.ok) { ui.toast(`Gick inte: ${r.fel}`); return true; }
+  barnOppen = false;
+  await hamtaMina(true);
+  ui.toast(`${r.klient.barn} är tillagd. Haris har fått veta det.`); ui.route(); return true;
+}
+
 export async function kollaNyaTillatelser() {
   if (!ios() || !store.session?.token || !store.profile) return;
   if (/^#\/(losen|start|kom-igang|k\/|installningar|login)/.test(location.hash)) return;
@@ -122,10 +151,14 @@ export function installningarPage() {
   </section>
   ${inloggad && k ? `<section class="panel inst-panel">
     <h3>Påminnelser</h3>
-    <label class="toggle"><input type="checkbox" data-action="inst-paminn" ${paminn ? 'checked' : ''}><span><b>Kvällen före passet</b><small>En notis kl 18 dagen före varje bokat pass (två timmar före om tiden bokades senare).</small></span></label>
+    <label class="toggle"><input type="checkbox" data-action="inst-paminn" ${paminn ? 'checked' : ''}><span><b>Inför passet</b><small>24 timmar före, och när det är dags att åka.${kalLage() === 'pa' ? ' Larmen ligger i kalendern CAP.' : ''}</small></span></label>
+    <div class="field" style="margin:8px 0 0"><label for="instRestid">Restid till träningen</label>
+      <select id="instRestid" data-action-change="inst-restid">${[15, 20, 30, 45, 60, 75, 90].map(m => `<option value="${m}" ${m === (k.installningar?.restid || kalRestid()) ? 'selected' : ''}>${m} minuter</option>`).join('')}</select>
+      <small class="hint">«Dags att åka» kommer så här länge innan passet börjar.</small></div>
     ${notisStod() ? `<label class="toggle"><input type="checkbox" data-action="notis-paminn" ${n.paminn ? 'checked' : ''}><span><b>Träna själv</b><small>${esc(paminnDagar(p?.freq).join(', '))} kl 17, utifrån ${esc(p?.freq || '2')} pass i veckan.</small></span></label>` : ''}
     <p class="small" style="margin:8px 0 0"><a href="#/notiser">Notiserna från Haris ›</a></p>
   </section>` : ''}
+  ${inloggad && k ? barnPanel() : ''}
   <section class="panel inst-panel">
     <h3>Konto</h3>
     ${inloggad ? `<p class="small" style="margin:0 0 10px">Inloggad som ${esc(store.session.user?.namn || 'förälder')}${store.session.user?.telefon ? ` · ${esc(visaTel(store.session.user.telefon))}` : ''}${k?.barn ? ` · ${esc(k.barn)}` : ''}</p>
@@ -223,9 +256,18 @@ export async function installningarAction(action, el) {
     } else { await kalAv(); toast('Kalendern CAP är borttagen från telefonen'); }
     om(); return true;
   }
+  if (action === 'inst-restid') {
+    const restid = +el.value;
+    const r = await api.put('/mina/installningar', { restid }, store.session?.token);
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    const m = minaNu(); if (m.klient) m.klient.installningar = r.installningar;
+    sattRestid(restid);
+    if (kalLage() === 'pa') await kalSynk(m.bokningar, { tvinga: true });
+    toast(`«Dags att åka» kommer ${restid} minuter före passet`); return true;
+  }
   if (action === 'inst-paminn') {
     const r = await api.put('/mina/installningar', { paminnelse: el.checked }, store.session?.token);
-    if (r.ok) { const m = minaNu(); if (m.klient) m.klient.installningar = r.installningar; toast(el.checked ? 'Du får en påminnelse kvällen före varje pass' : 'Påminnelsen kvällen före är av'); }
+    if (r.ok) { const m = minaNu(); if (m.klient) m.klient.installningar = r.installningar; toast(el.checked ? 'Du får påminnelser 24 timmar före och när det är dags att åka' : 'Påminnelserna inför passen är av'); }
     else { el.checked = !el.checked; toast(`Gick inte: ${r.fel}`); }
     return true;
   }

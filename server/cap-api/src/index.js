@@ -412,7 +412,7 @@ function publikVecka(vecka, uid) {
 function bokningarFor(veckor, uid) {
   const ut = [];
   for (const w of veckor) for (const s of w.slots) if (s.bokad && (s.bokad.uid === uid || s.bokad.barnIds?.includes(uid))) ut.push({ v: w.v, id: s.id, dag: s.dag, start: s.start, slut: s.slut, plats: s.plats, barn: s.bokad.barn, barnIds: bokadeBarn(s.bokad), datum: datumFor(w.v, s.dag), mandag: mandag(w.v).toISOString().slice(0, 10), av: s.bokad.av || 'foralder',
-    pris: s.bokad.pris || null, swishad: s.bokad.swishad || null, betald: s.bokad.betald || null, paket: s.bokad.paket || null, pott: !!s.bokad.pott });
+    pris: s.bokad.pris || null, swishad: s.bokad.swishad || null, betald: s.bokad.betald || null, paket: s.bokad.paket || null, pott: !!s.bokad.pott, bokadT: s.bokad.t || null });
   return ut.sort((a, b) => (a.datum + a.start).localeCompare(b.datum + b.start));
 }
 
@@ -563,18 +563,24 @@ function noteraKlient(k, typ, title, text, hash = '') {
 }
 
 // ---------- påminnelse inför passet (Khaleds mamma via Haris 2026-11-22: "kan man få notis inför träningspassen?") ----------
-// Kvällen före kl 18 till föräldern som har tiden. Bokades tiden efter det får föräldern påminnelsen två timmar före
-// i stället, och bokades den ännu senare kommer ingen. Schemat kör var 15:e minut ([triggers] i wrangler.toml).
-// Att påminnelsen gått iväg sparas som pam:<vecka>:<tid>:<bokningens tid> (egen nyckel, så att schemat aldrig skriver
-// över en vecka som någon bokar i samtidigt). Haris kan stänga av typen paminnelse under Admin → Mer → Notiser.
+// Carl 2026-11-24: "en notis kommer 24h innan, och att man får en notis när det är dags att åka". Två påminnelser:
+// 24 timmar före och när det är dags att åka (passets start minus familjens restid, 45 min om inget annat är valt
+// under Inställningar). En påminnelse som skulle ha gått innan tiden bokades skickas inte. Har familjen passen i
+// telefonens kalender (appen 1.4, installningar.kalender) kommer samma två larm därifrån, och då skickas inga notiser.
+// Schemat kör var 15:e minut ([triggers] i wrangler.toml). Att en påminnelse gått iväg sparas som
+// pam:<vecka>:<tid>:<bokningens tid>:<dygn|aka> (egen nyckel, så att schemat aldrig skriver över en vecka som någon
+// bokar i samtidigt). Haris kan stänga av typen paminnelse under Admin → Mer → Notiser.
 const dagFore = dag => new Date(Date.parse(`${dag}T12:00:00Z`) - 864e5).toISOString().slice(0, 10);
 const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-function paminnNar(v, s) {
-  const dag = datumFor(v, s.dag), kvall = `${dagFore(dag)}T18:00`;
-  const bokat = s.bokad.t ? lokal(new Date(s.bokad.t)) : '';
-  if (bokat < kvall) return { nar: kvall, imorgon: true };
-  const tva = minuter(s.start) >= 120 ? `${dag}T${hhmm(minuter(s.start) - 120)}` : '';
-  return tva && bokat < tva ? { nar: tva, imorgon: false } : null;
+const RESTID = 45;
+const restidAv = k => { const r = Math.round(+k?.installningar?.restid || 0); return r >= 5 && r <= 180 ? r : RESTID; };
+function paminnNar(v, s, restid = RESTID) {
+  const start = utcAv(datumFor(v, s.dag), s.start).getTime();
+  const bokat = s.bokad.t ? Date.parse(s.bokad.t) : 0;
+  const ut = [];
+  if (bokat < start - 864e5) ut.push({ typ: 'dygn', nar: lokal(new Date(start - 864e5)) });
+  if (bokat < start - restid * 60e3) ut.push({ typ: 'aka', nar: lokal(new Date(start - restid * 60e3)) });
+  return ut;
 }
 async function paminnelser(env, nuL = lokal()) {
   if ((await hamtaNotisCfg(env)).paminnelse === false) return { skickade: 0, av: true };
@@ -585,17 +591,24 @@ async function paminnelser(env, nuL = lokal()) {
     for (const s of w?.slots || []) {
       const b = s.bokad;
       if (!b?.uid || `${datumFor(v, s.dag)}T${s.start}` <= nuL) continue;
-      const nar = paminnNar(v, s);
-      if (!nar || nuL < nar.nar) continue;
-      const nyckel = `pam:${v}:${s.id}:${b.t || ''}`;
+      const alla = paminnNar(v, s);
+      if (!alla.length || nuL < alla[0].nar) continue;
+      const k = await env.DB.get(`klient:${b.uid}`, 'json');
+      // föräldern kan stänga av påminnelsen under Inställningar (Carl 2026-11-22); med passen i kalendern kommer larmen därifrån
+      if (k?.installningar?.paminnelse === false || k?.installningar?.kalender === true) continue;
+      const lista = paminnNar(v, s, restidAv(k)).filter(x => nuL >= x.nar);
+      if (!lista.length) continue;
+      const nar = lista.at(-1); // har schemat missat en, skickas bara den senaste
+      const nyckel = `pam:${v}:${s.id}:${b.t || ''}:${nar.typ}`;
       if (await env.DB.get(nyckel)) continue;
-      // föräldern kan stänga av påminnelsen under Inställningar (Carl 2026-11-22)
-      if ((await env.DB.get(`klient:${b.uid}`, 'json'))?.installningar?.paminnelse === false) continue;
-      await env.DB.put(nyckel, '1', { expirationTtl: 14 * 86400 });
-      const title = nar.imorgon ? 'Träning med Haris i morgon' : 'Träning med Haris i dag';
-      const text = `${b.barn || 'Ni'} tränar ${nar.imorgon ? 'i morgon' : 'i dag'}, ${tidText(v, s)}–${s.slut}${s.plats ? `, ${s.plats}` : ''}. Vi ses!`;
+      // den gamla påminnelsen kvällen före (före 2026-11-24) räknas som dygnspåminnelsen
+      if (nar.typ === 'dygn' && await env.DB.get(`pam:${v}:${s.id}:${b.t || ''}`)) continue;
+      await Promise.all(lista.map(x => env.DB.put(`pam:${v}:${s.id}:${b.t || ''}:${x.typ}`, '1', { expirationTtl: 14 * 86400 })));
+      const plats = s.plats || 'Backavallen';
+      const title = nar.typ === 'aka' ? 'Dags att åka till träningen' : 'Träning med Haris i morgon';
+      const text = nar.typ === 'aka' ? `${b.barn || 'Passet'} börjar ${s.start} på ${plats}. Vi ses!` : `${b.barn || 'Ni'} tränar i morgon, ${tidText(v, s)}–${s.slut}, ${plats}.`;
       const r = await pushServer(env, '/skicka', { title, text, hash: '/boka', till: [b.uid] });
-      ut.push({ v, slot: s.id, uid: b.uid, title, text, ok: r.ok, skickade: r.skickade });
+      ut.push({ v, slot: s.id, uid: b.uid, typ: nar.typ, title, text, ok: r.ok, skickade: r.skickade });
     }
   }
   return { skickade: ut.length, paminnelser: ut };
@@ -628,7 +641,7 @@ const vik = rad => {
   return ut.join('\r\n');
 };
 // En bokad tid som kalenderhändelse. haris: rubriken är barnens namn, beskrivningen förälder, telefon och betalning.
-function kalHandelse(v, s, { haris = false } = {}) {
+function kalHandelse(v, s, { haris = false, restid = RESTID } = {}) {
   const dag = datumFor(v, s.dag), b = s.bokad;
   const betalt = b.paket ? 'Ingår i paket' : b.pott ? `Ur potten${b.pris ? ` (${krText(b.pris)})` : ''}` : b.betald ? 'Betald' : b.swishad ? `Swishad${b.pris ? ` ${krText(b.pris)}` : ''}, inte bekräftad` : b.pris ? `Inte betald, ${krText(b.pris)}` : '';
   const rubrik = haris ? `CAP: ${b.barn || b.namn || 'Bokad tid'}` : `Träning med CAP${b.barn ? ` (${b.barn})` : ''}`;
@@ -638,7 +651,9 @@ function kalHandelse(v, s, { haris = false } = {}) {
   return ['BEGIN:VEVENT', `UID:cap-${v}-${s.id}-${String(b.t || '').replace(/\D/g, '')}@cap.8bitcat.io`, `DTSTAMP:${icsTid(new Date())}`,
     `DTSTART:${icsTid(utcAv(dag, s.start))}`, `DTEND:${icsTid(utcAv(dag, s.slut))}`,
     `SUMMARY:${icsText(rubrik)}`, `LOCATION:${icsText(kalPlats(s))}`, `DESCRIPTION:${icsText(text)}`,
-    'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(haris ? `Om en timme: ${b.barn || 'träning'} på Backavallen. Dags att åka.` : 'Träning med CAP om en timme. Dags att åka till Backavallen.')}`, 'TRIGGER:-PT1H', 'END:VALARM',
+    ...(haris ? ['BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(`Om en timme: ${b.barn || 'träning'} på ${s.plats || 'Backavallen'}.`)}`, 'TRIGGER:-PT1H', 'END:VALARM']
+      : ['BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(`I morgon: träning med CAP, ${s.start} på ${s.plats || 'Backavallen'}.`)}`, 'TRIGGER:-P1D', 'END:VALARM',
+        'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(`Dags att åka till ${s.plats || 'Backavallen'}. Passet börjar ${s.start}.`)}`, `TRIGGER:-PT${restid}M`, 'END:VALARM']),
     'END:VEVENT'];
 }
 function icsKalender(handelser, namn = '') {
@@ -812,7 +827,7 @@ export default {
     const mkf = /^\/kal\/familj\/([a-z0-9]{4,20})\/([0-9a-f]{18})\.ics$/.exec(p);
     if (req.method === 'GET' && mkf) {
       if (mkf[2] !== await kalSig(env, 'familj', 'alla', mkf[1])) return textSvar('Länken stämmer inte.', 403);
-      return kalSvar(icsKalender(await kalFlode(env, b => b.uid === mkf[1]), 'Träning med CAP'));
+      return kalSvar(icsKalender(await kalFlode(env, b => b.uid === mkf[1], { restid: restidAv(await hamtaKlient(env, mkf[1])) }), 'Träning med CAP'));
     }
 
     const json = async () => { try { return await req.json(); } catch { return null; } };
@@ -1069,15 +1084,32 @@ export default {
         return svar({ ok: true });
       }
       if (p === '/boka/avboka') {
+        let sen = null;
         if (s.bokad?.uid === user.uid) {
           const kl = user.klientId ? await hamtaKlient(env, user.klientId) : null;
-          if (kl) { logga(kl, 'avbokad', `Avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket ? 1 : 0, 'foralder'); await sparaKlient(env, kl); }
-          tillHaris('Avbokning', `${barnNamn(kl, user)} avbokade ${tidText(v, s)}. Tiden är ledig igen.`);
+          // Sen avbokning (Carl 2026-11-24: "man får inte pengarna tillbaka om man avbokar om det är mindre än 24 timmar
+          // kvar, men passet kan fortfarande bli öppet"): tiden blir ledig för andra, men passet räknas. Paketet tappar
+          // passet, potten dras, Swish betalas inte tillbaka. Den som bokat fel och ångrar sig inom 15 minuter går fri.
+          const start = utcAv(datumFor(v, s.dag), s.start).getTime(), bokatT = s.bokad.t ? Date.parse(s.bokad.t) : 0;
+          const nuMs = env.TEST_LAGE && d.testNu ? Date.parse(d.testNu) : Date.now(); // låtsad tid bara i tester
+          if (kl && start > nuMs && start - nuMs < 864e5 && nuMs - bokatT > 15 * 60e3) {
+            const b = s.bokad, bk = await betalare(env, kl);
+            const pk = b.paket ? (bk.paket || []).find(x => x.id === b.paket) : null;
+            if (pk) { pk.tidigare = (pk.tidigare || 0) + 1; sen = 'Passet räknas från paketet.'; }
+            else if (b.pott) { bk.pott = [...(bk.pott || []), { id: nyttId('pt'), belopp: -(b.pris || 0), text: `Sen avbokning ${tidText(v, s)}`, t: nu(), av: 'foralder' }]; sen = `${krText(b.pris || 0)} dras ur potten.`; }
+            else if (b.betald || b.swishad) sen = 'Betalningen betalas inte tillbaka.';
+            else if (b.pris) { bk.senAvbokat = [...(bk.senAvbokat || []), { v, slot: s.id, text: tidText(v, s), pris: b.pris, t: nu() }].slice(-50); sen = `Passet ska betalas (${krText(b.pris)}).`; }
+            else sen = 'Passet räknas.';
+            if (bk.id !== kl.id) await sparaKlient(env, bk);
+          }
+          logga(kl || {}, 'avbokad', sen ? `Avbokade ${tidText(v, s)} mindre än 24 timmar före: ${sen}` : `Avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket && !sen ? 1 : 0, 'foralder');
+          if (kl) await sparaKlient(env, kl);
+          tillHaris(sen ? 'Sen avbokning' : 'Avbokning', `${barnNamn(kl, user)} avbokade ${tidText(v, s)}${sen ? `, mindre än 24 timmar före. ${sen}` : ''} Tiden är ledig igen.`);
           s.bokad = null;
         }
         if (s.hall?.uid === user.uid) s.hall = null;
         await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
-        return svar({ ok: true });
+        return svar({ ok: true, sen });
       }
     }
     if (p === '/mina' && req.method === 'GET') {
@@ -1166,7 +1198,9 @@ export default {
       const d = await json(); if (!d) return fel('trasig JSON');
       const k = await hamtaKlient(env, user.klientId);
       if (!k) return fel('kontot finns inte', 404);
-      k.installningar = { ...(k.installningar || {}), ...(typeof d.paminnelse === 'boolean' ? { paminnelse: d.paminnelse } : {}) };
+      const restid = Math.round(+d.restid);
+      k.installningar = { ...(k.installningar || {}), ...(typeof d.paminnelse === 'boolean' ? { paminnelse: d.paminnelse } : {}),
+        ...(restid >= 5 && restid <= 180 ? { restid } : {}), ...(typeof d.kalender === 'boolean' ? { kalender: d.kalender } : {}) };
       await sparaKlient(env, k);
       return svar({ ok: true, installningar: k.installningar });
     }
@@ -1262,6 +1296,28 @@ export default {
       return svar({ ok: true, paket: paketSaldo(k, veckor), bokningar: bokningarFor(veckor, k.id) });
     }
 
+    // Föräldern lägger till ett syskon själv (Haris 2026-11-24: "En förälder kunde inte koppla ett syskon"). Samma som
+    // Lägg till syskon hos Haris: barnet får egen nivå, egna bedömningar och filmer, och delar förälderns inloggning,
+    // bokningar, paket och pott. Haris får en notis.
+    if (p === '/mina/syskon' && req.method === 'POST') {
+      const user = await sessionUser(env, req);
+      if (!user?.klientId) return fel('inte inloggad', 401);
+      const d = await json(); if (!d) return fel('trasig JSON');
+      const k = await hamtaKlient(env, user.klientId);
+      if (!k) return fel('kontot finns inte', 404);
+      const h = await betalare(env, k);
+      const barn = ren(d.barn, 40); if (!barn) return fel('skriv barnets förnamn');
+      if ((h.syskon || []).length >= 6) return fel('högst sju barn på ett konto');
+      const fam = await familj(env, h);
+      if (fam.some(x => (x.barn || '').toLowerCase() === barn.toLowerCase())) return fel(`${barn} finns redan på kontot`, 409);
+      const sk = renKlient({ barn, efternamn: ren(d.efternamn, 40) || h.efternamn, fodd: /^\d{4}$/.test(String(d.fodd || '')) ? +d.fodd : null, position: POSITIONER.includes(d.position) ? d.position : 'okand', telefon: h.telefon, foralder: h.foralder, email: h.email, status: h.status }, { id: nyttId('k') });
+      sk.huvud = h.id;
+      h.syskon = [...(h.syskon || []), sk.id];
+      await Promise.all([sparaKlient(env, sk), sparaKlient(env, h)]);
+      const ids = await klientIndex(env); if (!ids.includes(sk.id)) { ids.push(sk.id); await env.DB.put('klienter', JSON.stringify(ids)); }
+      tillHaris('Nytt syskon', `${barnNamn(h)} lade till syskonet ${barn} på kontot.`, `/admin/klient/${sk.id}`);
+      return svar({ ok: true, klient: { id: sk.id, barn: sk.barn, efternamn: sk.efternamn, fodd: sk.fodd } });
+    }
     if (p === '/mina/barn' && req.method === 'PUT') {
       const se = await env.DB.get(`sess:${bearer(req)}`, 'json');
       const k = se && await hamtaKlient(env, se.uid);

@@ -1,6 +1,7 @@
 // Admin → Tider: veckor med bokningsbara tider. Autosätt timmespass, justera, öppna veckan, duplicera,
 // boka en tid åt en befintlig kund (tiden blir röd i kalendern).
 import { api } from './api.js';
+import { lugnt } from './lugnt.js';
 import { klienterNu, klienterLadda, klienterLaddade, klientGlom, visaTel } from './admin-klienter.js';
 import { betalStatus, kr, visaSwish } from './swish.js';
 
@@ -43,7 +44,8 @@ export async function tiderUppdatera() {
   if (!st.laddat) return;
   const fore = JSON.stringify(st.veckor);
   await tiderLadda(true);
-  if (JSON.stringify(st.veckor) !== fore && /^#\/admin\/tider/.test(location.hash) && !document.activeElement?.matches?.('input,textarea,select')) { const y = window.scrollY; ui.route(); window.scrollTo(0, y); }
+  if (JSON.stringify(st.veckor) !== fore) st.ritaOm = true; // ritas när Haris inte håller på med något
+  if (st.ritaOm && /^#\/admin\/tider/.test(location.hash) && lugnt()) { st.ritaOm = false; const y = window.scrollY; ui.route(); window.scrollTo(0, y); }
 }
 const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen: false, slots: [] };
 const fmtTid = iso => new Date(iso).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });

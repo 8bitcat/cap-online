@@ -11,6 +11,7 @@ import { kopplaKlipp } from './ovningsbank.js';
 import { idagInit, idagView, idagAction, idagGlom, idagUppdatera } from './admin-idag.js';
 import { filmbankInit, filmbankView, filmbankAction, filmbankAfterRender, filmbankGlom } from './admin-filmbank.js';
 import { kopplaJamfor } from './passfilm.js';
+import { lugnt } from './lugnt.js';
 import { sattR2 } from './media.js';
 import { pushAdminAv, pushSatt, notisStod } from './notiser.js';
 
@@ -32,9 +33,11 @@ export async function adminInit(deps) {
 }
 export const taggar = () => TAGS;
 // Haris ser nya bokningar direkt: när en notis kommer (app.js), när appen kommer tillbaka och var 20:e sekund
-export function adminUppdatera() {
+export function adminUppdatera({ igen = 0 } = {}) {
   if (!store.admin || !location.hash.startsWith('#/admin')) return;
   tiderUppdatera().catch(() => {}); klienterUppdatera().catch(() => {}); idagUppdatera();
+  // en notis medan Haris trycker: rita så fort det är lugnt (tiden och listan är redan hämtade)
+  if (igen) setTimeout(() => { if (lugnt()) adminUppdatera(); else adminUppdatera({ igen: igen - 1 }); }, 3000);
 }
 let bevakar = false;
 function bevaka() {

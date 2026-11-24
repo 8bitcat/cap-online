@@ -4,6 +4,7 @@ import Capacitor
 import EventKit
 import AVFoundation
 import PhotosUI
+import CoreLocation
 import UniformTypeIdentifiers
 
 // Passen i telefonens kalender (Carl 2026-11-22: "vi gör ett nytt bygge som gör så att de prenumererar på
@@ -12,7 +13,10 @@ import UniformTypeIdentifiers
 // kommande pass; tillägget lägger till nya, ändrar flyttade och tar bort avbokade. Varje händelse känns igen på
 // sin url capkal://<vecka>-<tid>. Bara händelser i CAP-kalendern rörs, aldrig något annat i telefonens kalender.
 //   status()                      → {behorighet: ja|fraga|nej|skriv, harKalender}
-//   synka({handelser, fraga})     → {ok, behorighet, skapade, andrade, borttagna}   fraga: false = be inte om tillstånd
+//   synka({handelser, fraga})     → {ok, behorighet, skapade, andrade, borttagna, larm: true}   fraga: false = be inte om tillstånd
+//                                   händelse: {id, start, slut, titel, plats, anteckning, larm: [minuter före], paminnMin}
+//                                   (Carl 2026-11-24: larm 24 h före + "dags att åka"; platsen får koordinater, så att
+//                                   kalendern kan visa vägen och iPhonens egen "Dags att åka")
 //   avsluta()                     → tar bort CAP-kalendern (utloggning, raderat konto, avstängt)
 //   media()                       → {kamera, mikrofon}: ja|fraga|nej   (app 1.3, frågorna på sidan Sista steget)
 //   mediaFraga({typ})             → {ok, behorighet}   typ: kamera|mikrofon
@@ -99,6 +103,19 @@ public class CapKalenderPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["ok": false, "behorighet": b])
     }
 
+    // Platsens koordinater (t.ex. "Backavallen, Göteborg"), sparade i telefonen så att varje plats slås upp en gång
+    private let geoNyckel = "capKalenderGeo"
+    private func koordinater(_ plats: String) -> CLLocation? {
+        var cache = (UserDefaults.standard.dictionary(forKey: geoNyckel) as? [String: [Double]]) ?? [:]
+        if let c = cache[plats], c.count == 2 { return CLLocation(latitude: c[0], longitude: c[1]) }
+        let sem = DispatchSemaphore(value: 0)
+        var hittad: CLLocation?
+        CLGeocoder().geocodeAddressString(plats.contains("Sverige") ? plats : "\(plats), Sverige") { m, _ in hittad = m?.first?.location; sem.signal() }
+        _ = sem.wait(timeout: .now() + 6)
+        if let g = hittad { cache[plats] = [g.coordinate.latitude, g.coordinate.longitude]; UserDefaults.standard.set(cache, forKey: geoNyckel) }
+        return hittad
+    }
+
     private func gor(_ call: CAPPluginCall, _ lista: [JSObject]) {
         do {
             let k = try kalender()
@@ -123,18 +140,26 @@ public class CapKalenderPlugin: CAPPlugin, CAPBridgedPlugin {
                 let plats = h["plats"] as? String
                 let anteckning = h["anteckning"] as? String
                 let minuter = tal(h["paminnMin"]) ?? 60
+                let larm: [Double] = ((h["larm"] as? JSArray)?.compactMap { tal($0) }).flatMap { $0.isEmpty ? nil : $0 } ?? [minuter]
+                let geo = plats.flatMap { koordinater($0) }
                 let gammal = perId[id]
                 if let e = gammal, e.title == titel, e.startDate == start, e.endDate == slut, e.location == plats, e.notes == anteckning,
-                   e.alarms?.first?.relativeOffset == -minuter * 60 { continue }
+                   Set((e.alarms ?? []).map { $0.relativeOffset }) == Set(larm.map { -$0 * 60 }),
+                   (e.structuredLocation?.geoLocation != nil) == (geo != nil) { continue }
                 let e = gammal ?? EKEvent(eventStore: store)
                 e.calendar = k
                 e.title = titel
                 e.startDate = start
                 e.endDate = slut
                 e.location = plats
+                if let plats = plats {
+                    let sl = EKStructuredLocation(title: plats)
+                    if let g = geo { sl.geoLocation = g; sl.radius = 150 }
+                    e.structuredLocation = sl
+                }
                 e.notes = anteckning
                 e.url = URL(string: "capkal://\(id)")
-                e.alarms = [EKAlarm(relativeOffset: -minuter * 60)]
+                e.alarms = larm.map { EKAlarm(relativeOffset: -$0 * 60) }
                 try store.save(e, span: .thisEvent, commit: false)
                 if gammal == nil { skapade += 1 } else { andrade += 1 }
             }
@@ -144,7 +169,7 @@ public class CapKalenderPlugin: CAPPlugin, CAPBridgedPlugin {
                 borttagna += 1
             }
             try store.commit()
-            call.resolve(["ok": true, "behorighet": "ja", "skapade": skapade, "andrade": andrade, "borttagna": borttagna])
+            call.resolve(["ok": true, "behorighet": "ja", "skapade": skapade, "andrade": andrade, "borttagna": borttagna, "larm": true])
         } catch {
             store.reset()
             call.resolve(["ok": false, "behorighet": behorighet(), "fel": error.localizedDescription])
