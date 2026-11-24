@@ -870,3 +870,9 @@ body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }
 .idag-pass { padding: 12px; margin-top: 8px; }
 .idag-barn { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .idag-barn .grow { flex: 1; min-width: 140px; }
+
+/* iPhone zoomar in när man trycker i en ruta med text under 16 px, och zoomar inte ut igen (Haris 2026-11-24: "ibland
+   zoomar det in i appen och då fastnar man inzoomad"). På pekskärm är alla rutor minst 16 px. */
+@media (hover: none) and (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
+}

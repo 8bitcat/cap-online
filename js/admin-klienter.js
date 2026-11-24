@@ -63,6 +63,18 @@ function friska(id) {
   st.friskar = true;
   klientLadda(id, { bakgrund: true }).finally(() => { st.friskar = false; if (location.hash.replace(/^#/, '') === `/admin/klient/${id}`) ui.route(); });
 }
+// samma som tiderUppdatera: listan och kundsidan som Haris har framme
+export async function klienterUppdatera() {
+  const h = location.hash.replace(/^#/, ''), rita = () => { if (!document.activeElement?.matches?.('input,textarea,select')) { const y = window.scrollY; ui.route(); window.scrollTo(0, y); } };
+  if (h === '/admin/klienter' && st.laddat) { const fore = JSON.stringify(st.klienter); await klienterLadda(true); if (JSON.stringify(st.klienter) !== fore && location.hash === '#/admin/klienter') rita(); }
+  const m = /^\/admin\/klient\/([a-z0-9]+)$/.exec(h);
+  if (m && st.vald?.id === m[1] && !st.friskar) {
+    const utan = v => JSON.stringify({ ...v, hamtat: 0, lokala: 0 });
+    const fore = utan(st.vald); st.friskar = true;
+    try { await klientLadda(m[1], { bakgrund: true }); } finally { st.friskar = false; }
+    if (utan(st.vald) !== fore && location.hash === `#/admin/klient/${m[1]}`) rita();
+  }
+}
 function smsRakna(r) { if (r && r.smsTak !== undefined) { st.smsIdag = r.smsIdag; st.smsTak = r.smsTak; st.smsFran = r.smsFran; } }
 export function klientGlom() { st.vald = null; st.laddat = false; }
 

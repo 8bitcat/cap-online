@@ -6,7 +6,7 @@ import { kr } from './swish.js';
 import { loginPage, losenPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
 import { serverStatus, statusNu, sparaBarn } from './api.js';
 import { kopplaJamfor } from './passfilm.js';
-import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar } from './admin.js';
+import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar, adminUppdatera } from './admin.js';
 import { bokaInit, minaPassPage, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu, veckorGlom } from './boka.js';
 import { tiderGlom } from './admin-tider.js';
 import { utvecklingInit, utvecklingPage } from './utveckling.js';
@@ -1867,7 +1867,7 @@ async function boot() {
   hamtaFilmer().then(() => { const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/film') || p.startsWith('/stig')) route(); });
   api.get('/config/stig').then(r => { if (r.ok && r.config) { tillampaStigConfig(r.config); const p = location.hash.replace(/^#/, '') || '/'; if (p === '/' || p.startsWith('/stig')) route(); } });
   document.addEventListener('cap:notiser', e => { if (/notiser/.test(location.hash)) { toast(e.detail?.ok ? 'Telefonen får notiser från Haris' : 'Kunde inte registrera telefonen'); route(); } });
-  document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); veckorGlom(); const om = kvar(); hamtaMina(true).then(om); });
+  document.addEventListener('cap:push', e => { const n = e.detail || {}; toast(`${n.title ? n.title + ': ' : ''}${n.body || ''}`); veckorGlom(); adminUppdatera(); const om = kvar(); hamtaMina(true).then(om); });
   window.addEventListener('hashchange', route);
   route();
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.ai$/.test(location.hostname)) {

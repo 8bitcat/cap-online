@@ -12,6 +12,7 @@ let st = { pass: [], idag: '', hamtat: 0, hamtar: false };
 let ui = null, ritarOm = false;
 export function idagInit(deps) { ui = deps; }
 export function idagGlom() { st.hamtat = 0; }
+export function idagUppdatera() { if (/^#\/admin(\/idag)?$/.test(location.hash) && st.hamtat) hamta(); }
 
 function hamta() {
   if (st.hamtar) { st.igen = true; return; } // en hämtning pågår redan: gör en till när den är klar

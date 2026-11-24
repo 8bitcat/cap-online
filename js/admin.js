@@ -1,14 +1,14 @@
 // Adminsidan för Haris (Carl 2026-10-21/23): klientregister, tider, pass, filmer med taggar, stigen, nyhet som push.
 import { store } from './store.js';
 import { api, API, laddaUppFilm, laddaUppPoster, hamtaFilmer } from './api.js';
-import { tiderInit, tiderView, tiderAction, tiderSubmit, tiderGlom } from './admin-tider.js';
+import { tiderInit, tiderView, tiderAction, tiderSubmit, tiderGlom, tiderUppdatera } from './admin-tider.js';
 import { swishLank, visaSwish, kr } from './swish.js';
 import { passInit, passView, passAction, passSubmit, passStopur, passStoppa, passFilVald, passGlom } from './admin-pass.js';
 import { stigAdminInit, stigAdminView, stigAdminAction } from './admin-stig.js';
-import { klienterInit, klienterView, klienterAction, klienterSubmit, klienterAfterRender, klienterLadda, klientGlom } from './admin-klienter.js';
+import { klienterInit, klienterView, klienterAction, klienterSubmit, klienterAfterRender, klienterLadda, klientGlom, klienterUppdatera } from './admin-klienter.js';
 import { ovningarInit, ovningarView, ovningarAction, ovningarAfterRender } from './admin-ovningar.js';
 import { kopplaKlipp } from './ovningsbank.js';
-import { idagInit, idagView, idagAction, idagGlom } from './admin-idag.js';
+import { idagInit, idagView, idagAction, idagGlom, idagUppdatera } from './admin-idag.js';
 import { filmbankInit, filmbankView, filmbankAction, filmbankAfterRender, filmbankGlom } from './admin-filmbank.js';
 import { kopplaJamfor } from './passfilm.js';
 import { sattR2 } from './media.js';
@@ -27,10 +27,22 @@ const FLIKAR = [['idag', 'Idag'], ['klienter', 'Klienter'], ['tider', 'Tider'], 
 export async function adminInit(deps) {
   // när ett pass sparas/tas bort ska klientsidan hämtas om nästa gång
   ui = { ...deps, klientAndrad: () => { klientGlom(); idagGlom(); filmbankGlom(); }, passAndrad: () => { passGlom(); idagGlom(); }, tiderAndrad: () => { tiderGlom(); } };
-  tiderInit(ui); passInit(ui); idagInit(ui); filmbankInit(ui); stigAdminInit(ui, deps.content); klienterInit(ui); ovningarInit(ui);
+  tiderInit(ui); passInit(ui); idagInit(ui); filmbankInit(ui); bevaka(); stigAdminInit(ui, deps.content); klienterInit(ui); ovningarInit(ui);
   if (!TAGS) TAGS = await (await fetch('data/taggar.json', { cache: 'no-cache' })).json();
 }
 export const taggar = () => TAGS;
+// Haris ser nya bokningar direkt: när en notis kommer (app.js), när appen kommer tillbaka och var 20:e sekund
+export function adminUppdatera() {
+  if (!store.admin || !location.hash.startsWith('#/admin')) return;
+  tiderUppdatera().catch(() => {}); klienterUppdatera().catch(() => {}); idagUppdatera();
+}
+let bevakar = false;
+function bevaka() {
+  if (bevakar) return;
+  bevakar = true;
+  setInterval(() => { if (!document.hidden) adminUppdatera(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) adminUppdatera(); });
+}
 export const adminLaddat = () => state.laddat;
 
 // Kopplar in filval, sök och stoppur efter att adminvyn ritats; stoppar klockor när man lämnar

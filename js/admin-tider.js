@@ -37,6 +37,14 @@ export async function tiderLadda(tvinga = false) {
   if (r.ok) { st.nu = r.nu; st.veckor = r.veckor; st.mandag = r.mandag; st.schema = r.schema || null; st.laddat = true; st.hamtat = Date.now(); if (!st.vald || st.vald < veckaPlus(st.nu, -1)) st.vald = st.nu; }
 }
 export const tiderGlom = () => { st.laddat = false; };
+// Bokningar som föräldrarna gör ska synas direkt hos Haris (Carl 2026-11-24: "Haris måste kunna se direkt när ett pass
+// blir bokat"). Anropas när en notis kommer, när appen kommer tillbaka och var 20:e sekund. Ritar bara om vid ändring.
+export async function tiderUppdatera() {
+  if (!st.laddat) return;
+  const fore = JSON.stringify(st.veckor);
+  await tiderLadda(true);
+  if (JSON.stringify(st.veckor) !== fore && /^#\/admin\/tider/.test(location.hash) && !document.activeElement?.matches?.('input,textarea,select')) { const y = window.scrollY; ui.route(); window.scrollTo(0, y); }
+}
 const vecka = () => st.veckor.find(w => w.v === st.vald) || { v: st.vald, oppen: false, slots: [] };
 const fmtTid = iso => new Date(iso).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const notisText = n => !n ? '' : n.ok ? (n.skickade ? ` Notis skickad till ${n.skickade} ${n.skickade === 1 ? 'telefon' : 'telefoner'}.` : ' Ingen förälder har slagit på notiser än.') : ` Notisen gick inte iväg (${n.fel}).`;
