@@ -13,6 +13,7 @@ import { swishLank, visaSwish, bokningsMeddelande, paketMeddelande, kr } from '.
 import { notisStod, pushSatt } from './notiser.js';
 import { kalSynk, kalStod, kalLage, kalAv } from './kalender.js';
 import { blockFranMina } from './block.js';
+import { filmMedTid, serieJamfor, fmtDag } from './passfilm.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DAG = ['', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag'];
@@ -331,6 +332,16 @@ export async function bokaAction(action, el) {
 async function bokaActionNu(action, el) {
   const { toast, route } = ui;
   const { v, slot } = el.dataset;
+  if (action === 'boka-svar') {
+    const inp = document.getElementById(`svar-${el.dataset.block || 'pass'}`), text = inp?.value.trim();
+    if (!text) { inp?.focus(); return; }
+    el.disabled = true;
+    const r = await api.post(`/mina/plan/${el.dataset.plan}/svar`, { blockId: el.dataset.block || '', text }, token());
+    el.disabled = false;
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return; }
+    const pl = mina.planer.find(x => x.id === el.dataset.plan); if (pl) pl.svar = r.svar;
+    toast('Skickat till Haris'); ritaKvar(); return;
+  }
   if (action === 'boka-hall') {
     const r = await api.post('/boka/hall', { v, slot }, token());
     if (!r.ok) { toast(r.fel || 'Gick inte att hålla platsen'); await hamtaVeckor(true); ritaKvar(); return true; }
@@ -451,12 +462,19 @@ export function medHarisPage(id) {
   }
   medHarisPage._forsokt = null;
   const fmtSek = s => `${Number(s).toLocaleString('sv-SE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} s`;
+  // barnets bedömningar och filmer (syskon: var för sig), för jämförelsen med första gången
+  const barnet = (mina.familj || []).find(x => x.klient.id === p.uid);
+  const bedB = (barnet ? barnet.bedomningar : mina.bedomningar) || [], medB = (barnet ? barnet.media : mina.media) || [];
+  // tiden ovanpå filmen: bedömningens medel, eller den bästa låsta tiden
+  const etikett = b => b.resultat ? `${b.titel} · ${fmtSek(b.resultat.medel)}` : b.tider?.length ? `${b.titel} · ${fmtSek(Math.min(...b.tider.map(t => t.sek)))}` : '';
+  const kansla = (p.media || []).filter(m => m.url);
   return `
   <a class="back" href="#/boka">‹ Träna med Haris</a>
   <section>
-    <div class="eyebrow">${esc(p.datum)}${p.barn ? ` · ${esc(p.barn)}` : ''}</div>
+    <div class="eyebrow">${esc(fmtDag(p.datum))}${p.barn ? ` · ${esc(p.barn)}` : ''}</div>
     <h1>${esc(p.titel)}</h1>
     ${p.anteckning ? `<p>${esc(p.anteckning)}</p>` : ''}
+    ${kansla.length ? `<div class="panel brand"><div class="eyebrow">🎙 Haris om passet</div>${kansla.map(m => m.typ === 'audio' ? `<audio controls preload="none" src="${esc(m.url)}" style="width:100%;margin-top:6px"></audio>` : filmMedTid({ url: m.url })).join('')}</div>` : ''}
   </section>
   <section><div class="list">${p.block.map((b, i) => `<div class="step"><span class="num">${i + 1}</span><div style="min-width:0">
     <b>${{ samtal: '💬 ', film: '🎥 ', tid: '⏱ ', ovning: '⚽ ', text: '📘 ', bedomning: '📊 ' }[b.typ] || ''}${esc(b.titel)}</b>
@@ -464,8 +482,18 @@ export function medHarisPage(id) {
     ${b.tider?.length ? `<div class="small">Tider: ${b.tider.map(t => `<b>${fmtSek(t.sek)}</b>`).join(', ')}${b.mal ? ` · mål ${b.mal} s` : ''}</div>` : ''}
     ${b.resultat ? `<div class="small">Resultat: medel <b>${fmtSek(b.resultat.medel)}</b> av ${b.resultat.varv.length} försök (${b.resultat.varv.map(fmtSek).join(', ')})${b.resultat.jamfor ? ` · ${esc(b.resultat.jamfor)}` : ''}</div>` : ''}
     ${b.film ? (b.film.url ? `<div class="player portrait" data-sid="plan:${p.id}:${b.id}" data-local="${esc(b.film.url)}" data-drive="" data-poster="${esc(b.film.poster || '')}" style="max-height:50vh;margin:8px 0"></div>` : `<div class="small">🎥 Film inspelad${b.film.t ? ` ${esc(b.film.t.slice(0, 10))}` : ''} (kommer när Haris laddat upp den)</div>`) : ''}
-    ${(b.media || []).map(m => m.url ? (m.typ === 'audio' ? `<div class="small" style="margin-top:6px">🎙 ${esc(m.namn || 'Ljud')}</div><audio controls preload="none" src="${esc(m.url)}" style="width:100%"></audio>` : `<div class="player portrait manuell" style="max-height:50vh;margin:8px 0"><video controls playsinline preload="metadata" src="${esc(m.url)}" poster="${esc(m.poster || '')}"></video></div>`) : `<div class="small muted">${m.typ === 'audio' ? '🎙 Ljud' : '🎥 Film'} inspelad ${esc((m.t || '').slice(0, 10))} (kommer när Haris laddat upp den)</div>`).join('')}
+    ${(b.media || []).map(m => m.url ? (m.typ === 'audio' ? `<div class="small" style="margin-top:6px">🎙 ${esc(m.namn || 'Ljud')}</div><audio controls preload="none" src="${esc(m.url)}" style="width:100%"></audio>` : `<div style="margin:8px 0">${filmMedTid({ url: m.url, poster: m.poster, etikett: etikett(b) })}</div>`) : `<div class="small muted">${m.typ === 'audio' ? '🎙 Ljud' : '🎥 Film'} inspelad ${esc((m.t || '').slice(0, 10))} (kommer när Haris laddat upp den)</div>`).join('')}
+    ${b.typ === 'bedomning' && b.resultat ? serieJamfor(bedB, medB, b.titel, 'Jämför med första gången') : ''}
     ${b.kommentar ? `<div class="note small">${esc(b.kommentar)}</div>` : ''}
+    ${svarTrad(p, b.id)}
   </div><span class="min">${b.minuter ? b.minuter + ' min' : ''}</span></div>`).join('')}</div></section>
+  <section class="panel"><h3 style="margin:0">Om passet</h3><p class="small muted" style="margin:4px 0 0">Fråga Haris eller berätta hur det gick hemma. Haris får en notis.</p>${svarTrad(p, '')}</section>
   <p class="small" style="text-align:center"><a href="#/utveckling">📈 Se utvecklingen över tid ›</a></p>`;
+}
+// Kommentarerna på ett moment, och rutan för förälderns svar (Carl 2026-11-24: "dela passet med föräldrarna och lägga
+// kommentarer"). blockId '' = passet i stort.
+function svarTrad(p, blockId) {
+  const lista = (p.svar || []).filter(x => (x.blockId || '') === blockId);
+  return `${lista.length ? `<ul class="svar-lista small">${lista.map(x => `<li class="${x.av}"><b>${esc(x.av === 'haris' ? 'Haris' : x.namn)}</b> <span class="muted">${esc(fmtDag(x.t))}</span><div>${esc(x.text)}</div></li>`).join('')}</ul>` : ''}
+    <div class="svar-form"><input type="text" id="svar-${blockId || 'pass'}" placeholder="${blockId ? 'Kommentera momentet…' : 'Skriv till Haris…'}" maxlength="1000"><button class="film" data-action="boka-svar" data-plan="${p.id}" data-block="${blockId}">Skicka</button></div>`;
 }

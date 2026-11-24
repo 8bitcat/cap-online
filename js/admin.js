@@ -8,6 +8,9 @@ import { stigAdminInit, stigAdminView, stigAdminAction } from './admin-stig.js';
 import { klienterInit, klienterView, klienterAction, klienterSubmit, klienterAfterRender, klienterLadda, klientGlom } from './admin-klienter.js';
 import { ovningarInit, ovningarView, ovningarAction, ovningarAfterRender } from './admin-ovningar.js';
 import { kopplaKlipp } from './ovningsbank.js';
+import { idagInit, idagView, idagAction, idagGlom } from './admin-idag.js';
+import { filmbankInit, filmbankView, filmbankAction, filmbankAfterRender, filmbankGlom } from './admin-filmbank.js';
+import { kopplaJamfor } from './passfilm.js';
 import { sattR2 } from './media.js';
 import { pushAdminAv, pushSatt, notisStod } from './notiser.js';
 
@@ -19,12 +22,12 @@ const fmtT = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2
 let TAGS = null;          // data/taggar.json
 let state = { flik: 'klienter', filmer: [], r2: false, sms: false, redigerar: null, laddat: false };
 let ui = null;            // { toast, route, go, content }
-const FLIKAR = [['klienter', 'Klienter'], ['tider', 'Tider'], ['ovningar', 'Övningar'], ['filmer', 'Filmer'], ['stigen', 'Stigen'], ['mer', 'Mer']];
+const FLIKAR = [['idag', 'Idag'], ['klienter', 'Klienter'], ['tider', 'Tider'], ['ovningar', 'Övningar'], ['filmer', 'Filmer'], ['filmbank', 'Filmbank'], ['stigen', 'Stigen'], ['mer', 'Mer']];
 
 export async function adminInit(deps) {
   // när ett pass sparas/tas bort ska klientsidan hämtas om nästa gång
-  ui = { ...deps, klientAndrad: () => { klientGlom(); }, passAndrad: () => { passGlom(); }, tiderAndrad: () => { tiderGlom(); } };
-  tiderInit(ui); passInit(ui); stigAdminInit(ui, deps.content); klienterInit(ui); ovningarInit(ui);
+  ui = { ...deps, klientAndrad: () => { klientGlom(); idagGlom(); filmbankGlom(); }, passAndrad: () => { passGlom(); idagGlom(); }, tiderAndrad: () => { tiderGlom(); } };
+  tiderInit(ui); passInit(ui); idagInit(ui); filmbankInit(ui); stigAdminInit(ui, deps.content); klienterInit(ui); ovningarInit(ui);
   if (!TAGS) TAGS = await (await fetch('data/taggar.json', { cache: 'no-cache' })).json();
 }
 export const taggar = () => TAGS;
@@ -37,6 +40,8 @@ export function adminAfterRender(view) {
   if (view.querySelector('.stopur #stopurKnapp') || view.querySelector('#recTid')) passStopur();
   klienterAfterRender(view);
   ovningarAfterRender(view);
+  filmbankAfterRender(view);
+  kopplaJamfor(view);
   kopplaKlipp(view);
 }
 export function adminStop() { passStoppa(); }
@@ -60,8 +65,10 @@ export function adminPage(flik = 'klienter', id, lage) {
   if (flik === 'klient') flik = 'klienter';
   if (!FLIKAR.some(([k]) => k === flik) && flik !== 'pass') flik = 'klienter';
   state.flik = flik;
-  const rubrik = { klienter: 'Klienter', tider: 'Tider att boka', ovningar: 'Övningsbanken', pass: 'Alla pass', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
-  const inre = flik === 'klienter' ? klienterView(id, lage)
+  const rubrik = { idag: 'Dagens pass', filmbank: 'Filmbanken', klienter: 'Klienter', tider: 'Tider att boka', ovningar: 'Övningsbanken', pass: 'Alla pass', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
+  const inre = flik === 'idag' ? idagView()
+    : flik === 'filmbank' ? filmbankView()
+    : flik === 'klienter' ? klienterView(id, lage)
     : flik === 'tider' ? tiderView()
     : flik === 'ovningar' ? ovningarView()
     : flik === 'pass' ? passView(id, lage)
@@ -369,6 +376,8 @@ export async function adminAction(action, el, e) {
   if (action.startsWith('stig-')) return stigAdminAction(action, el, e);
   if (action.startsWith('klient-')) return klienterAction(action, el, e);
   if (action.startsWith('ov-')) return ovningarAction(action, el, e);
+  if (action.startsWith('idag-')) return idagAction(action, el, e);
+  if (action.startsWith('fb-')) return filmbankAction(action, el, e);
   if (action === 'admin-ut') { e.preventDefault(); await pushAdminAv(); store.admin = null; state = { ...state, laddat: false, redigerar: null }; klientGlom(); passGlom(); ui.toast('Utloggad'); ui.go(store.session ? '/' : '/login'); return true; }
   if (action === 'admin-notis-denna') {
     const r = await pushSatt(true);
@@ -431,7 +440,7 @@ export async function adminSubmit(kind, f, fd) {
   if (kind === 'admin-login') {
     const r = await api.post('/admin/login', { losen: fd.get('losen') });
     if (!r.ok) { toast(r.fel || 'Fel lösenord'); return true; }
-    store.admin = r.token; state.laddat = false; klientGlom(); passGlom(); ui.go('/admin/klienter'); await adminLadda(); klienterLadda(true).then(() => route()); route(); return true;
+    store.admin = r.token; state.laddat = false; klientGlom(); passGlom(); ui.go('/admin/idag'); await adminLadda(); klienterLadda(true).then(() => route()); route(); return true;
   }
   if (kind === 'admin-film') {
     const film = lasForm();

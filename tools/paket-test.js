@@ -30,7 +30,7 @@ const TEL = '070-555 66 77';
   const a = await nyFlik('haris', { viewport: { width: 1280, height: 900 } });
   await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
   await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(1000);
+  await a.waitForURL(/#\/admin\/(idag|klienter)/, { timeout: 15000 }); await a.waitForTimeout(1000);
   const tok = await a.evaluate(() => JSON.parse(localStorage.getItem('caponline.v3') || '{}').admin);
   const adm = (metod, p, data) => fetch(API + p, { method: metod, headers: { authorization: 'Bearer ' + tok, 'content-type': 'application/json' }, body: data ? JSON.stringify(data) : undefined }).then(r => r.json());
   const cfg = (await adm('PUT', '/admin/config/betalning', { swish: '1232852762', pris: 850, paket: [{ namn: '10 pass', antal: 10, pris: 6900 }, { namn: '20 pass', antal: 20, pris: 12900 }] })).config;
@@ -48,7 +48,7 @@ const TEL = '070-555 66 77';
   const f = await nyFlik('förälder', devices['iPhone 13']);
   await f.goto(base + 'index.html#/k/' + kod, { waitUntil: 'networkidle' }); await f.waitForSelector('#losen1', { timeout: 15000 }); await f.fill('#losen1', 'hemligt1'); await f.fill('#losen2', 'hemligt1'); await f.click('form[data-form=losen] button[type=submit]');
   await f.waitForFunction(() => document.querySelector('#name') || document.querySelector('.greet'), null, { timeout: 15000 });
-  if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); }
+  if (await f.$('#name')) { await f.selectOption('#fodd', '2016'); await f.click('form[data-form=wiz1] button'); await f.waitForURL(/kom-igang/, { timeout: 10000 }).catch(() => {}); if (/kom-igang/.test(f.url())) await f.click('button[data-action=inst-klar]'); }
   await f.waitForSelector('.greet', { timeout: 15000 });
   await f.goto(base + `index.html#/boka/${vt}`); await f.waitForSelector('.tid', { timeout: 10000 });
   koll('bokningssidan nämner paketen', (await text(f, 'section p.muted.small')).includes('Paket med fler pass finns längre ner'));

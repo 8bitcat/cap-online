@@ -2,7 +2,7 @@
 // (flera försök med stoppur, medeltiden sparas på spelaren). I kör-läget kan varje block filmas eller spelas
 // in som ljud direkt från appen. Passet delas med föräldern. Filmer kan bli delar i Träna själv.
 import { api } from './api.js';
-import { sparaInspelning, startaLjud, kanSpelaInLjud, lokalUrl, r2Pa, sattR2 } from './media.js';
+import { sparaInspelning, startaLjud, kanSpelaInLjud, lokalUrl, r2Pa, sattR2, kanKomprimera, filmaKomprimerat, mb } from './media.js';
 import { sattMal, ovning, bankNu, hamtaBank, klippHtml } from './ovningsbank.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,6 +47,15 @@ export function passMedOvningar({ uid, barn, block }) {
   st.redigerar = { titel: 'Pass med Haris', datum: new Date().toISOString().slice(0, 10), uid, barn, block: [m[0], ...block, m.at(-1)], delad: false, anteckning: '' };
 }
 export function passLaggTill(block) { if (st.redigerar) st.redigerar.block.push(...block); }
+// Från Idag: ett pass som hör till en bokning (Carl 2026-11-24)
+const MANK = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+const bokPass = ({ uid, barn, datum, bokning }) => ({ titel: `Pass ${+datum.slice(8, 10)} ${MANK[+datum.slice(5, 7) - 1]}`, datum, uid, barn, bokning, block: mall(barn).map(b => ({ ...b, id: Math.random().toString(36).slice(2, 8) })), delad: false, anteckning: '' });
+export function passFranBokning(b) { st.redigerar = bokPass(b); }
+export async function passSkapaFranBokning(b) {
+  const r = await sparaPlan(bokPass(b));
+  if (r.ok) { st.kor = { id: r.plan.id, i: 0 }; }
+  return r;
+}
 
 export function passView(id, lage) {
   if (!st.laddat) { passLadda().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar pass…</p></section>`; }
@@ -56,6 +65,7 @@ export function passView(id, lage) {
     return passForm(st.redigerar && !st.redigerar.id && (!lage || st.redigerar.uid === lage) ? st.redigerar : forslag);
   }
   if (id) {
+    if (lage !== 'kor' && id !== 'ny') farskt(id); // inte i kör-läget: stoppuret får inte ritas om
     const p = plan(id);
     if (!p) return `<section><p class="muted">Passet hittades inte.</p><a class="btn secondary" href="#/admin/pass">Alla pass</a></section>`;
     return lage === 'kor' ? passKor(p) : passForm(st.redigerar?.id === id ? st.redigerar : JSON.parse(JSON.stringify(p)));
@@ -66,6 +76,23 @@ export function passView(id, lage) {
     <p class="small muted">Ett pass per träningstillfälle. Enklast: gå in på klienten under Klienter och tryck Planera nytt pass.</p>
     ${st.planer.length ? `<ul class="list">${st.planer.map(p => `<li class="row"><a class="grow" href="#/admin/pass/${p.id}"><b>${esc(p.titel)}</b> · ${esc(p.barn || spelareNamn(p.uid))}<div class="small muted">${esc(p.datum)} · ${p.block.length} block · ${p.block.filter(b => b.klar).length} klara${p.delad ? ' · <span style="color:var(--brand)">delat</span>' : ''}</div></a><a class="film" href="#/admin/pass/${p.id}/kor">▶ Kör</a></li>`).join('')}</ul>` : '<p class="muted">Inga pass än.</p>'}
   </section>`;
+}
+// passet hämtas om när sidan öppnas (högst var 5:e sekund), så att förälderns kommentarer syns direkt
+const hamtadNar = {};
+let ritarOm = false;
+function farskt(id) {
+  if (ritarOm || Date.now() - (hamtadNar[id] || 0) < 1500) return;
+  hamtadNar[id] = Date.now();
+  api.admin.get(`/admin/plan/${id}`).then(r => {
+    if (!r.ok) return;
+    const i = st.planer.findIndex(x => x.id === id);
+    const gammal = i >= 0 ? st.planer[i] : null;
+    if (gammal && JSON.stringify(gammal.svar || []) === JSON.stringify(r.plan.svar || []) && gammal.uppdaterad === r.plan.uppdaterad) return;
+    if (gammal && String(r.plan.uppdaterad) < String(gammal.uppdaterad)) return; // vår kopia är nyare (sparad efter hämtningen)
+    if (i >= 0) st.planer[i] = r.plan; else st.planer.unshift(r.plan);
+    if (st.redigerar?.id === id) st.redigerar.svar = r.plan.svar;
+    if (location.hash.startsWith(`#/admin/pass/${id}`) && !st.rec && !document.activeElement?.matches?.('input,textarea')) { ritarOm = true; try { ui.route(); } finally { ritarOm = false; } }
+  });
 }
 const spelareNamn = uid => { const k = klient(uid); if (k) return k.barn; const u = st.anvandare.find(x => x.uid === uid); return u ? (u.barn || u.namn || u.email) : ''; };
 
@@ -103,11 +130,13 @@ function passForm(p) {
           ${b.resultat ? `<div class="small">📊 medel <b>${fmtSek(b.resultat.medel)}</b> (${b.resultat.varv.map(fmtSek).join(', ')})</div>` : ''}
           ${b.media?.length ? `<div class="small">${b.media.map(m => `${m.typ === 'audio' ? '🎙' : '🎥'} ${esc(m.namn || m.typ)}`).join(' · ')}</div>` : b.film ? `<div class="small">🎥 ${esc(b.film.namn || 'film')}</div>` : ''}
           ${b.ovningId ? `<div class="small muted">📚 Ur övningsbanken${ovning(b.ovningId)?.film ? ', filmklippet visas när ni kör passet' : ''}</div>` : ''}
+          ${p.id && b.id ? trad(p, b.id) : ''}
         </div>
         <div style="display:grid;gap:4px"><button type="button" class="film" data-action="pass-upp" data-i="${i}">↑</button><button type="button" class="film" data-action="pass-ner" data-i="${i}">↓</button><button type="button" class="film" data-action="pass-bort" data-i="${i}">✕</button></div>
       </div>`).join('')}</div>
       <div class="chips" style="margin-top:10px"><button type="button" class="chip brand" data-action="pass-bank">+ 📚 Ur övningsbanken</button>${Object.entries(TYP).map(([k, [ic, n]]) => `<button type="button" class="chip" data-action="pass-nytt-block" data-typ="${k}">+ ${ic} ${n}</button>`).join('')}</div>
       <div class="field" style="margin-top:14px"><label for="pant">Anteckning till föräldern</label><textarea id="pant" name="anteckning" placeholder="Det här såg jag i dag, det här tränar ni på hemma…">${esc(p.anteckning || '')}</textarea></div>
+      ${p.id ? `<div class="panel" style="margin-top:10px"><h3 style="margin:0">Om passet</h3>${trad(p, '')}</div>${kanslaPanel(p)}` : ''}
       <label class="toggle"><input type="checkbox" name="delad" ${p.delad ? 'checked' : ''}><span><b>Delat med föräldern</b><small>Passet med tider, bedömningar, filmer, ljud och anteckning syns i förälderns app under Träna med Haris och Utveckling.</small></span></label>
       <div class="btn-row two" style="margin-top:12px">
         <button class="btn grad" type="submit">Spara</button>
@@ -116,6 +145,25 @@ function passForm(p) {
       ${p.id ? `<p class="small"><a data-action="pass-radera" data-id="${p.id}" href="#${tillbaka}">Ta bort passet</a></p>` : ''}
     </form>
   </section>`;
+}
+
+// Kommentarerna på ett moment (blockId '' = passet i stort): Haris och föräldern (Carl 2026-11-24)
+function trad(p, blockId) {
+  const lista = (plan(p.id)?.svar || p.svar || []).filter(x => (x.blockId || '') === blockId);
+  return `<div class="trad">${lista.length ? `<ul class="svar-lista small">${lista.map(x => `<li class="${x.av}"><b>${esc(x.namn)}</b> <span class="muted">${esc(fmtIso(x.t?.slice(0, 10)))}</span><div>${esc(x.text)}</div>${x.av === 'haris' ? `<a class="small muted" href="#" data-action="pass-svar-bort" data-plan="${p.id}" data-sid="${x.id}">Ta bort</a>` : ''}</li>`).join('')}</ul>` : ''}
+    <div class="svar-form"><input type="text" id="svar-${blockId || 'pass'}" placeholder="${lista.some(x => x.av === 'foralder') ? 'Svara föräldern…' : blockId ? 'Kommentar på momentet…' : 'Kommentar om passet…'}" maxlength="1000"><button type="button" class="film" data-action="pass-svar" data-plan="${p.id}" data-block="${blockId}">Skicka</button></div></div>`;
+}
+// Känslan från passet: Haris röst om hur passet kändes, sparas på passet (Carl 2026-11-24: "bara att Haris samlar en
+// voiceover för en känsla han vill ha från passet")
+function kanslaPanel(p) {
+  const rec = st.rec?.blockId === 'kansla' ? st.rec : null;
+  const media = plan(p.id)?.media || [];
+  return `<div class="panel brand" style="margin-top:10px">
+    <div class="section-head"><h3 style="margin:0">🎙 Känslan från passet</h3><span class="small muted">${media.length ? `${media.length} inspelad${media.length > 1 ? 'e' : ''}` : ''}</span></div>
+    <p class="small muted" style="margin:4px 0 8px">Säg med egna ord hur passet kändes. Föräldern hör det överst i passet när du delat det.</p>
+    <button type="button" class="btn ${rec ? 'rec on' : 'secondary'} block" data-action="pass-kansla" data-plan="${p.id}" ${kanSpelaInLjud() ? '' : 'disabled'}>${rec ? `<i class="rec-dot"></i> Stoppa <span id="recTid">0:00</span>` : '🎙 Spela in'}</button>
+    ${media.length ? `<ul class="list small" style="margin-top:8px">${media.map(m => `<li class="row media-rad" data-mid="${m.id}"><span class="grow">${m.typ === 'audio' ? '🎙' : '🎥'} ${esc(m.namn || 'Inspelning')}<div class="muted">${m.url ? 'uppladdad' : 'på den här telefonen'}</div></span><button type="button" class="film" data-action="pass-spela" data-mid="${m.id}" data-typ="${m.typ}" data-url="${esc(m.url || '')}">Spela</button></li>`).join('')}</ul>` : ''}
+  </div>`;
 }
 
 function lasForm() {
@@ -195,10 +243,13 @@ function inspelningar(p, b) {
   return `<div class="panel ${forsta ? 'brand' : ''} rec-panel">
     <div class="section-head"><h3>${forsta ? 'Filma nu' : 'Filma eller spela in'}</h3><span class="small muted">${r2Pa() ? 'laddas upp till spelaren' : 'sparas på telefonen'}</span></div>
     <div class="btn-row two" style="margin:8px 0">
-      <label class="btn ${forsta && !media.length ? 'grad' : 'secondary'}" for="passfilm">🎥 ${media.some(m => m.typ === 'video') ? 'Filma igen' : 'Filma'}</label>
-      <input type="file" id="passfilm" accept="video/*" capture="environment" hidden data-plan="${p.id}" data-block="${b.id}">
+      ${kanKomprimera()
+        ? `<button class="btn ${forsta && !media.length ? 'grad' : 'secondary'}" data-action="pass-filma" data-kalla="kamera" data-block="${b.id}">🎥 ${media.some(m => m.typ === 'video') ? 'Filma igen' : 'Filma'}</button>`
+        : `<label class="btn ${forsta && !media.length ? 'grad' : 'secondary'}" for="passfilm">🎥 ${media.some(m => m.typ === 'video') ? 'Filma igen' : 'Filma'}</label>
+      <input type="file" id="passfilm" accept="video/*" capture="environment" hidden data-plan="${p.id}" data-block="${b.id}">`}
       <button class="btn ${rec ? 'rec on' : 'secondary'}" data-action="pass-ljud" data-block="${b.id}" ${kanSpelaInLjud() ? '' : 'disabled title="Mikrofonen stöds inte här"'}>${rec ? `<i class="rec-dot"></i> Stoppa <span id="recTid">0:00</span>` : '🎙 Spela in ljud'}</button>
     </div>
+    ${kanKomprimera() ? `<p class="small" style="margin:0 0 6px"><a href="#" data-action="pass-filma" data-kalla="bibliotek" data-block="${b.id}">Välj en film från telefonen i stället ›</a></p>` : ''}
     <div class="progress" hidden id="passbar"><i style="width:0%"></i></div>
     <p class="small muted" id="passhint" style="margin:6px 0 0">${rec ? 'Spelar in… prata på, tryck Stoppa när ni är klara.' : forsta && !media.length ? 'Kameran öppnas direkt. Filmen sparas på spelaren och delas med föräldern.' : ''}</p>
     ${media.length ? `<ul class="list small" style="margin-top:10px">${media.map(m => `<li class="row media-rad" data-mid="${m.id}"><span class="grow"><b>${m.typ === 'audio' ? '🎙' : '🎥'} ${esc(m.namn || m.typ)}</b><div class="muted">${esc((m.t || '').slice(0, 16).replace('T', ' '))} · ${m.url ? 'uppladdad' : 'på den här telefonen'}</div></span>
@@ -260,6 +311,56 @@ export async function passFilVald(input) {
 
 export async function passAction(action, el, e) {
   const { toast, route, go } = ui;
+  if (action === 'pass-svar') {
+    const inp = document.getElementById(`svar-${el.dataset.block || 'pass'}`), text = inp?.value.trim();
+    if (!text) { inp?.focus(); return true; }
+    el.disabled = true;
+    const r = await api.admin.post(`/admin/plan/${el.dataset.plan}/svar`, { blockId: el.dataset.block || '', text });
+    el.disabled = false;
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    const pl = plan(el.dataset.plan); if (pl) pl.svar = r.svar;
+    if (st.redigerar?.id === el.dataset.plan) { const p = lasForm(); p.svar = r.svar; st.redigerar = p; }
+    toast(pl?.delad ? 'Skickat till föräldern' : 'Sparat. Föräldern ser det när passet är delat.'); route(); return true;
+  }
+  if (action === 'pass-svar-bort') {
+    e?.preventDefault?.();
+    const r = await api.admin.del(`/admin/plan/${el.dataset.plan}/svar/${el.dataset.sid}`);
+    if (r.ok) { const pl = plan(el.dataset.plan); if (pl) pl.svar = r.svar; if (st.redigerar?.id === el.dataset.plan) { const p = lasForm(); p.svar = r.svar; st.redigerar = p; } }
+    route(); return true;
+  }
+  if (action === 'pass-kansla') {
+    const pl = plan(el.dataset.plan); if (!pl) return true;
+    if (st.rec?.blockId === 'kansla') {
+      const rec = st.rec; st.rec = null; clearInterval(rec.h); el.disabled = true;
+      const blob = await rec.stop();
+      const m = await sparaInspelning(blob, { klientId: pl.uid, typ: 'audio', namn: `Känslan ${pl.datum}.${/webm/.test(blob.type) ? 'webm' : 'm4a'}`, titel: `Känslan från passet · ${pl.barn || ''} ${pl.datum}`.trim(), planId: pl.id, blockId: '' });
+      const rad = { id: m.id, typ: 'audio', url: m.url, namn: m.namn, t: m.t, lokal: m.lokal };
+      pl.media = [...(pl.media || []), rad];
+      const utkast = st.redigerar?.id === pl.id ? lasForm() : null;
+      const r = await sparaPlan(pl);
+      if (utkast) { utkast.media = pl.media; st.redigerar = utkast; }
+      toast(!r.ok ? `Gick inte: ${r.fel}` : m.url ? 'Inspelningen är sparad på passet' : 'Inspelningen är sparad på telefonen');
+      route(); return true;
+    }
+    if (st.redigerar?.id === pl.id) st.redigerar = lasForm();
+    try { st.rec = { blockId: 'kansla', ...(await startaLjud()) }; route(); }
+    catch (err) { toast(/denied|NotAllowed/i.test(String(err)) ? 'Tillåt mikrofonen för CAP i Inställningar' : `Kunde inte starta mikrofonen: ${err?.message || err}`); }
+    return true;
+  }
+  if (action === 'pass-filma') {
+    e?.preventDefault?.();
+    const p = plan(st.kor.id), b = p.block.find(x => x.id === el.dataset.block);
+    const bar = $('#passbar'), hint = $('#passhint');
+    const m = await filmaKomprimerat(el.dataset.kalla, { klientId: p.uid, namn: `${b.titel.slice(0, 40)} ${p.datum}.mp4`, titel: `${b.titel} · ${p.barn || ''} ${p.datum}`.trim(), planId: p.id, blockId: b.id },
+      ({ steg, andel }) => { if (bar) { bar.hidden = false; bar.firstElementChild.style.width = Math.round(andel * 100) + '%'; } if (hint) hint.textContent = steg === 'laddar' ? `Laddar upp… ${Math.round(andel * 100)} %` : `Gör filmen mindre… ${Math.round(andel * 100)} %`; });
+    if (m.avbrutet) { route(); return true; }
+    if (!m.ok) { toast(`Gick inte: ${m.fel}`); route(); return true; }
+    (b.media = b.media || []).push({ id: m.id, typ: 'video', url: m.url, namn: m.namn, t: m.t, lokal: m.lokal }); b.klar = true;
+    const r = await sparaPlan(p);
+    const krymp = m.fore ? ` (${mb(m.fore)} → ${mb(m.efter)})` : '';
+    toast(!r.ok ? `Gick inte: ${r.fel}` : m.url ? `Filmen är uppladdad${krymp}` : `Filmen är sparad i appen${krymp}${m.fel ? `, uppladdningen väntar: ${m.fel}` : ''}`);
+    route(); return true;
+  }
   if (action === 'pass-nytt-block') { const p = lasForm(); const t = el.dataset.typ; p.block.push({ typ: t, titel: t === 'bedomning' ? 'Konbana' : TYP[t][1], desc: '', minuter: 5, mal: t === 'tid' ? 25 : 0, varv: 3 }); st.redigerar = p; route(); return true; }
   if (action === 'pass-bank') {
     const p = lasForm(); st.redigerar = p;

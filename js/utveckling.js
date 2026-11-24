@@ -3,6 +3,7 @@
 import { store } from './store.js';
 import { minaNu, hamtaMina } from './boka.js';
 import { diagram, sammanfattning } from './diagram.js';
+import { serieJamfor } from './passfilm.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const MAN = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
@@ -54,6 +55,7 @@ export function utvecklingPage(barnId) {
           <div class="section-head"><h3>${esc(namnT)}</h3><span class="small muted">${rader.length} ${rader.length === 1 ? 'tillfälle' : 'tillfällen'}</span></div>
           ${diagram(punkter)}
           <p class="small" style="margin:6px 0 10px">${esc(sammanfattning(punkter))}</p>
+          ${serieJamfor(rader, media, null, 'Filmerna: första gången och senaste')}
           <ul class="list small">${rader.slice().reverse().map(b => `<li><b>${fmtIso(b.datum)}</b> · medel <b>${fmtSek(b.medel)}</b>${b.varv.length > 1 ? ` · bäst ${fmtSek(b.bast)} (${b.varv.map(v => fmtSek(v)).join(', ')})` : ''}${b.kommentar ? `<div class="muted">${esc(b.kommentar)}</div>` : ''}</li>`).join('')}</ul>
         </div>`;
       }).join('')}

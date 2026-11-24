@@ -45,7 +45,7 @@ const TEL = '070-333 44 55';
 
   // ---- Haris: Swish-nummer och pris i Admin → Mer ----
   await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(1500);
+  await a.waitForURL(/#\/admin\/(idag|klienter)/, { timeout: 15000 }); await a.waitForTimeout(1500);
   await a.goto(base + 'index.html#/admin/mer'); await a.waitForSelector('form[data-form=admin-betalning]', { timeout: 10000 });
   await a.fill('form[data-form=admin-betalning] input[name=swish]', '12345'); await a.fill('form[data-form=admin-betalning] input[name=pris]', '300');
   await a.click('form[data-form=admin-betalning] button[type=submit]'); await vantaToast(a, 'ser fel ut');

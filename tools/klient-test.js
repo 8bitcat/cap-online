@@ -44,7 +44,7 @@ const TEL = '070-000 00 02';
   console.log('olika koder →', await f.$eval('.note', e => e.textContent).catch(() => '-'));
   await f.fill('#pin1', '1234'); await f.fill('#pin2', '1234'); await f.click('form[data-form=pin] button'); await f.waitForTimeout(2000);
   console.log('efter kodval:', url(f), '| namn förifyllt:', await f.$eval('#name', e => e.value).catch(() => '-'), '| ålder:', await f.$eval('#age', e => e.value).catch(() => '-'));
-  await f.click('form[data-form=wiz1] button'); await f.waitForTimeout(300);
+  await f.click('form[data-form=wiz1] button'); await f.waitForURL(/kom-igang/, { timeout: 10000 }).catch(() => {}); if (/kom-igang/.test(f.url())) await f.click('button[data-action=inst-klar]'); await f.waitForTimeout(300);
   console.log('position förvald:', await f.$eval('input[name=position]:checked', e => e.value));
   await f.click('form[data-form=wiz2] button[type=submit]'); await f.waitForTimeout(300);
   await f.click('form[data-form=wiz3] button[type=submit]'); await f.waitForTimeout(2500);

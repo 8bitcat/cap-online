@@ -28,6 +28,7 @@ export const api = {
     get: p => call('GET', p, undefined, store.admin),
     post: (p, b) => call('POST', p, b, store.admin),
     put: (p, b) => call('PUT', p, b, store.admin),
+    patch: (p, b) => call('PATCH', p, b, store.admin),
     del: p => call('DELETE', p, undefined, store.admin),
   },
 };

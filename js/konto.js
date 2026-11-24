@@ -165,7 +165,7 @@ export async function kontoSubmit(kind, f, fd, { toast, go, render }) {
     const anv = String(fd.get('anvandare') || '').trim();
     const r = await loggaIn(anv, fd.get('losen'));
     if (!r.ok) { ater(); render(loginPage({ anv, fel: r.fel || 'Gick inte att logga in' })); return; }
-    if (r.admin) { senast.telefon = anv; try { localStorage.setItem('cap_tel', anv); } catch { /* ok */ } toast('Välkommen, Haris!'); go('/admin/klienter'); return; }
+    if (r.admin) { senast.telefon = anv; try { localStorage.setItem('cap_tel', anv); } catch { /* ok */ } toast('Välkommen, Haris!'); go('/admin/idag'); return; }
     efterInloggning(r.user, { toast, tyst: !!r.nyttLosen });
     go(r.nyttLosen ? '/losen' : '/'); return;
   }

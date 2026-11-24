@@ -3,6 +3,41 @@
 Loggbok över vägval. Nyast överst. Antaganden som Carl eller Haris inte
 bekräftat är markerade **(antagande)**.
 
+## 2026-11-24 – 1.4: passen med film (Idag, filmbank, kommentarer, komprimering)
+
+Carl: Haris ska planera pass utifrån bokningen, filma moment så att appen vet
+barn och dag, mäta tid (konbana) och jämföra med första passet, dela med
+föräldern med kommentarer, spela in en «känsla» och få material till
+marknadsföringen.
+
+- **Admin → Idag** är Haris startsida: bokningarna från i förrgår till om en
+  vecka. Varje bokat barn får ett eget pass med `plan.bokning {v, slot}`
+  («Planera» eller «Kör direkt» med standardpasset). Syskon på samma tid får
+  ett pass var.
+- **Komprimering i appen (1.4):** tillägget `CapFilm` i `CapKalender.swift`
+  filmar eller tar en film ur biblioteket, gör om den till 720p H.264
+  1,8 Mbit/s + AAC 96 kbit/s (~14 MB/min mot ~50 MB/min) och laddar upp den i
+  delar själv. Webben laddas från GitHub Pages och kan inte läsa appens filer.
+  Äldre appar och webben laddar upp okomprimerat.
+- **Tak i R2:** gratis upp till 10 GB. `/admin/upload/start` nekar (507) om
+  summan + filen går över 9,5 GB. Summan räknas genom att lista bucketen,
+  med cache i KV `r2:anvant` i 10 minuter.
+- **Filmbanken** (Admin → Filmbank): alla filmer och allt ljud från passen,
+  med mätaren, ⭐ för marknadsföring (`media.marknad`), nedladdning,
+  jämförelse och borttagning. **Samtycke** till marknadsföring sköter Haris
+  själv med föräldrarna (Carl 2026-11-24), så det finns ingen ruta i appen.
+- **Tiden ovanpå filmen** och **första mot senaste** bredvid varandra
+  (`js/passfilm.js`). Filmen kopplas till bedömningen genom
+  planId + blockId.
+- **Kommentarer per moment** (`plan.svar`, Carl valde «per moment»).
+  Föräldern skriver via `/mina/plan/<id>/svar` och Haris via
+  `/admin/plan/<id>/svar`. Båda får en notis. Svaren skrivs aldrig över när
+  passet sparas.
+- **Känslan från passet:** ljud på hela passet (`plan.media`), överst hos
+  föräldern.
+- En film från ett pass ger ingen egen notis längre. Föräldern får en notis
+  när passet delas.
+
 ## 2026-11-16 – v1.1.0: ny första sida med inloggning, lösenord, Haris loggar in med e-post
 
 - **Inloggning krävs.** Carl: "för att komma in krävs ett login, det ska vara en snygg login-skärm". Första sidan

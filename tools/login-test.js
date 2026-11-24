@@ -38,11 +38,11 @@ const TEL = '070-555 12 34';
   await logga(a, 'fel@test.se', 'testlosen');
   koll('okänd e-post nekas', (await text(a, '.login-kort')).includes('fel e-post eller lösenord'));
   await logga(a, 'Haris@Test.se', 'testlosen');
-  await a.waitForURL(/#\/admin\/klienter/, { timeout: 10000 }).catch(() => {});
-  koll('Haris e-post ger adminvyn', url(a) === '/admin/klienter', url(a));
+  await a.waitForURL(/#\/admin\/(idag|klienter)/, { timeout: 10000 }).catch(() => {});
+  koll('Haris e-post ger adminvyn', url(a) === '/admin/idag', url(a));
   koll('bara Haris inloggad: ingen ⇄ och föräldravyn är stängd', await a.$eval('#vaxla', e => e.hidden));
   await a.goto(base + 'index.html#/boka'); await a.waitForTimeout(600);
-  koll('Haris skickas tillbaka till adminvyn', url(a) === '/admin/klienter', url(a));
+  koll('Haris skickas tillbaka till adminvyn', url(a) === '/admin/idag', url(a));
 
   // ---- Haris lägger in Jennifer (ett sms med koden) ----
   await a.goto(base + 'index.html#/admin/klienter'); await a.waitForTimeout(1200);
@@ -74,7 +74,7 @@ const TEL = '070-555 12 34';
   await f.waitForSelector('#name', { timeout: 10000 }).catch(() => {});
   koll('lösenordet sparat, sedan barnets namn', url(f) === '/start/1', url(f));
   await f.fill('#name', 'Elijah'); await f.fill('#efternamn', 'Demir'); await f.selectOption('#fodd', '2016');
-  await f.click('form[data-form=wiz1] button'); await f.waitForSelector('.greet', { timeout: 10000 }).catch(() => {});
+  await f.click('form[data-form=wiz1] button'); await f.waitForURL(/kom-igang/, { timeout: 10000 }).catch(() => {}); if (/kom-igang/.test(f.url())) await f.click('button[data-action=inst-klar]'); await f.waitForSelector('.greet', { timeout: 10000 }).catch(() => {});
   koll('startsidan med Elijah', (await text(f, '.greet')).includes('Elijah'), await text(f, '.greet'));
 
   // ---- logga ut, in med lösenordet; koden gäller inte längre ----

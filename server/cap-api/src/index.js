@@ -73,7 +73,7 @@
 
 import { kollaTransaktion } from './apple.js';
 
-const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' };
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' };
 const svar = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json', ...CORS } });
 const fel = (text, status = 400) => svar({ ok: false, fel: text }, status);
 const KOD_TECKEN = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -298,7 +298,27 @@ const renMedia = (d, klientId) => ({
   typ: d.typ === 'audio' ? 'audio' : 'video', url: ren(d.url, 400), key: ren(d.key, 200), poster: ren(d.poster, 400),
   namn: ren(d.namn, 80), titel: ren(d.titel, 120), t: /^\d{4}-\d{2}-\d{2}T/.test(String(d.t || '')) ? d.t : nu(),
   planId: ren(d.planId, 40), blockId: ren(d.blockId, 20), bedId: ren(d.bedId, 40), delad: d.delad !== false,
+  storlek: Math.max(0, Math.round(+d.storlek || 0)), sek: Math.max(0, Math.round((+d.sek || 0) * 10) / 10), marknad: !!d.marknad,
 });
+
+// Lagringen i R2 (Carl 2026-11-24: "vi ska komprimera filmerna, så att vi inte går över 10 gb"). Gratis upp till
+// 10 GB; uppladdningar stoppas vid 9,5 GB. Summan räknas genom att lista bucketen (cache i KV r2:anvant, 10 min).
+const R2_TAK = 9.5e9, R2_GRATIS = 10e9;
+async function r2Anvant(env, farsk = false) {
+  if (!env.MEDIA) return { b: 0, n: 0, t: Date.now() };
+  const c = await env.DB.get('r2:anvant', 'json');
+  if (!farsk && c && Date.now() - c.t < 10 * 60e3) return c;
+  let b = 0, n = 0, cursor;
+  do {
+    const l = await env.MEDIA.list({ cursor, limit: 1000 });
+    for (const o of l.objects) { b += o.size || 0; n++; }
+    cursor = l.truncated ? l.cursor : undefined;
+  } while (cursor);
+  const ut = { b, n, t: Date.now() };
+  await env.DB.put('r2:anvant', JSON.stringify(ut));
+  return ut;
+}
+const gbText = b => `${(b / 1e9).toFixed(1).replace('.', ',')} GB`;
 
 // Tvättar en film från adminsidan: bara kända fält, taggar ur kända dimensioner, moment med tider.
 function renFilm(d, gammal = {}) {
@@ -684,8 +704,13 @@ function renPlan(d, gammal = {}) {
     bokning: d.bokning && typeof d.bokning === 'object' ? { v: ren(d.bokning.v, 10), slot: ren(d.bokning.slot, 12) } : (gammal.bokning || null),
     block: (Array.isArray(d.block) ? d.block : []).slice(0, 40).map(renBlock),
     delad: !!d.delad, anteckning: ren(d.anteckning, 1000),
+    // ljud eller film för hela passet, t.ex. Haris röst om känslan från passet (Carl 2026-11-24)
+    media: (Array.isArray(d.media) ? d.media : []).slice(0, 6).map(m => ({ id: ren(m.id, 24), typ: m.typ === 'audio' ? 'audio' : 'video', url: ren(m.url, 400), namn: ren(m.namn, 80), t: ren(m.t, 30), lokal: !!m.lokal })),
+    // kommentarerna (Haris och föräldern) ändras bara genom /svar, aldrig genom att passet sparas
+    svar: gammal.svar || [],
   };
 }
+const renSvar = (d, av, namn) => ({ id: nyttId('s'), blockId: ren(d.blockId, 20), av, namn: ren(namn, 60), text: ren(d.text, 1000), t: nu() });
 // Stigens listor från admin: bara kända fält
 function renStigConfig(d) {
   const drommar = (Array.isArray(d.drommar) ? d.drommar : []).slice(0, 20).map(x => ({ id: ren(x.id, 20).toLowerCase().replace(/[^a-z0-9]/g, '') || slump(6, 'abcdefghijklmnopqrstuvwxyz'), namn: ren(x.namn, 40), ikon: ren(x.ikon, 4), desc: ren(x.desc, 120) })).filter(x => x.namn);
@@ -1080,6 +1105,27 @@ export default {
       return svar({ ok: true, block: blockFor(betK), kopta: (betK?.kop || []).filter(x => !x.aterkallad).map(x => x.id), bokningar, planer, klient, bedomningar, media, familj: familjData, kalFeed, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
     }
 
+    // Föräldern kommenterar ett moment i ett delat pass (Carl 2026-11-24: "dela passet med föräldrarna och lägga
+    // kommentarer"). blockId '' = om passet i stort. Haris får en notis.
+    const msv = /^\/mina\/plan\/([a-z0-9]+)\/svar$/.exec(p);
+    if (msv && req.method === 'POST') {
+      const user = await sessionUser(env, req);
+      if (!user) return fel('inte inloggad', 401);
+      const d = await json(); if (!d) return fel('trasig JSON');
+      const plan = await env.DB.get(`plan:${msv[1]}`, 'json');
+      const kRad = user.klientId ? await hamtaKlient(env, user.klientId) : null;
+      const fam = kRad ? (kRad.syskon?.length || kRad.huvud ? (await familj(env, kRad)).map(x => x.id) : [kRad.id]) : [user.uid];
+      if (!plan || !plan.delad || !fam.includes(plan.uid)) return fel('passet finns inte', 404);
+      const sv = renSvar(d, 'foralder', kRad?.foralder || user.namn || 'Förälder');
+      if (!sv.text) return fel('skriv något först');
+      if (sv.blockId && !plan.block.some(b => b.id === sv.blockId)) return fel('momentet finns inte');
+      plan.svar = [...(plan.svar || []), sv].slice(-200);
+      await env.DB.put(`plan:${plan.id}`, JSON.stringify(plan));
+      const moment = plan.block.find(b => b.id === sv.blockId)?.titel;
+      tillHaris(`${sv.namn} svarade på passet`, `${moment ? `${moment}: ` : ''}${sv.text.slice(0, 140)}`, `/admin/pass/${plan.id}`);
+      return svar({ ok: true, svar: plan.svar });
+    }
+
     // Köp i appen: appen skickar Apples signerade transaktion efter ett köp och vid Återställ köp
     if (p === '/mina/kop' && req.method === 'POST') {
       const user = await sessionUser(env, req);
@@ -1380,16 +1426,23 @@ export default {
         }
         if (del === 'media') {
           const alla = (await env.DB.get(`med:${k.id}`, 'json')) || [];
+          if (req.method === 'PATCH' && sub) {
+            const m = alla.find(x => x.id === sub); if (!m) return fel('filmen finns inte', 404);
+            if ('marknad' in d) m.marknad = !!d.marknad;
+            if ('delad' in d) m.delad = !!d.delad;
+            if ('titel' in d) m.titel = ren(d.titel, 120);
+            await env.DB.put(`med:${k.id}`, JSON.stringify(alla)); return svar({ ok: true, media: m });
+          }
           if (req.method === 'DELETE' && sub) {
             const m = alla.find(x => x.id === sub);
-            if (m?.key && env.MEDIA) await env.MEDIA.delete(m.key).catch(() => {});
+            if (m?.key && env.MEDIA) { await env.MEDIA.delete(m.key).catch(() => {}); await env.DB.delete('r2:anvant'); }
             const kvar = alla.filter(x => x.id !== sub); await env.DB.put(`med:${k.id}`, JSON.stringify(kvar)); return svar({ ok: true, media: kvar });
           }
           if (req.method === 'POST') {
             const m = renMedia(d, k.id);
             const i = alla.findIndex(x => x.id === m.id); const ny = i < 0; if (i >= 0) alla[i] = { ...alla[i], ...m }; else alla.push(m);
             await env.DB.put(`med:${k.id}`, JSON.stringify(alla.slice(-500)));
-            if (ny && m.delad && (m.url || m.key)) { tillKlient(k, 'utveckling', m.typ === 'audio' ? 'Nytt ljud från Haris' : 'Ny film från Haris', `Haris har lagt upp ${m.typ === 'audio' ? 'ett ljud' : 'en film'} från passet med ${k.barn || 'ert barn'}.`, '/utveckling'); await sparaKlient(env, k); }
+            if (ny && m.delad && !m.planId && (m.url || m.key)) { tillKlient(k, 'utveckling', m.typ === 'audio' ? 'Nytt ljud från Haris' : 'Ny film från Haris', `Haris har lagt upp ${m.typ === 'audio' ? 'ett ljud' : 'en film'} från passet med ${k.barn || 'ert barn'}.`, '/utveckling'); await sparaKlient(env, k); }
             return svar({ ok: true, media: alla, inlagd: m });
           }
         }
@@ -1755,6 +1808,59 @@ export default {
         await env.DB.put(`plan:${plan.id}`, JSON.stringify(plan));
         return svar({ ok: true, plan });
       }
+      const asv = /^\/admin\/plan\/([a-z0-9]+)\/svar(?:\/([a-z0-9]+))?$/.exec(p);
+      if (asv) {
+        const plan = await env.DB.get(`plan:${asv[1]}`, 'json');
+        if (!plan) return fel('passet finns inte', 404);
+        if (req.method === 'DELETE' && asv[2]) plan.svar = (plan.svar || []).filter(x => x.id !== asv[2]);
+        else if (req.method === 'POST') {
+          const d = await json(); if (!d) return fel('trasig JSON');
+          const sv = renSvar(d, 'haris', 'Haris');
+          if (!sv.text) return fel('skriv något först');
+          plan.svar = [...(plan.svar || []), sv].slice(-200);
+          if (plan.delad) { const kl = await hamtaKlient(env, plan.uid); if (kl) { const moment = plan.block.find(b => b.id === sv.blockId)?.titel; tillKlient(kl, 'utveckling', 'Haris svarade', `${moment ? `${moment}: ` : ''}${sv.text.slice(0, 140)}`, `/med-haris/${plan.id}`); await sparaKlient(env, kl); } }
+        } else return fel('fel metod', 405);
+        await env.DB.put(`plan:${plan.id}`, JSON.stringify(plan));
+        return svar({ ok: true, svar: plan.svar });
+      }
+      // Dagens pass (Carl 2026-11-24): bokningarna från i förrgår till om en vecka, med passet som hör till varje barn
+      if (p === '/admin/idag' && req.method === 'GET') {
+        const [veckor, planer, klienter] = await Promise.all([hamtaAlla(env, 'vecka:'), hamtaAlla(env, 'plan:'), hamtaKlienter(env)]);
+        const fran = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10), till = new Date(Date.now() + 8 * 864e5).toISOString().slice(0, 10);
+        const ut = [];
+        for (const w of veckor) for (const s of w.slots || []) {
+          if (!s.bokad) continue;
+          const datum = datumFor(w.v, s.dag);
+          if (datum < fran || datum > till) continue;
+          const barn = bokadeBarn(s.bokad).map(id => {
+            const k = klienter.find(x => x.id === id);
+            const pl = planer.find(x => x.uid === id && x.bokning?.v === w.v && x.bokning?.slot === s.id);
+            return { id, barn: k ? [k.barn, k.efternamn].filter(Boolean).join(' ') : (s.bokad.barn || ''), fornamn: k?.barn || s.bokad.barn || '', niva: k?.niva || null, finns: !!k,
+              plan: pl ? { id: pl.id, titel: pl.titel, block: pl.block.length, klara: pl.block.filter(b => b.klar).length, delad: pl.delad, filmer: pl.block.reduce((n, b) => n + (b.media?.length || 0), 0) } : null };
+          });
+          ut.push({ v: w.v, slot: s.id, datum, start: s.start, slut: s.slut, plats: s.plats || '', barn });
+        }
+        ut.sort((a, b) => (a.datum + a.start).localeCompare(b.datum + b.start));
+        return svar({ ok: true, pass: ut, idag: idag() });
+      }
+      // Filmbanken: alla filmer och ljud från passen, med barnet, passet och tiden (Carl 2026-11-24: "material för
+      // sin marknadsföring"), och hur mycket av lagringen som används
+      if (p === '/admin/passfilmer' && req.method === 'GET') {
+        const [klienter, planer] = await Promise.all([hamtaKlienter(env), hamtaAlla(env, 'plan:')]);
+        const filmer = [];
+        for (const k of klienter) {
+          const [med, bed] = await Promise.all([env.DB.get(`med:${k.id}`, 'json'), env.DB.get(`bed:${k.id}`, 'json')]);
+          for (const m of med || []) {
+            const pl = planer.find(x => x.id === m.planId), bl = pl?.block.find(b => b.id === m.blockId);
+            const bd = (bed || []).find(b => (m.bedId && b.id === m.bedId) || (b.mediaId && b.mediaId === m.id) || (m.planId && b.planId === m.planId && b.blockId === m.blockId));
+            filmer.push({ ...m, klientId: k.id, barn: [k.barn, k.efternamn].filter(Boolean).join(' '), plan: pl ? { id: pl.id, titel: pl.titel, datum: pl.datum } : null, moment: bl?.titel || '', fardighet: bl?.fardighet || '',
+              bed: bd ? { namn: bd.namn, medel: bd.medel, bast: bd.bast, datum: bd.datum } : null });
+          }
+        }
+        filmer.sort((a, b) => String(b.t).localeCompare(String(a.t)));
+        const l = await r2Anvant(env);
+        return svar({ ok: true, filmer, r2: !!env.MEDIA, lagring: { anvant: l.b, antal: l.n, tak: R2_TAK, gratis: R2_GRATIS } });
+      }
       const mpl = /^\/admin\/plan\/([a-z0-9]+)$/.exec(p);
       if (mpl && (req.method === 'PUT' || req.method === 'DELETE' || req.method === 'GET')) {
         const gammal = await env.DB.get(`plan:${mpl[1]}`, 'json');
@@ -1772,6 +1878,11 @@ export default {
       if (p === '/admin/upload/start' && req.method === 'POST') {
         if (!env.MEDIA) return fel('R2 är inte påslaget ännu – filen sparas på telefonen så länge', 503);
         const d = await json(); if (!d) return fel('trasig JSON');
+        const ny = Math.max(0, +d.storlek || 0);
+        if ((await r2Anvant(env)).b + ny > R2_TAK) {
+          const f = await r2Anvant(env, true);
+          if (f.b + ny > R2_TAK) return fel(`Lagringen är full: ${gbText(f.b)} av 10 GB. Ta bort gamla filmer under Admin → Filmbank.`, 507);
+        }
         const ext = filEnd(d.filnamn, d.typ);
         const key = d.klientId ? `klient/${ren(d.klientId, 24)}/${Date.now().toString(36)}${slump(3, SMA)}${ext}` : `film/${ren(d.filmId, 40) || 'ny'}-${Date.now().toString(36)}${ext}`;
         const up = await env.MEDIA.createMultipartUpload(key, { httpMetadata: { contentType: MIME[ext] || 'application/octet-stream' } });
@@ -1789,8 +1900,10 @@ export default {
         if (!env.MEDIA) return fel('R2 är inte påslaget', 503);
         const d = await json(); if (!d) return fel('trasig JSON');
         const up = env.MEDIA.resumeMultipartUpload(String(d.key), String(d.uploadId));
-        await up.complete((d.parts || []).map(x => ({ partNumber: +x.partNumber, etag: String(x.etag) })));
-        return svar({ ok: true, url: `${base}/media/${d.key}`, key: d.key });
+        const obj = await up.complete((d.parts || []).map(x => ({ partNumber: +x.partNumber, etag: String(x.etag) })));
+        const c = await env.DB.get('r2:anvant', 'json');
+        if (c) { c.b += obj?.size || 0; c.n++; await env.DB.put('r2:anvant', JSON.stringify(c)); }
+        return svar({ ok: true, url: `${base}/media/${d.key}`, key: d.key, storlek: obj?.size || 0 });
       }
       const mp = /^\/admin\/upload\/poster\/([a-z0-9]+)$/.exec(p);
       if (mp && req.method === 'PUT') {

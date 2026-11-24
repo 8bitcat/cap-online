@@ -29,7 +29,7 @@ const TEL = '070-444 55 66';
     await p.waitForFunction(() => /^#\/(start\/1)?$/.test(location.hash) && (document.querySelector('#name') || document.querySelector('.greet')), null, { timeout: 15000 });
     if (await p.$('#name')) {
       await p.fill('#name', 'Ida'); await p.fill('#efternamn', 'Berg'); await p.selectOption('#fodd', String(new Date().getFullYear() - 9));
-      await p.click('form[data-form=wiz1] button');
+      await p.click('form[data-form=wiz1] button'); await p.waitForURL(/kom-igang/, { timeout: 10000 }).catch(() => {}); if (/kom-igang/.test(p.url())) await p.click('button[data-action=inst-klar]');
     }
     await p.waitForSelector('.greet', { timeout: 15000 }).catch(async () => console.log('  (startsidan kom inte:', url(p), (await p.$eval('#view', e => e.textContent)).replace(/\s+/g, ' ').slice(0, 160), ')'));
   };
@@ -37,12 +37,13 @@ const TEL = '070-444 55 66';
   // ---- Haris loggar in på telefonen ----
   const a = await nyFlik('haris', devices['iPhone 13']);
   await a.goto(base + 'index.html#/login', { waitUntil: 'networkidle' });
-  await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]');
-  await a.waitForURL(/#\/admin\/klienter/, { timeout: 15000 }); await a.waitForTimeout(1200);
-  koll('Haris meny längst ner har Övningar', (await flikar(a)).join(',') === 'Klienter,Tider,Övningar,Filmer,Stigen,Mer', (await flikar(a)).join(','));
+  if (await a.$('#anv-lage')) await a.click('#anv-lage');
+  for (let i = 0; i < 4 && !/admin\/(idag|klienter)/.test(a.url()); i++) { await a.fill('#anv', 'haris@test.se'); await a.fill('#losen', 'testlosen'); await a.click('form[data-form=login] button[type=submit]'); await a.waitForURL(/#\/admin\/(idag|klienter)/, { timeout: 8000 }).catch(() => {}); } await a.waitForTimeout(1200);
+  koll('Haris meny längst ner har Övningar', (await flikar(a)).join(',') === 'Idag,Klienter,Tider,Övningar,Filmbank,Mer', (await flikar(a)).join(','));
   koll('bara Haris inloggad: ingen ⇄', await a.$eval('#vaxla', e => e.hidden));
 
   // en klient att planera åt
+  await a.goto(base + 'index.html#/admin/klienter'); await a.waitForSelector('.klient-card', { timeout: 8000 }).catch(() => {});
   for (const kort of await a.$$('.klient-card')) { if ((await kort.textContent()).includes(TEL)) { await kort.click(); await a.waitForTimeout(1000); await a.click('[data-action=klient-radera]'); await a.click('[data-action=klient-radera]'); await a.waitForTimeout(1200); break; } }
   await a.goto(base + 'index.html#/admin/klient/ny'); await a.waitForSelector('#ktel'); await a.click('.mer-om summary');
   await a.fill('#kbarn', 'Ida'); await a.fill('#kefter', 'Berg'); await a.fill('#kforalder', 'Lisa'); await a.fill('#ktel', TEL);
@@ -107,7 +108,7 @@ const TEL = '070-444 55 66';
   koll('⇄ syns och leder till Haris', await a.$eval('#vaxla', e => !e.hidden && e.textContent.trim() === 'Haris'));
   await a.screenshot({ path: path.join(UT, 'ovningar-foralder.png') });
   await a.click('#vaxla'); await a.waitForTimeout(800);
-  koll('⇄ tillbaka till där Haris var (Tider)', url(a) === '/admin/tider' && (await flikar(a))[0] === 'Klienter', url(a));
+  koll('⇄ tillbaka till där Haris var (Tider)', url(a) === '/admin/tider' && (await flikar(a))[0] === 'Idag', url(a));
   await a.screenshot({ path: path.join(UT, 'ovningar-haris.png') });
   await a.click('#vaxla'); await a.waitForTimeout(800);
   koll('⇄ tillbaka till föräldern', url(a) === '/' && !!(await a.$('.greet')) && (await flikar(a))[0] === 'Hem', url(a));

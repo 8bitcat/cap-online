@@ -840,3 +840,33 @@ body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }
 .block-fot .btn { min-width: 140px; }
 .stig-node.ejkopt { opacity: .55; }
 .stig-node.ejkopt .stig-dot { filter: grayscale(1); }
+
+/* Filmer från passen: tiden ovanpå, jämförelse, filmbanken, kommentarer, dagens pass (2026-11-24) */
+.pf-film { margin: 0; min-width: 0; }
+.pf-ram { position: relative; border-radius: 12px; overflow: hidden; background: #000; }
+.pf-ram video { width: 100%; max-height: 60vh; display: block; }
+.pf-tid { position: absolute; left: 8px; top: 8px; background: rgba(0, 0, 0, .62); color: #fff; font-weight: 800; font-size: 15px; padding: 4px 9px; border-radius: 8px; pointer-events: none; }
+.pf-film figcaption { margin-top: 4px; }
+.pf-par { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.pf-par .pf-ram video { max-height: 44vh; }
+.pf-jamfor { margin: 12px 0; }
+.fb-meter { height: 10px; border-radius: 6px; background: var(--line, rgba(255,255,255,.12)); overflow: hidden; margin: 8px 0 4px; }
+.fb-meter i { display: block; height: 100%; background: var(--brand, #2bd17e); }
+.fb-meter.varn i { background: #f0b429; }
+.fb-meter.full i { background: #e5484d; }
+.fb-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.fb-kort { padding: 10px; }
+.fb-kort .pf-ram video { max-height: 38vh; }
+.fb-kort .fb-meta { margin: 6px 0; }
+.fb-knappar { display: flex; gap: 6px; flex-wrap: wrap; }
+.fb-kort.marknad { outline: 2px solid #f0b429; }
+.svar-lista { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 6px; }
+.svar-lista li { background: var(--panel2, rgba(255,255,255,.06)); border-radius: 10px; padding: 7px 10px; }
+.svar-lista li.haris { border-left: 3px solid var(--brand, #2bd17e); }
+.svar-lista li.foralder { border-left: 3px solid #6aa9ff; }
+.svar-form { display: flex; gap: 6px; margin-top: 6px; }
+.svar-form input { flex: 1; min-width: 0; }
+.idag-dag { margin-top: 14px; }
+.idag-pass { padding: 12px; margin-top: 8px; }
+.idag-barn { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.idag-barn .grow { flex: 1; min-width: 140px; }

@@ -5,6 +5,7 @@ import { loggaUt, hamtaFilmer, filmerNu } from './api.js';
 import { kr } from './swish.js';
 import { loginPage, losenPage, appPage, loggaInViaLank, kontoSubmit, kontoAction, kontoAfterRender, kontoStop, kontoRad } from './konto.js';
 import { serverStatus, statusNu, sparaBarn } from './api.js';
+import { kopplaJamfor } from './passfilm.js';
 import { adminInit, adminPage, adminLadda, adminLaddat, adminAction, adminSubmit, adminAfterRender, adminStop, taggar } from './admin.js';
 import { bokaInit, minaPassPage, bokaPage, medHarisPage, bokaAction, startHallTimer, stoppaHallTimer, fyllMina, hamtaMina, minaNu, veckorGlom } from './boka.js';
 import { tiderGlom } from './admin-tider.js';
@@ -94,10 +95,10 @@ const ICON = {
 };
 const TABS = {
   app: [['/', 'Hem', ICON.home], ['/stig', 'Träna själv', ICON.compass], ['/boka', 'Med Haris', ICON.cal], ['/mer', 'Mer', ICON.dots]],
-  admin: [['/admin/klienter', 'Klienter', ICON.card], ['/admin/tider', 'Tider', ICON.cal], ['/admin/ovningar', 'Övningar', ICON.book], ['/admin/filmer', 'Filmer', ICON.film], ['/admin/stigen', 'Stigen', ICON.compass], ['/admin/mer', 'Mer', ICON.dots]],
+  admin: [['/admin/idag', 'Idag', ICON.home], ['/admin/klienter', 'Klienter', ICON.card], ['/admin/tider', 'Tider', ICON.cal], ['/admin/ovningar', 'Övningar', ICON.book], ['/admin/filmbank', 'Filmbank', ICON.film], ['/admin/mer', 'Mer', ICON.dots]],
 };
 // ⇄ uppe vid klockan växlar mellan föräldravyn och Haris admin (Carl 2026-10-28). Varje sida minns var man var.
-const sista = { foralder: '/', haris: '/admin/klienter' };
+const sista = { foralder: '/', haris: '/admin/idag' };
 
 function fmtLen(sec) {
   if (!sec) return '';
@@ -130,7 +131,7 @@ const routes = [
   [/^\/app$/, appPage],
   [/^\/(losen|pin)$/, () => losenPage() || go('/login')],
   [/^\/k\/([A-Za-z0-9-]+)$/, kod => { loggaInViaLank(kod, { toast, go }); return `<section class="empty"><p class="muted">Loggar in…</p></section>`; }],
-  [/^\/admin$/, () => go(store.admin ? '/admin/klienter' : '/login')],
+  [/^\/admin$/, () => go(store.admin ? '/admin/idag' : '/login')],
   [/^\/admin\/klient\/ny$/, () => adminPage('klienter', 'ny')],
   [/^\/admin\/klient\/([a-z0-9]+)(?:\/(redigera|boka))?$/, (id, lage) => adminPage('klienter', id, lage)],
   [/^\/admin\/pass\/ny\/([a-z0-9]+)$/, kid => adminPage('pass', 'ny', kid)],
@@ -186,8 +187,8 @@ function route() {
   if (!oppen && !store.session && !store.admin) return go('/login');
   if (store.session?.nyttLosen && !/^\/(losen|k\/|login)/.test(path)) return go('/losen');
   if (path.startsWith('/admin') && !store.admin) return go('/login');
-  if (!oppen && store.admin && !store.session && !path.startsWith('/admin')) return go('/admin/klienter');
-  if (path.startsWith('/login') && (store.session || store.admin) && !store.session?.nyttLosen) return go(store.session ? '/' : '/admin/klienter');
+  if (!oppen && store.admin && !store.session && !path.startsWith('/admin')) return go('/admin/idag');
+  if (path.startsWith('/login') && (store.session || store.admin) && !store.session?.nyttLosen) return go(store.session ? '/' : '/admin/idag');
   // Carl 2026-10-28: prototyperna är borttagna, appen som den är nu är föräldravyn
   if (store.proto !== 'app') store.proto = 'app';
   if (!store.profile && path === '/') return go('/start/1');
@@ -250,6 +251,7 @@ function afterRender(path) {
   $$('[data-action]', view).forEach(el => el.addEventListener('click', onAction));
   $$('form[data-form]', view).forEach(f => f.addEventListener('submit', onSubmit));
   $$('.player:not(.manuell)', view).forEach(wirePlayer);
+  kopplaJamfor(view);
   $$('.step input[type=checkbox]', view).forEach(cb => cb.addEventListener('change', onStepToggle));
   if ($('.timer', view)) startTimer();
   if ($('.stopur', view) && !path.startsWith('/admin')) startStopur(); // adminpassets stoppur sköts av admin-pass.js
@@ -1660,7 +1662,7 @@ async function onAction(e) {
   const el = e.currentTarget;
   const { action, id } = el.dataset;
   const paAdmin = location.hash.replace(/^#/, '').startsWith('/admin');
-  if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov)-/.test(action))) { await adminAction(action, el, e); return; }
+  if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov|idag|fb)-/.test(action))) { await adminAction(action, el, e); return; }
   if (action.startsWith('inst-')) { await installningarAction(action, el); return; }
   if (action.startsWith('block-')) { await blockAction(action, el); return; }
   if (action.startsWith('boka-')) { await bokaAction(action, el); return; }
