@@ -177,6 +177,7 @@ const routes = [
   [/^\/stig\/([\w-]+)$/, stigNode],
 ];
 
+let senastRitad = '';
 function route() {
   clearInterval(timerHandle);
   stoppaHallTimer(); adminStop(); kontoStop();
@@ -197,10 +198,14 @@ function route() {
   for (const [re, fn] of routes) {
     const m = path.match(re);
     if (m) {
+      const y = window.scrollY, sammaSida = path === senastRitad;
       const html = fn(...m.slice(1));
       if (html === undefined) return; // vyn skötte redirect själv
       view.innerHTML = html;
-      window.scrollTo(0, 0);
+      // Upp till toppen bara när man byter sida. Ritas samma sida om (Haris bokar en kund under Tider, en notis kommer)
+      // står man kvar där man var (Haris 2026-11-24: "varje gång jag lägger in en kund manuellt åker jag längst upp").
+      window.scrollTo(0, sammaSida ? y : 0);
+      senastRitad = path;
       afterRender(path);
       pushAuto();
       return;

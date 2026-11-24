@@ -39,13 +39,28 @@ const mock = http.createServer((req, res) => { req.resume(); req.on('end', () =>
   const medNotis = await a.waitForFunction(() => document.querySelector('main').textContent.includes('Nils'), null, { timeout: 15000 }).then(() => true, () => false);
   koll('notisen kommer: bokningen syns på Tider (direkt, eller när Haris slutat trycka)', medNotis);
 
+  // Haris 2026-11-24: "varje gång jag lägger in en kund manuellt åker jag längst upp" – sidan står kvar
+  const tom = await adm('POST', `/admin/vecka/${V}/auto`, { schema: [1, 2, 3, 4, 5, 6, 7].map(d => ({ dag: d, pa: true, start: '08:00', slut: '12:00' })), langd: 60, plats: 'Backavallen' });
+  await adm('PUT', `/admin/vecka/${V}`, { oppen: true, slots: tom.vecka.slots, notis: false });
+  await a.goto(base + 'index.html#/admin/klienter'); await a.waitForTimeout(300);
+  await a.goto(base + 'index.html#/admin/tider', { waitUntil: 'networkidle' }); await a.waitForTimeout(1500);
+  const knappar = await a.$$('[data-action=tid-boka]');
+  const sista = knappar.at(-1);
+  await sista.scrollIntoViewIfNeeded(); await a.waitForTimeout(300);
+  const fore = await a.evaluate(() => window.scrollY);
+  await sista.click(); await a.waitForTimeout(800);
+  const efter = await a.evaluate(() => window.scrollY);
+  koll('Boka åt en kund: sidan står kvar (hoppar inte upp)', fore > 300 && Math.abs(efter - fore) < 200, `${fore} → ${efter}`);
+  await a.goto(base + 'index.html#/admin/klienter'); await a.waitForTimeout(500);
+  koll('byte av sida: börjar högst upp', await a.evaluate(() => window.scrollY) === 0);
+
   // Idag framme, bokning utan notis: syns inom 20 s
   await a.goto(base + 'index.html#/admin/idag', { waitUntil: 'networkidle' }); await a.waitForTimeout(1200);
-  const fore = (await a.$$(`[data-slot="${s2}"]`)).length;
+  const fore2 = (await a.$$(`[data-slot="${s2}"]`)).length;
   await adm('POST', `/admin/klient/${ny.klient.id}/boka`, { v: V, slot: s2 });
   const t0 = Date.now();
   const utan = await a.waitForFunction(s => document.querySelectorAll(`[data-slot="${s}"]`).length > 0, s2, { timeout: 25000 }).then(() => true, () => false);
-  koll('utan notis: bokningen syns på Idag inom 20 s', fore === 0 && utan, `${Math.round((Date.now() - t0) / 1000)} s`);
+  koll('utan notis: bokningen syns på Idag inom 20 s', fore2 === 0 && utan, `${Math.round((Date.now() - t0) / 1000)} s`);
 
   // zoomen
   const storlek = await a.evaluate(() => { const i = document.createElement('input'); i.type = 'text'; const d = document.createElement('div'); d.className = 'small'; d.appendChild(i); document.body.appendChild(d); const s = getComputedStyle(i).fontSize; d.remove(); return s; });
