@@ -198,6 +198,7 @@ function klientSida() {
   <div class="admin-grid">
   <div>
   ${k.huvud ? (d.huvud ? familjNot(d) + lankPanel({ ...d, ...d.huvud }) : '') : lankPanel(d)}
+  ${foraldrarPanel(d)}
   ${syskonPanel(d)}
   <section class="panel">
     <div class="section-head"><h3>Nivå</h3><span class="small muted">${k.nivaHistorik?.length > 1 ? `ändrad ${k.nivaHistorik.length - 1} ${k.nivaHistorik.length === 2 ? 'gång' : 'gånger'}` : ''}</span></div>
@@ -289,6 +290,31 @@ function pottPanel(d) {
 function familjNot(d) {
   const h = (d.familj || []).find(x => x.huvud), namn = (d.familj || []).map(x => x.barn).filter(Boolean);
   return h ? `<p class="small muted" style="margin:0 0 6px">Inloggning, pott, paket och köp gäller hela familjen (${esc(namn.join(' och '))}) och ändras här eller på <a href="#/admin/klient/${h.id}">${esc(h.barn)}s sida</a>.</p>` : '';
+}
+// Fler föräldrar på kontot (Haris 2026-11-25: "att jag knappar in två olika telefonnummer … för de som inte är
+// tekniska"). Varje förälder loggar in med sitt eget nummer, sin kod och sitt lösenord och ser samma barn.
+function foraldrarPanel(d) {
+  const k = d.klient, h = k.huvud ? d.huvud?.klient : k;
+  if (!h) return '';
+  const extra = h.foraldrar || [], ny = st.nyForalder?.klientId === k.id ? st.nyForalder : null;
+  const lage = f => f.harPin ? `<span style="color:var(--ok)">✓ Har valt lösenord</span>${f.senast ? ` · inloggad ${esc(fmtTid(f.senast))}` : ''}` : f.kod ? `Kod ${esc(f.kod.slice(0, 3))}-${esc(f.kod.slice(3))} · har inte loggat in än` : 'Ingen kod';
+  return `<section class="panel" id="foraldrar">
+    <div class="section-head"><h3>Föräldrar på kontot</h3><span class="small muted">${1 + extra.length}</span></div>
+    <p class="small muted" style="margin:0 0 8px">Varje förälder loggar in med sitt eget mobilnummer och lösenord och ser samma barn, bokningar och spelarkort. Båda får notiserna.</p>
+    <ul class="list small">
+      <li class="row"><span class="grow"><b>${esc(h.foralder || 'Förälder')}</b> · ${esc(visaTel(h.telefon))}<div class="muted">Kontots första nummer (inloggningen ovan)</div></span></li>
+      ${extra.map(f => `<li class="row"><span class="grow"><b>${esc(f.namn || 'Förälder')}</b> · ${esc(visaTel(f.telefon))}<div class="muted">${lage(f)}${f.av === 'foralder' ? ' · inbjuden av föräldern' : ''}</div></span>
+        <button type="button" class="film" data-action="klient-for-kod" data-fid="${f.id}">Ny kod</button><button type="button" class="film" data-action="klient-for-bort" data-fid="${f.id}">✕</button></li>`).join('')}
+    </ul>
+    ${ny ? `<div class="note" style="margin:10px 0">
+      <b>${esc(ny.namn)}</b> kan logga in med ${esc(visaTel(ny.telefon))} och koden <b>${esc(ny.kod.slice(0, 3))}-${esc(ny.kod.slice(3))}</b>.
+      ${ny.skickat ? '<div class="small">Sms:et är skickat.</div>' : `<a class="btn grad block" style="margin-top:8px" href="${esc(smsLank(ny.telefon, ny.text))}">💬 Skicka sms från min telefon</a>`}</div>` : ''}
+    <form data-form="klient-foralder" class="rad-form" style="margin-top:10px">
+      <label>Namn <input type="text" name="namn" placeholder="T.ex. Pappa Ali" maxlength="60" required></label>
+      <label>Mobil <input type="tel" name="telefon" placeholder="070-123 45 67" required></label>
+      <button class="btn secondary" type="submit">Lägg till förälder</button>
+    </form>
+  </section>`;
 }
 function kopPanel(k) {
   const kop = (k.kop || []).filter(x => !x.aterkallad);
@@ -480,6 +506,19 @@ export async function klienterAction(action, el, e) {
 async function klienterActionNu(action, el, e) {
   const { toast, route, go } = ui;
   const d = st.vald, k = d?.klient;
+  if (action === 'klient-for-kod') {
+    const r = await api.admin.post(`/admin/klient/${k.id}/foralder/${el.dataset.fid}`, { skicka: true });
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    const f = (r.klient.foraldrar || []).find(x => x.id === el.dataset.fid);
+    st.nyForalder = { klientId: k.id, namn: f?.namn || 'Föräldern', telefon: r.telefon, kod: r.kod, text: r.text, skickat: r.skickat };
+    await klientLadda(k.id); toast(r.skickat ? 'Ny kod skickad som sms' : 'Ny kod. Skicka sms:et från din telefon.'); route(); return true;
+  }
+  if (action === 'klient-for-bort') {
+    if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Ta bort?'; setTimeout(() => { delete el.dataset.armed; el.textContent = '✕'; }, 4000); return true; }
+    const r = await api.admin.del(`/admin/klient/${k.id}/foralder/${el.dataset.fid}`);
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    st.nyForalder = null; await klientLadda(k.id); toast('Föräldern är borttagen från kontot'); route(); return true;
+  }
   const uppdatera = async () => { if (d) await klientLadda(d.id); st.laddat = false; };
   if (action === 'klient-niva') {
     const niva = k.niva + Number(el.dataset.d);
@@ -606,6 +645,13 @@ export async function klienterSubmit(kind, f, fd) {
 }
 async function klienterSubmitNu(kind, f, fd) {
   const { toast, route, go } = ui;
+  if (kind === 'klient-foralder') {
+    const k = st.vald?.klient; if (!k) return true;
+    const r = await api.admin.post(`/admin/klient/${k.id}/foralder`, { namn: fd.get('namn'), telefon: fd.get('telefon'), skicka: true });
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    st.nyForalder = { klientId: k.id, namn: fd.get('namn'), telefon: r.telefon, kod: r.kod, text: r.text, skickat: r.skickat };
+    await klientLadda(k.id); toast(`${fd.get('namn')} är tillagd på kontot`); route(); return true;
+  }
   const falt = () => ({ barn: fd.get('barn'), efternamn: fd.get('efternamn'), fodd: fd.get('fodd'), position: fd.get('position'), lag: fd.get('lag'), niva: +fd.get('niva') || 1, foralder: fd.get('foralder'), telefon: fd.get('telefon'), email: fd.get('email'), anteckning: fd.get('anteckning'), status: fd.get('status') });
   if (kind === 'klient-ny') {
     const btn = f.querySelector('button[type=submit]'); btn.disabled = true;

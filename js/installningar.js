@@ -74,7 +74,39 @@ function barnPanel() {
   </section>`;
 }
 let barnOppen = false;
+// Föräldrarna på kontot, och Bjud in en förälder (Haris 2026-11-25: "om mamma och pappa vill ha tillgång till barnets
+// spelarkort"). Den inbjudna loggar in med sitt eget nummer och en kod, och väljer sedan ett eget lösenord.
+let inbjuden = null;
+const smsLank = (tel, text) => `sms:${tel}?&body=${encodeURIComponent(text)}`;
+function foraldrarPanel() {
+  const m = minaNu(), lista = m.foraldrar || [];
+  const tel = t => String(t || '').replace(/^\+46/, '0').replace(/^(0\d{2})(\d{3})(\d{2})(\d{2})$/, '$1-$2 $3 $4');
+  return `<section class="panel inst-panel" id="foraldrar">
+    <h3>Föräldrar på kontot</h3>
+    <ul class="list small" style="margin:0 0 10px">${lista.map(f => `<li class="row"><span class="grow">👤 <b>${esc(f.namn || 'Förälder')}</b>${f.du ? ' (du)' : ''} · ${esc(tel(f.telefon))}${!f.huvud && !f.harPin ? '<div class="muted">Har inte loggat in än</div>' : ''}</span>${!f.huvud && !f.du ? `<button class="film" data-action="inst-for-bort" data-fid="${esc(f.id)}">✕</button>` : ''}</li>`).join('')}</ul>
+    ${inbjuden ? `<div class="note" style="margin:0 0 10px"><b>${esc(inbjuden.namn)}</b> är inbjuden. ${inbjuden.skickat ? 'Ett sms med koden är skickat.' : 'Skicka inbjudan, så får hen koden och länken till appen.'}
+      ${inbjuden.skickat ? '' : `<a class="btn grad block" style="margin-top:8px" href="${esc(smsLank(inbjuden.telefon, inbjuden.text))}">💬 Skicka inbjudan</a>`}</div>` : ''}
+    <details${foraldrarOppen ? ' open' : ''}><summary class="small"><b>➕ Bjud in en förälder</b></summary>
+      <form data-form="inst-foralder" style="margin-top:8px">
+        <div class="field"><label for="forNamn">Namn</label><input type="text" id="forNamn" name="namn" autocomplete="off" required maxlength="60" placeholder="T.ex. Ali"></div>
+        <div class="field"><label for="forTel">Mobilnummer</label><input type="tel" id="forTel" name="telefon" autocomplete="off" required placeholder="070-123 45 67"></div>
+        <p class="small muted" style="margin:0 0 8px">Hen loggar in med sitt eget nummer och väljer ett eget lösenord, och ser samma barn, bokningar och spelarkort som du.</p>
+        <button class="btn grad block" type="submit">Bjud in</button>
+      </form>
+    </details>
+  </section>`;
+}
+let foraldrarOppen = false;
 export async function installningarSubmit(kind, f, fd) {
+  if (kind === 'inst-foralder') {
+    const knapp = f.querySelector('button[type=submit]'); if (knapp) knapp.disabled = true;
+    const r = await api.post('/mina/foralder', { namn: fd.get('namn'), telefon: fd.get('telefon') }, store.session?.token);
+    if (knapp) knapp.disabled = false;
+    if (!r.ok) { ui.toast(`Gick inte: ${r.fel}`); return true; }
+    inbjuden = { namn: r.foralder.namn, telefon: r.telefon, text: r.text, skickat: r.skickat };
+    await hamtaMina(true);
+    ui.toast(r.skickat ? `${r.foralder.namn} har fått ett sms med koden` : `Tryck Skicka inbjudan, så får ${r.foralder.namn} koden`); ui.route(); return true;
+  }
   if (kind !== 'inst-syskon') return false;
   const knapp = f.querySelector('button[type=submit]'); if (knapp) knapp.disabled = true;
   const r = await api.post('/mina/syskon', { barn: fd.get('barn'), fodd: fd.get('fodd') }, store.session?.token);
@@ -158,7 +190,7 @@ export function installningarPage() {
     ${notisStod() ? `<label class="toggle"><input type="checkbox" data-action="notis-paminn" ${n.paminn ? 'checked' : ''}><span><b>Träna själv</b><small>${esc(paminnDagar(p?.freq).join(', '))} kl 17, utifrån ${esc(p?.freq || '2')} pass i veckan.</small></span></label>` : ''}
     <p class="small" style="margin:8px 0 0"><a href="#/notiser">Notiserna från Haris ›</a></p>
   </section>` : ''}
-  ${inloggad && k ? barnPanel() : ''}
+  ${inloggad && k ? barnPanel() + foraldrarPanel() : ''}
   <section class="panel inst-panel">
     <h3>Konto</h3>
     ${inloggad ? `<p class="small" style="margin:0 0 10px">Inloggad som ${esc(store.session.user?.namn || 'förälder')}${store.session.user?.telefon ? ` · ${esc(visaTel(store.session.user.telefon))}` : ''}${k?.barn ? ` · ${esc(k.barn)}` : ''}</p>
@@ -255,6 +287,12 @@ export async function installningarAction(action, el) {
       toast(r?.ok ? 'Passen läggs nu i kalendern CAP' : r?.behorighet === 'nej' || r?.behorighet === 'skriv' ? 'Nekat på telefonen. Tryck Öppna Inställningar.' : `Gick inte: ${r?.fel || 'okänt fel'}`);
     } else { await kalAv(); toast('Kalendern CAP är borttagen från telefonen'); }
     om(); return true;
+  }
+  if (action === 'inst-for-bort') {
+    if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Ta bort?'; setTimeout(() => { delete el.dataset.armed; el.textContent = '✕'; }, 4000); return true; }
+    const r = await api.del(`/mina/foralder/${el.dataset.fid}`, store.session?.token);
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    inbjuden = null; await hamtaMina(true); toast('Föräldern är borttagen från kontot'); ui.route(); return true;
   }
   if (action === 'inst-restid') {
     const restid = +el.value;

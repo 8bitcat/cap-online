@@ -181,9 +181,9 @@ async function skickaSmsNu(env, till, text, { hook } = {}) {
   } catch (e) { return { ok: false, skickat: false, fel: String(e?.message || e) }; }
 }
 // Sms till en klient, med en rad i klientens smsLogg som 46elks uppdaterar med leveransstatus. Spara klienten efteråt.
-async function skickaTillKlient(env, k, typ, text, base) {
-  const e = { id: slump(8, SMA), t: nu(), typ, status: 'skickas', tok: slump(16, SMA) };
-  const r = await skickaSms(env, k.telefon, text, { hook: `${base}/sms/status?k=${k.id}&e=${e.id}&t=${e.tok}` });
+async function skickaTillKlient(env, k, typ, text, base, till = k.telefon) {
+  const e = { id: slump(8, SMA), t: nu(), typ, status: 'skickas', tok: slump(16, SMA), ...(till !== k.telefon ? { till } : {}) };
+  const r = await skickaSms(env, till, text, { hook: `${base}/sms/status?k=${k.id}&e=${e.id}&t=${e.tok}` });
   e.status = r.skickat ? (r.test ? 'levererat' : 'skickat') : 'misslyckat';
   if (!r.skickat) e.fel = ren(r.fel, 120);
   k.smsLogg = [...(k.smsLogg || []), e].slice(-12);
@@ -200,7 +200,8 @@ function smsHamta(env, k) {
 }
 // Carl 2026-11-16: "Haris skapar användaren när han gör sitt sms, och den koden man får är ens login. Det första som
 // ska hända när man loggar in via koden är att man sätter ett lösenord." Ett sms med allt.
-function smsLogga(env, k, kod) {
+function smsLogga(env, k, kod, f = null) {
+  if (f) k = { ...k, foralder: f.namn, telefon: f.telefon };
   const tel = String(k.telefon || '').replace(/^\+46/, '0').replace(/^(0\d{2})(\d{3})(\d{2})(\d{2})$/, '$1-$2 $3 $4');
   return `Hej${k.foralder ? ' ' + k.foralder : ''}! Välkommen till CAP, appen för träningen hos Haris.\n1. Hämta appen: ${hamtaLank(env)}\n2. Logga in med ditt mobilnummer ${tel} och koden ${kodVisa(kod)}.\n3. Välj ett eget lösenord. Sedan loggar du in med mobilnumret och lösenordet.\n/Haris`;
 }
@@ -273,7 +274,7 @@ function valdaBarn(fam, ids, standard) {
   return val.length ? val : fam.filter(x => x.id === standard);
 }
 // Det föräldern och adminlistan får se (aldrig pin-hashen eller sms-loggens nycklar)
-const publikKlient = k => { const { pin, ...rest } = k; return { ...rest, harPin: !!pin, smsLogg: (k.smsLogg || []).map(({ tok, ...e }) => e) }; };
+const publikKlient = k => { const { pin, ...rest } = k; return { ...rest, harPin: !!pin, smsLogg: (k.smsLogg || []).map(({ tok, ...e }) => e), foraldrar: (k.foraldrar || []).map(f => ({ id: f.id, namn: f.namn, telefon: f.telefon, harPin: !!f.pin, kod: f.kod?.kod && !f.kod.forbrukad ? f.kod.kod : null, inloggad: f.inloggad || null, senast: f.senast || null, av: f.av, skapad: f.skapad })) }; };
 const userAvKlient = k => ({ uid: k.id, klientId: k.id, typ: 'klient', namn: k.foralder, barn: k.barn, efternamn: k.efternamn || '', telefon: k.telefon, email: k.email, fodd: k.fodd, position: k.position, niva: k.niva, harPin: !!k.pin });
 async function klientIndex(env) { return (await env.DB.get('klienter', 'json')) || []; }
 async function hamtaKlient(env, id) { return /^[a-z0-9]{4,20}$/.test(String(id || '')) ? env.DB.get(`klient:${id}`, 'json') : null; }
@@ -290,10 +291,44 @@ async function nyKod(env, k) {
   k.kod = { kod, skapad: nu(), anvand: null };
   return kod;
 }
-async function nySession(env, uid) {
+async function nySession(env, uid, foralder = null) {
   const token = tokenNy();
-  await env.DB.put(`sess:${token}`, JSON.stringify({ uid, skapad: nu(), forlangd: Date.now() }), { expirationTtl: SESS_TTL });
+  await env.DB.put(`sess:${token}`, JSON.stringify({ uid, ...(foralder ? { foralder } : {}), skapad: nu(), forlangd: Date.now() }), { expirationTtl: SESS_TTL });
   return token;
+}
+// Fler föräldrar på samma konto (Haris 2026-11-25: "om mamma och pappa vill ha tillgång till barnets spelarkort … att
+// jag knappar in två olika telefonnummer"; Carl: "föräldrarna ska kunna bjuda in en annan förälder eller så gör Haris
+// det till samma konto"). En extra förälder ligger i k.foraldrar på huvudklienten med eget nummer, egen kod och eget
+// lösenord. tel:<nummer> pekar på samma klient, kod:<KOD> har {klientId, foralder}, sessionen har foralder = id.
+const foralderAv = (k, tel) => (tel && tel !== k?.telefon ? (k?.foraldrar || []).find(f => f.telefon === tel) || null : null);
+const giltigKodF = f => (f?.kod?.kod && !f.kod.forbrukad ? f.kod.kod : null);
+const userFor = (k, f) => (f ? { ...userAvKlient(k), namn: f.namn, telefon: f.telefon, foralderId: f.id, harPin: !!f.pin } : userAvKlient(k));
+const publikForalder = f => ({ id: f.id, namn: f.namn, telefon: f.telefon, harPin: !!f.pin, kod: giltigKodF(f), inloggad: f.inloggad || null, senast: f.senast || null, av: f.av, skapad: f.skapad });
+async function nyKodF(env, k, f) {
+  if (f.kod?.kod) await env.DB.delete(`kod:${f.kod.kod}`);
+  let kod; do { kod = slump(6, '0123456789'); } while (await env.DB.get(`kod:${kod}`));
+  await env.DB.put(`kod:${kod}`, JSON.stringify({ klientId: k.id, foralder: f.id, skapad: nu() }), { expirationTtl: 60 * 60 * 24 * 90 });
+  f.kod = { kod, skapad: nu(), anvand: null };
+  return kod;
+}
+// lägger till en förälder på huvudklienten h; fel som text om numret redan används
+async function laggTillForalder(env, h, d, av) {
+  const tel = telefonNorm(d.telefon);
+  if (!tel) return { fel: 'skriv mobilnumret, t.ex. 070-123 45 67' };
+  if (tel === h.telefon || (h.foraldrar || []).some(f => f.telefon === tel)) return { fel: 'det numret finns redan på kontot' };
+  if (await env.DB.get(`tel:${tel}`)) return { fel: 'det numret hör redan till ett annat konto hos Haris' };
+  if ((h.foraldrar || []).length >= 4) return { fel: 'högst fem föräldrar på ett konto' };
+  const f = { id: nyttId('f'), namn: ren(d.namn, 60), telefon: tel, pin: null, kod: null, skapad: nu(), av };
+  const kod = await nyKodF(env, h, f);
+  h.foraldrar = [...(h.foraldrar || []), f];
+  await env.DB.put(`tel:${tel}`, h.id);
+  return { f, kod };
+}
+async function rensaForaldrar(env, k) {
+  for (const f of k?.foraldrar || []) {
+    await env.DB.delete(`tel:${f.telefon}`).catch(() => {});
+    if (f.kod?.kod) await env.DB.delete(`kod:${f.kod.kod}`).catch(() => {});
+  }
 }
 const renBedomning = (d, gammal = {}) => {
   const varv = (Array.isArray(d.varv) ? d.varv : []).map(x => Math.round((+x || 0) * 10) / 10).filter(x => x > 0).slice(0, 20);
@@ -699,6 +734,7 @@ async function sessionUser(env, req) {
   // glidande: varje användning (högst en skrivning i veckan) förlänger sessionen, så man förblir inloggad
   if (!s.forlangd || Date.now() - s.forlangd > 7 * 864e5) { s.forlangd = Date.now(); await env.DB.put(`sess:${t}`, JSON.stringify(s), { expirationTtl: SESS_TTL }); }
   const k = await env.DB.get(`klient:${s.uid}`, 'json');
+  if (k && s.foralder) { const f = (k.foraldrar || []).find(x => x.id === s.foralder); return f ? userFor(k, f) : null; }
   if (k) return userAvKlient(k);
   return env.DB.get(`user:${s.uid}`, 'json');
 }
@@ -885,7 +921,7 @@ export default {
       const salt = slump(16, SMA);
       await env.DB.put(`otp:${tel}`, JSON.stringify({ salt, hash: await pinHash(kod, salt), forsok: 0, t: Date.now() }), { expirationTtl: 600 });
       await env.DB.put(`smsl:${tel}`, JSON.stringify({ n: lim.n + 1, senast: Date.now() }), { expirationTtl: 3600 });
-      const r = await skickaTillKlient(env, k, 'kod', `${kod} är din kod till CAP. Den gäller i 10 minuter.`, base);
+      const r = await skickaTillKlient(env, k, 'kod', `${kod} är din kod till CAP. Den gäller i 10 minuter.`, base, tel);
       await sparaKlient(env, k);
       if (!r.skickat) return fel(r.tak ? 'Dagens sms är slut. Försök i morgon, eller be Haris skicka en ny länk.' : `sms:et gick inte iväg (${r.fel}). Prova igen om en stund eller hör av dig till Haris.`, r.tak ? 503 : 502);
       return svar({ ok: true, giltigSek: 600, vantaSek: 45 });
@@ -906,9 +942,10 @@ export default {
       await env.DB.delete(`otp:${tel}`);
       const k = await hamtaKlient(env, await env.DB.get(`tel:${tel}`));
       if (!k) return fel('numret finns inte hos Haris längre', 404);
-      inloggad(k, kallaAv(d));
+      const f = foralderAv(k, tel);
+      if (f) { f.senast = nu(); f.inloggad = { ...(f.inloggad || {}), [kallaAv(d)]: nu() }; } else inloggad(k, kallaAv(d));
       await sparaKlient(env, k);
-      return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k) });
+      return svar({ ok: true, token: await nySession(env, k.id, f?.id), user: userFor(k, f) });
     }
     if (p === '/auth/kod' && req.method === 'POST') {
       const d = await json(); if (!d) return fel('trasig JSON');
@@ -919,11 +956,13 @@ export default {
       if (kl) {
         const k = await hamtaKlient(env, kl.klientId);
         if (!k) return fel('kontot finns inte längre', 404);
+        const f = kl.foralder ? (k.foraldrar || []).find(x => x.id === kl.foralder) : null;
+        if (kl.foralder && !f) return fel('inbjudan gäller inte längre. Be om en ny.', 404);
         // länken fungerar flera gånger (först i Safari, sedan i appen) tills Haris skapar en ny
-        if (k.kod?.kod === kod && !k.kod.anvand) k.kod.anvand = nu();
-        inloggad(k, kallaAv(d));
+        if (f) { if (!f.kod?.anvand && f.kod) f.kod.anvand = nu(); f.senast = nu(); f.inloggad = { ...(f.inloggad || {}), [kallaAv(d)]: nu() }; }
+        else { if (k.kod?.kod === kod && !k.kod.anvand) k.kod.anvand = nu(); inloggad(k, kallaAv(d)); }
         await sparaKlient(env, k);
-        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k), nyttLosen: true });
+        return svar({ ok: true, token: await nySession(env, k.id, f?.id), user: userFor(k, f), nyttLosen: true });
       }
       // gammal e-postkod
       const inv = await env.DB.get(`inv:${kod}`, 'json');
@@ -971,21 +1010,25 @@ export default {
       const id = await env.DB.get(`tel:${tel}`);
       const k = id ? await hamtaKlient(env, id) : null;
       if (!k) return fel('numret finns inte hos Haris än. Be honom lägga in er.', 404);
+      // den andra föräldern på kontot loggar in med sitt eget nummer, sin kod och sitt lösenord
+      const fo = foralderAv(k, tel);
+      const markera = () => { if (fo) { fo.senast = nu(); fo.inloggad = { ...(fo.inloggad || {}), [kallaAv(d)]: nu() }; } else inloggad(k, kallaAv(d)); };
       // koden ur sms:et loggar in, och då väljer man ett lösenord direkt
-      const kod = giltigKod(k), skrivet = losen.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const kod = fo ? giltigKodF(fo) : giltigKod(k), skrivet = losen.toUpperCase().replace(/[^A-Z0-9]/g, '');
       if (kod && skrivet === kod) {
         await env.DB.delete(limKey);
-        if (!k.kod.anvand) k.kod.anvand = nu();
-        inloggad(k, kallaAv(d));
+        const kk = fo ? fo.kod : k.kod; if (!kk.anvand) kk.anvand = nu();
+        markera();
         await sparaKlient(env, k);
-        return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k), nyttLosen: true });
+        return svar({ ok: true, token: await nySession(env, k.id, fo?.id), user: userFor(k, fo), nyttLosen: true });
       }
-      if (!k.pin) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel('fel kod. Första gången loggar du in med koden i sms:et från Haris.', 403); }
-      if ((await pinHash(losen, k.pin.salt)) !== k.pin.hash) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel(`fel lösenord${forsok >= 6 ? `, ${10 - forsok - 1} försök kvar` : ''}`, 403); }
+      const pin = fo ? fo.pin : k.pin;
+      if (!pin) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel('fel kod. Första gången loggar du in med koden i sms:et från Haris.', 403); }
+      if ((await pinHash(losen, pin.salt)) !== pin.hash) { await env.DB.put(limKey, String(forsok + 1), { expirationTtl: 900 }); return fel(`fel lösenord${forsok >= 6 ? `, ${10 - forsok - 1} försök kvar` : ''}`, 403); }
       await env.DB.delete(limKey);
-      inloggad(k, kallaAv(d));
+      markera();
       await sparaKlient(env, k);
-      return svar({ ok: true, token: await nySession(env, k.id), user: userAvKlient(k) });
+      return svar({ ok: true, token: await nySession(env, k.id, fo?.id), user: userFor(k, fo) });
     }
     if (p === '/auth/pin' && req.method === 'POST') {
       const d = await json(); if (!d) return fel('trasig JSON');
@@ -995,6 +1038,14 @@ export default {
       const k = s && await hamtaKlient(env, s.uid);
       if (!k) return fel('inte inloggad', 401);
       const salt = slump(16, SMA);
+      if (s.foralder) {
+        const f = (k.foraldrar || []).find(x => x.id === s.foralder);
+        if (!f) return fel('inte inloggad', 401);
+        f.pin = { salt, hash: await pinHash(losen, salt), t: nu() };
+        if (f.kod?.kod) { await env.DB.delete(`kod:${f.kod.kod}`); f.kod.forbrukad = nu(); }
+        await sparaKlient(env, k);
+        return svar({ ok: true, user: userFor(k, f) });
+      }
       k.pin = { salt, hash: await pinHash(losen, salt), t: nu() };
       k.vilLank = null; k.status = 'aktiv';
       // sms-koden har gjort sitt: den (och länken) slutar gälla när lösenordet är valt
@@ -1009,6 +1060,14 @@ export default {
       const id = await env.DB.get(`tel:${tel}`);
       const k = id ? await hamtaKlient(env, id) : null;
       if (!k) return fel('numret finns inte hos Haris än', 404);
+      const fg = foralderAv(k, tel);
+      if (fg) {
+        const kodF = giltigKodF(fg) || await nyKodF(env, k, fg);
+        const smsF = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kodF, fg), base, fg.telefon);
+        if (!smsF.skickat) { fg.vilLank = nu(); tillHaris('Glömt lösenordet', `${fg.namn || 'En förälder'} (${barnNamn(k)}) har glömt lösenordet. Skicka koden från klientsidan.`, `/admin/klient/${k.id}`); }
+        await sparaKlient(env, k);
+        return svar({ ok: true, skickat: smsF.skickat, meddelande: smsF.skickat ? 'En ny kod är skickad som sms till ditt nummer.' : 'Haris får ett meddelande och skickar en ny kod till dig.' });
+      }
       const kod = giltigKod(k) || await nyKod(env, k);
       const sms = await skickaTillKlient(env, k, 'lank', smsLogga(env, k, kod), base);
       if (!sms.skickat) { k.vilLank = nu(); tillHaris('Glömt lösenordet', `${barnNamn(k)} har glömt lösenordet. Skicka sms:et med koden från klientsidan.`, `/admin/klient/${k.id}`); }
@@ -1146,7 +1205,8 @@ export default {
       const cfg = await hamtaBetalning(env);
       const kalFeed = kRad ? `/kal/familj/${kRad.id}/${await kalSig(env, 'familj', 'alla', kRad.id)}.ics` : null;
       const betK = kRad ? await betalare(env, kRad) : null;
-      return svar({ ok: true, block: blockFor(betK), kopta: (betK?.kop || []).filter(x => !x.aterkallad).map(x => x.id), bokningar, planer, klient, bedomningar, media, familj: familjData, kalFeed, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
+      const foraldrar = betK ? [{ id: 'huvud', namn: betK.foralder || '', telefon: betK.telefon, huvud: true, du: !user.foralderId }, ...(betK.foraldrar || []).map(f => ({ ...publikForalder(f), kod: undefined, du: f.id === user.foralderId }))] : [];
+      return svar({ ok: true, foraldrar, block: blockFor(betK), kopta: (betK?.kop || []).filter(x => !x.aterkallad).map(x => x.id), bokningar, planer, klient, bedomningar, media, familj: familjData, kalFeed, betalning: publikBetalning({ ...cfg, pris: klientPris(klient, cfg) }), paket: klient ? paketSaldo(klient, veckor) : [], pott: klient ? pottSaldo(klient, veckor, cfg) : null });
     }
 
     // Föräldern kommenterar ett moment i ett delat pass (Carl 2026-11-24: "dela passet med föräldrarna och lägga
@@ -1248,6 +1308,7 @@ export default {
         const pott = pottSaldo(k, veckor, cfg), kvar = paketSaldo(k, veckor).reduce((n, x) => n + x.kvar, 0);
         const media = (await env.DB.get(`med:${k.id}`, 'json')) || [];
         if (env.MEDIA) for (const m of media) if (m.key) await env.MEDIA.delete(m.key).catch(() => {});
+        await rensaForaldrar(env, k);
         await Promise.all([env.DB.delete(`klient:${k.id}`), k.telefon ? env.DB.delete(`tel:${k.telefon}`) : null, env.DB.delete(`bed:${k.id}`), env.DB.delete(`med:${k.id}`), k.kod?.kod ? env.DB.delete(`kod:${k.kod.kod}`) : null]);
         const ids = (await klientIndex(env)).filter(x => x !== k.id && !syskon.includes(x)); await env.DB.put('klienter', JSON.stringify(ids));
         const rest = [pott && pott.saldo ? `${krText(pott.saldo)} kvar i potten` : '', kvar ? `${kvar} pass kvar i paket` : ''].filter(Boolean).join(' och ');
@@ -1330,6 +1391,35 @@ export default {
       tillHaris('Nytt syskon', `${barnNamn(h)} lade till syskonet ${barn} på kontot.`, `/admin/klient/${sk.id}`);
       return svar({ ok: true, klient: { id: sk.id, barn: sk.barn, efternamn: sk.efternamn, fodd: sk.fodd } });
     }
+    // Föräldern bjuder in en annan förälder till kontot: namn och mobilnummer. Med sms påslaget skickas koden direkt,
+    // annars får föräldern texten att skicka själv (appen öppnar Meddelanden med texten ifylld).
+    const mfo = /^\/mina\/foralder(?:\/([a-z0-9]+))?$/.exec(p);
+    if (mfo) {
+      const user = await sessionUser(env, req);
+      if (!user?.klientId) return fel('inte inloggad', 401);
+      const k = await hamtaKlient(env, user.klientId);
+      if (!k) return fel('kontot finns inte', 404);
+      const h = await betalare(env, k);
+      if (req.method === 'DELETE' && mfo[1]) {
+        const f = (h.foraldrar || []).find(x => x.id === mfo[1]);
+        if (!f) return fel('föräldern finns inte på kontot', 404);
+        if (f.id === user.foralderId) return fel('du kan inte ta bort dig själv här. Hör av dig till Haris.');
+        await rensaForaldrar(env, { foraldrar: [f] });
+        h.foraldrar = h.foraldrar.filter(x => x.id !== f.id);
+        await sparaKlient(env, h);
+        return svar({ ok: true, foraldrar: h.foraldrar.map(publikForalder) });
+      }
+      if (req.method !== 'POST') return fel('fel metod', 405);
+      const d = await json(); if (!d) return fel('trasig JSON');
+      if (!ren(d.namn, 60)) return fel('skriv förälderns namn');
+      const r = await laggTillForalder(env, h, d, 'foralder');
+      if (r.fel) return fel(r.fel, 409);
+      const text = smsLogga(env, h, r.kod, r.f);
+      const sms = smsPa(env) ? await skickaTillKlient(env, h, 'lank', text, base, r.f.telefon) : { skickat: false };
+      await sparaKlient(env, h);
+      tillHaris('Ny förälder på kontot', `${user.namn || 'En förälder'} bjöd in ${r.f.namn} till ${barnNamn(h)}s konto.`, `/admin/klient/${h.id}`);
+      return svar({ ok: true, foralder: publikForalder(r.f), foraldrar: h.foraldrar.map(publikForalder), text, telefon: r.f.telefon, skickat: !!sms.skickat });
+    }
     if (p === '/mina/barn' && req.method === 'PUT') {
       const se = await env.DB.get(`sess:${bearer(req)}`, 'json');
       const k = se && await hamtaKlient(env, se.uid);
@@ -1392,13 +1482,13 @@ export default {
         const ids = await klientIndex(env); if (!ids.includes(k.id)) { ids.push(k.id); await env.DB.put('klienter', JSON.stringify(ids)); }
         return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, hamtaText: smsHamta(env, k), loggaText: smsLogga(env, k, kod), hamtaLank: hamtaLank(env), ...(await smsDag(env)) });
       }
-      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket|pris|utanfor|pott|syskon)(?:\/([a-z0-9]+))?)?$/.exec(p);
+      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket|pris|utanfor|pott|syskon|foralder)(?:\/([a-z0-9]+))?)?$/.exec(p);
       if (mk) {
         const barnK = await hamtaKlient(env, mk[1]);
         if (!barnK) return fel('klienten finns inte', 404);
         const del = mk[2], sub = mk[3];
         // pris, paket, pott och hur en tid betalas gäller hela familjen och ligger på huvudklienten
-        const k = ['paket', 'tidpaket', 'pris', 'utanfor', 'pott'].includes(del) ? await betalare(env, barnK) : barnK;
+        const k = ['paket', 'tidpaket', 'pris', 'utanfor', 'pott', 'foralder'].includes(del) ? await betalare(env, barnK) : barnK;
         if (!del && req.method === 'GET') {
           const [veckor, planer, bedomningar, media] = await Promise.all([hamtaAlla(env, 'vecka:'), hamtaAlla(env, 'plan:'), env.DB.get(`bed:${k.id}`, 'json'), env.DB.get(`med:${k.id}`, 'json')]);
           const kod = giltigKod(k);
@@ -1429,6 +1519,7 @@ export default {
         }
         if (!del && req.method === 'DELETE') {
           if (k.syskon?.length) return fel('ta bort syskonen först: den här klienten har inloggningen för hela familjen', 409);
+          if (!k.huvud) await rensaForaldrar(env, k);
           await Promise.all([env.DB.delete(`klient:${k.id}`), k.huvud ? null : env.DB.delete(`tel:${k.telefon}`), env.DB.delete(`bed:${k.id}`), env.DB.delete(`med:${k.id}`), k.kod?.kod ? env.DB.delete(`kod:${k.kod.kod}`) : null]);
           const ids = (await klientIndex(env)).filter(x => x !== k.id); await env.DB.put('klienter', JSON.stringify(ids));
           if (k.huvud) { const h = await hamtaKlient(env, k.huvud); if (h) { h.syskon = (h.syskon || []).filter(x => x !== k.id); await sparaKlient(env, h); } }
@@ -1462,6 +1553,30 @@ export default {
         }
         const d = (await json()) || {};
         // typ: hamta (sms 1), logga (sms 2) eller bada. ny: true ger en ny inloggningslänk (den gamla slutar gälla).
+        // fler föräldrar: lägg till (namn, mobil) → kod och sms-text, ny kod (POST …/foralder/<id>), ta bort
+        if (del === 'foralder') {
+          if (req.method === 'DELETE' && sub) {
+            const f = (k.foraldrar || []).find(x => x.id === sub); if (!f) return fel('föräldern finns inte', 404);
+            await rensaForaldrar(env, { foraldrar: [f] });
+            k.foraldrar = k.foraldrar.filter(x => x.id !== sub);
+            await sparaKlient(env, k); return svar({ ok: true, klient: publikKlient(k) });
+          }
+          if (req.method === 'POST' && sub) {
+            const f = (k.foraldrar || []).find(x => x.id === sub); if (!f) return fel('föräldern finns inte', 404);
+            const kod = await nyKodF(env, k, f); f.vilLank = null;
+            const text = smsLogga(env, k, kod, f);
+            const sms = d.skicka && smsPa(env) ? await skickaTillKlient(env, k, 'lank', text, base, f.telefon) : { skickat: false };
+            await sparaKlient(env, k); return svar({ ok: true, klient: publikKlient(k), kod, text, telefon: f.telefon, skickat: !!sms.skickat });
+          }
+          if (req.method === 'POST') {
+            if (!ren(d.namn, 60)) return fel('skriv förälderns namn');
+            const r = await laggTillForalder(env, k, d, 'haris');
+            if (r.fel) return fel(r.fel, 409);
+            const text = smsLogga(env, k, r.kod, r.f);
+            const sms = d.skicka && smsPa(env) ? await skickaTillKlient(env, k, 'lank', text, base, r.f.telefon) : { skickat: false };
+            await sparaKlient(env, k); return svar({ ok: true, klient: publikKlient(k), kod: r.kod, text, telefon: r.f.telefon, skickat: !!sms.skickat });
+          }
+        }
         if (del === 'lank' && req.method === 'POST') {
           const typ = ['hamta', 'logga', 'bada'].includes(d.typ) ? d.typ : 'logga';
           let kod = giltigKod(k);

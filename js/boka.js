@@ -79,7 +79,7 @@ export async function hamtaMina(tvinga = false, bakgrund = false) {
   const start = Date.now();
   const r = await api.get('/mina', token());
   if (bakgrund && andrad >= start) return mina;
-  if (r.ok) mina = { bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], kalFeed: r.kalFeed || null, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
+  if (r.ok) mina = { foraldrar: r.foraldrar || [], bokningar: r.bokningar, planer: r.planer, klient: r.klient || null, bedomningar: r.bedomningar || [], media: r.media || [], familj: r.familj || [], kalFeed: r.kalFeed || null, betalning: r.betalning || null, paket: r.paket || [], pott: r.pott || null, hamtat: Date.now() };
   if (r.ok) { sattRestid(r.klient?.installningar?.restid); synkaKalender(); blockFranMina(r); }
   return mina;
 }

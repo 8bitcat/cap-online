@@ -18,7 +18,7 @@ const L = {
   alder: ['7–8', '9–10', '11–12', '13–14', '15–16', '17+'],
   erfarenhet: ['Nybörjare', 'Spelat 1–2 år', 'Spelat 3+ år'],
   fas: ['Uppvärmning', 'Huvuddel', 'Avslut'],
-  fardighet: ['Första touch', 'Driv', 'Vändningar', 'Jonglering & bollkänsla', 'Passning insida', 'Långa tillslag', 'Avslut', 'Dribbling & finter', 'Nickar', 'Snabba fötter', 'Reaktion', 'Balans', 'Spelförståelse', 'Målvaktsspel'],
+  fardighet: ['Första touch', 'Driv', 'Vändningar', 'Jonglering & bollkänsla', 'Passning insida', 'Långa tillslag', 'Avslut', 'Dribbling & finter', 'Nickar', 'Snabba fötter', 'Reaktion', 'Balans', 'Spelförståelse', 'Målvaktsspel', 'Koordination', 'Bollkontroll', 'Teknik', 'Tillslag', 'Skanning', 'Krossbollar'], // de sex sista: Haris 2026-11-25
   utr: ['Boll', 'Koner', 'Mål', 'Vägg', 'Medspelare', 'Stege/häckar'],
   sallskap: ['Ensam', 'Med förälder', 'Med kompis'],
   yta: ['Liten (5×5 m)', 'Mellan (10×10 m)', 'Stor (halvplan)'],
