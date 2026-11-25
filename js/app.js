@@ -136,6 +136,7 @@ const routes = [
   [/^\/admin\/klient\/([a-z0-9]+)(?:\/(redigera|boka))?$/, (id, lage) => adminPage('klienter', id, lage)],
   [/^\/admin\/pass\/ny\/([a-z0-9]+)$/, kid => adminPage('pass', 'ny', kid)],
   [/^\/admin\/pass\/([a-z0-9]+)(?:\/(kor))?$/, (id, lage) => adminPage('pass', id, lage)],
+  [/^\/admin\/fragor\/([a-z0-9-]+)$/, id => adminPage('fragor', id)],
   [/^\/admin\/(\w+)$/, flik => adminPage(flik)],
   [/^\/boka$/, () => bokaPage()],
   [/^\/boka\/(\d{4}-W\d{2})$/, v => bokaPage(v)],
@@ -1669,7 +1670,7 @@ async function onAction(e) {
   const el = e.currentTarget;
   const { id } = el.dataset, action = e.aktion || el.dataset.action;
   const paAdmin = location.hash.replace(/^#/, '').startsWith('/admin');
-  if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov|idag|fb)-/.test(action))) { await adminAction(action, el, e); return; }
+  if (action.startsWith('admin') || ['tag', 'm-ny', 'm-bort', 'm-start', 'm-slut', 'kopiera'].includes(action) || (paAdmin && /^(tid|pass|stig|klient|ov|ovf|idag|fb)-/.test(action))) { await adminAction(action, el, e); return; }
   if (action.startsWith('inst-')) { await installningarAction(action, el); return; }
   if (action.startsWith('block-')) { await blockAction(action, el); return; }
   if (action.startsWith('boka-')) { await bokaAction(action, el); return; }

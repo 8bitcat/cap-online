@@ -113,6 +113,18 @@ async function lista(env, prefix) {
   do { const s = await env.DB.list({ prefix, cursor }); ut.push(...s.keys); cursor = s.list_complete ? null : s.cursor; } while (cursor);
   return ut;
 }
+// som hamtaAlla, men som {id: dokument} där id är det som står efter prefixet
+async function hamtaAllaMedId(env, prefix) {
+  const ut = {};
+  let cursor;
+  do {
+    const l = await env.DB.list({ prefix, cursor });
+    const varden = await Promise.all(l.keys.map(k => env.DB.get(k.name, 'json')));
+    l.keys.forEach((k, i) => { if (varden[i]) ut[k.name.slice(prefix.length)] = varden[i]; });
+    cursor = l.list_complete ? undefined : l.cursor;
+  } while (cursor);
+  return ut;
+}
 async function hamtaAlla(env, prefix) {
   const keys = await lista(env, prefix);
   return (await Promise.all(keys.map(k => env.DB.get(k.name, 'json')))).filter(Boolean);
@@ -1881,6 +1893,36 @@ export default {
         } else return fel('fel metod', 405);
         await env.DB.put(`plan:${plan.id}`, JSON.stringify(plan));
         return svar({ ok: true, svar: plan.svar });
+      }
+      // Frågor om övningarna (Carl 2026-11-25: "skapa det inne i appen"): Haris svarar på hur varje övning i
+      // övningsbanken ska användas. KV ovf:svar:<övnings-id>, ovf:nya:<id> (nya övningar), ovf:allmant.
+      if (p === '/admin/ovfragor' && req.method === 'GET') {
+        const [svaren, nya, allmant] = await Promise.all([hamtaAllaMedId(env, 'ovf:svar:'), hamtaAllaMedId(env, 'ovf:nya:'), env.DB.get('ovf:allmant', 'json')]);
+        return svar({ ok: true, svar: svaren, nya, allmant: allmant || {} });
+      }
+      const movf = /^\/admin\/ovfragor\/(svar|nya|allmant)(?:\/([a-z0-9-]{1,40}))?$/.exec(p);
+      if (movf) {
+        const [, del, id] = movf;
+        if (del !== 'allmant' && !id) return fel('id saknas');
+        const nyckel = del === 'allmant' ? 'ovf:allmant' : `ovf:${del}:${id}`;
+        if (req.method === 'DELETE') { await env.DB.delete(nyckel); return svar({ ok: true }); }
+        if (req.method !== 'PUT') return fel('fel metod', 405);
+        const d = await json(); if (!d) return fel('trasig JSON');
+        const ren1 = (v, max = 60) => typeof v === 'number' ? (Number.isFinite(v) ? v : null) : ren(v, max);
+        const lista = v => (Array.isArray(v) ? v : v === '' || v == null ? [] : [v]).slice(0, 30).map(x => ren1(x)).filter(x => x !== '' && x != null);
+        let ut;
+        if (del === 'allmant') {
+          ut = { t: nu() };
+          for (const k of ['passlangd', 'filmerna', 'utanFilm', 'nivastyr', 'ordning']) ut[k] = lista(d[k]);
+          ut.mer = ren(d.mer, 2000);
+        } else {
+          ut = { t: nu(), beslut: ren(d.beslut, 20), namn: ren(d.namn, 80), desc: ren(d.desc, 1200), kommentar: ren(d.kommentar, 2000), film: ren(d.film, 60) };
+          for (const k of ['tid', 'maltid', 'start', 'slut']) ut[k] = d[k] === '' || d[k] == null || !Number.isFinite(+d[k]) ? '' : +d[k];
+          for (const k of ['typ', 'niva', 'position', 'alder', 'erfarenhet', 'fas', 'fardighet', 'utr', 'sallskap', 'yta', 'plats', 'var']) ut[k] = lista(d[k]);
+          ut.niva = ut.niva.map(Number).filter(n => n >= 1 && n <= 5);
+        }
+        await env.DB.put(nyckel, JSON.stringify(ut));
+        return svar({ ok: true, data: ut });
       }
       // Dagens pass (Carl 2026-11-24): bokningarna från i förrgår till om en vecka, med passet som hör till varje barn
       if (p === '/admin/idag' && req.method === 'GET') {

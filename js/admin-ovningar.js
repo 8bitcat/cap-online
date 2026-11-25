@@ -3,6 +3,7 @@
 // dem åt en klient. Kommer han från ett pass (knappen Ur övningsbanken) läggs de valda i det passet i stället.
 import { hamtaBank, bankNu, blockAv, malNu, sattMal, klippHtml, kopplaKlipp } from './ovningsbank.js';
 import { klienterNu, klienterLadda, klienterLaddade } from './admin-klienter.js';
+import { ovfRaknare } from './admin-ovfragor.js';
 import { passMedOvningar, passLaggTill } from './admin-pass.js';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,8 +28,9 @@ export function ovningarView() {
   const bank = bankNu();
   if (!bank) { hamtaBank().then(ui.kvar()); return `<section class="panel"><p class="muted" style="margin:0">Hämtar övningarna…</p></section>`; }
   if (!klienterLaddade()) klienterLadda().then(() => { if (location.hash === '#/admin/ovningar') ui.route(); });
-  const mal = malNu();
+  const mal = malNu(), fr = mal ? null : ovfRaknare();
   return `
+  ${mal ? '' : `<a class="panel brand ovf-kort" href="#/admin/fragor"><b>📝 Frågor om övningarna</b><span class="small">${fr ? `${fr.klara} av ${fr.alla} klara` : 'Svara på hur varje övning ska användas'} ›</span></a>`}
   ${mal ? `<div class="note small">Du väljer övningar till passet <b>${esc(mal.titel || 'Nytt pass')}</b>${mal.barn ? ` för ${esc(mal.barn)}` : ''}. <a href="#${malTillbaka(mal)}" data-action="ov-avbryt">Tillbaka till passet</a> · <a href="#/admin/ovningar" data-action="ov-glom">välj fritt i stället</a></div>` : ''}
   <section>
     <p class="small muted">${bank.length} övningar: CAP-passets moment med filmklipp, stigens övningar och tidtagningar, nivåproven och avsluten. Välj de du vill ha och tryck Planera pass.</p>

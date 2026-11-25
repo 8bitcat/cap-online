@@ -876,3 +876,22 @@ body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }
 @media (hover: none) and (pointer: coarse) {
   input, select, textarea { font-size: 16px !important; }
 }
+
+/* Admin → Övningar → Frågor om övningarna (2026-11-25) */
+.ovf-kort { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; text-decoration: none; color: inherit; margin-bottom: 12px; }
+.ovf-progress { height: 8px; border-radius: 99px; background: var(--surface2, rgba(255,255,255,.08)); overflow: hidden; margin-top: 10px; }
+.ovf-progress i { display: block; height: 100%; background: var(--brand); }
+.ovf-form { display: grid; gap: 16px; }
+.ovf-form .field { margin: 0; }
+.ovf-q { display: grid; gap: 4px; }
+.ovf-chips { margin: 4px 0 0; }
+.ovf-lands { background: var(--surface2, rgba(255,255,255,.06)); border-radius: 10px; padding: 10px 12px; display: grid; gap: 4px; font-size: 14px; }
+.ovf-lands b { color: var(--brand); }
+.ovf-rad { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ovf-rad input { width: 110px; }
+.ovf-film { max-height: 60vh; margin: 0 auto; }
+.ovf-pill { flex: none; font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.ovf-pill.klar { color: var(--ok, #4ade80); border-color: currentColor; }
+.ovf-pill.bort { color: #f87171; border-color: currentColor; }
+.ovf-pill.osaker { color: #fbbf24; border-color: currentColor; }
+.ovf-knappar { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(transparent, var(--bg) 35%); padding-top: 14px; }
