@@ -77,6 +77,7 @@ async function laddaUpp(post, onProgress = () => {}) {
     ? await capFilm()?.laddaUpp({ id: post.id, api: API, token: store.admin || '', klientId: m.klientId, filnamn: m.filnamn }) || { ok: false, fel: 'filmen ligger i appen, öppna appen för att ladda upp den' }
     : await laddaUppFil({ klientId: m.klientId, filnamn: m.filnamn, typ: m.mime }, post.blob, onProgress);
   if (!r.ok) return r;
+  if (!m.klientId) { await lokalBort(post.id).catch(() => {}); return { ok: true, url: r.url, key: r.key }; } // film till en övning
   const reg = await api.admin.post(`/admin/klient/${m.klientId}/media`, { id: post.id, typ: m.typ, url: r.url, key: r.key, namn: m.filnamn, titel: m.titel || '', planId: m.planId || '', blockId: m.blockId || '', bedId: m.bedId || '', t: m.t, storlek: r.storlek || post.blob?.size || m.storlek || 0, sek: m.sek || 0 });
   if (!reg.ok) return { ok: false, fel: reg.fel || 'kunde inte registrera filen' };
   await lokalBort(post.id).catch(() => {});

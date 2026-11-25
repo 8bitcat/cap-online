@@ -20,8 +20,9 @@ const minuter = valda => valda.reduce((n, o) => n + (o.tid || 5), 0);
 
 function traffar(bank) {
   const q = st.sok.trim().toLowerCase();
-  return bank.filter(o => (!st.fas || o.fas === st.fas) && (!st.typ || o.typ === st.typ) && (!st.niva || o.niva === st.niva) && (!st.film || o.film)
-    && (!q || [o.namn, o.desc, o.omrade, o.position, ...o.fardighet, ...o.utr].some(x => String(x || '').toLowerCase().includes(q))));
+  const har = (o, flera, ett, v) => (o[flera]?.length ? o[flera] : [o[ett]]).map(String).includes(String(v));
+  return bank.filter(o => (!st.fas || har(o, 'faser', 'fas', st.fas)) && (!st.typ || har(o, 'typer', 'typ', st.typ)) && (!st.niva || har(o, 'nivor', 'niva', st.niva)) && (!st.film || o.film)
+    && (!q || [o.namn, o.desc, o.omrade, o.position, ...(o.fardighet || []), ...(o.utr || [])].some(x => String(x || '').toLowerCase().includes(q))));
 }
 
 export function ovningarView() {
@@ -30,7 +31,7 @@ export function ovningarView() {
   if (!klienterLaddade()) klienterLadda().then(() => { if (location.hash === '#/admin/ovningar') ui.route(); });
   const mal = malNu(), fr = mal ? null : ovfRaknare();
   return `
-  ${mal ? '' : `<a class="panel brand ovf-kort" href="#/admin/fragor"><b>📝 Frågor om övningarna</b><span class="small">${fr ? `${fr.klara} av ${fr.alla} klara` : 'Svara på hur varje övning ska användas'} ›</span></a>`}
+  ${mal ? '' : `<a class="panel brand ovf-kort" href="#/admin/fragor"><b>✎ Ändra övningsbanken</b><span class="small">Lägg till, ändra, ta bort och koppla filmer${fr?.andrade ? ` · ${fr.andrade} ändrade` : ''} ›</span></a>`}
   ${mal ? `<div class="note small">Du väljer övningar till passet <b>${esc(mal.titel || 'Nytt pass')}</b>${mal.barn ? ` för ${esc(mal.barn)}` : ''}. <a href="#${malTillbaka(mal)}" data-action="ov-avbryt">Tillbaka till passet</a> · <a href="#/admin/ovningar" data-action="ov-glom">välj fritt i stället</a></div>` : ''}
   <section>
     <p class="small muted">${bank.length} övningar: CAP-passets moment med filmklipp, stigens övningar och tidtagningar, nivåproven och avsluten. Välj de du vill ha och tryck Planera pass.</p>

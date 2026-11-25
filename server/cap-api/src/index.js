@@ -1894,6 +1894,47 @@ export default {
         await env.DB.put(`plan:${plan.id}`, JSON.stringify(plan));
         return svar({ ok: true, svar: plan.svar });
       }
+      // Övningsbanken (Carl 2026-11-25: "ett ställe där Haris kan lägga upp nya och ta bort övningar … och lägga till
+      // filmer till övningarna"). Grunden är data/ovningsbank.json i appen; här ligger det Haris ändrat eller lagt till
+      // (obank:<id>, hela övningen) och de han tagit bort (obank:borta). Appen lägger ihop dem.
+      if (p === '/admin/ovningsbank' && req.method === 'GET') {
+        const [ovningar, borta] = await Promise.all([hamtaAllaMedId(env, 'obank:o:'), env.DB.get('obank:borta', 'json')]);
+        return svar({ ok: true, ovningar, borta: borta || [] });
+      }
+      const mob = /^\/admin\/ovningsbank\/([a-z0-9-]{1,40})(\/tillbaka)?$/.exec(p);
+      if (mob) {
+        const id = mob[1], borta = (await env.DB.get('obank:borta', 'json')) || [];
+        if (mob[2] && req.method === 'POST') {
+          await env.DB.put('obank:borta', JSON.stringify(borta.filter(x => x !== id)));
+          return svar({ ok: true });
+        }
+        if (req.method === 'DELETE') {
+          await env.DB.delete(`obank:o:${id}`);
+          if (!url.searchParams.get('egen') && !borta.includes(id)) await env.DB.put('obank:borta', JSON.stringify([...borta, id].slice(-500)));
+          return svar({ ok: true });
+        }
+        if (req.method !== 'PUT') return fel('fel metod', 405);
+        const d = await json(); if (!d) return fel('trasig JSON');
+        const ren1 = v => typeof v === 'number' ? (Number.isFinite(v) ? v : null) : ren(v, 80);
+        const lista = v => (Array.isArray(v) ? v : v === '' || v == null ? [] : [v]).slice(0, 30).map(ren1).filter(x => x !== '' && x != null);
+        const tal = v => v === '' || v == null || !Number.isFinite(+v) ? null : Math.max(0, Math.round(+v * 10) / 10);
+        const f = d.film && typeof d.film === 'object' && d.film.url ? { namn: ren(d.film.namn, 80), url: ren(d.film.url, 400), poster: ren(d.film.poster, 400), start: tal(d.film.start) ?? 0, slut: tal(d.film.slut) } : null;
+        const o = {
+          id, namn: ren(d.namn, 80), desc: ren(d.desc, 1500), omrade: ren(d.omrade, 60), kalla: ren(d.kalla, 120), kommentar: ren(d.kommentar, 2000),
+          tid: tal(d.tid), maltid: tal(d.maltid), film: f, egen: !!d.egen, var: lista(d.var).map(String),
+          typer: lista(d.typer).map(String), faser: lista(d.faser).map(String), nivor: lista(d.nivor).map(Number).filter(n => n >= 1 && n <= 5).sort((a, b) => a - b),
+          positioner: lista(d.positioner).map(String), ytor: lista(d.ytor).map(String), alder: lista(d.alder).map(String), erfarenhet: lista(d.erfarenhet).map(String),
+          fardighet: lista(d.fardighet).map(String), utr: lista(d.utr).map(String), sallskap: lista(d.sallskap).map(String), plats: lista(d.plats).map(String),
+          andrad: nu(),
+        };
+        if (!o.namn) return fel('övningen behöver ett namn');
+        // fälten appen redan läser (ett värde): det första valda, lägsta nivån, Alla om ingen position är vald
+        o.typ = o.typer[0] || 'Övning'; o.fas = o.faser[0] || ''; o.niva = o.nivor[0] || null; o.yta = o.ytor[0] || '';
+        o.position = !o.positioner.length || o.positioner.includes('Alla') ? 'Alla' : o.positioner.join(', ');
+        await env.DB.put(`obank:o:${id}`, JSON.stringify(o));
+        if (borta.includes(id)) await env.DB.put('obank:borta', JSON.stringify(borta.filter(x => x !== id)));
+        return svar({ ok: true, ovning: o });
+      }
       // Frågor om övningarna (Carl 2026-11-25: "skapa det inne i appen"): Haris svarar på hur varje övning i
       // övningsbanken ska användas. KV ovf:svar:<övnings-id>, ovf:nya:<id> (nya övningar), ovf:allmant.
       if (p === '/admin/ovfragor' && req.method === 'GET') {
