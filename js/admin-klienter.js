@@ -213,6 +213,7 @@ function klientSida() {
   ${pottPanel(d)}
   ${paketPanel(d)}
   ${kopPanel(k.huvud ? d.huvud?.klient || k : k)}
+  ${staendePanel(d)}
   <section>
     <div class="section-head"><h2>Tider</h2><a class="small" href="#/admin/klient/${k.id}/boka">Boka ›</a></div>
     ${kommande.length ? `<ul class="list">${kommande.map(b => tidRad(b, true)).join('')}</ul>` : '<p class="muted small">Ingen kommande tid. Boka en åt familjen, så ser de den i appen.</p>'}
@@ -313,6 +314,28 @@ function foraldrarPanel(d) {
       <label>Namn <input type="text" name="namn" placeholder="T.ex. Pappa Ali" maxlength="60" required></label>
       <label>Mobil <input type="tel" name="telefon" placeholder="070-123 45 67" required></label>
       <button class="btn secondary" type="submit">Lägg till förälder</button>
+    </form>
+  </section>`;
+}
+// Stående tider (Haris 2026-11-26: "kan du fixa så att jag kan ha stående tider till vissa klienter?"). Bokas varje
+// vecka där tiden finns och är ledig, innan veckan öppnas för andra. Ligger på familjen (huvudklienten).
+const VARJE = ['', 'måndag', 'tisdag', 'onsdag', 'torsdag', 'fredag', 'lördag', 'söndag'];
+function staendePanel(d) {
+  const k = d.klient, h = k.huvud ? d.huvud?.klient : k;
+  if (!h) return '';
+  const lista = (h.staende || []).slice().sort((a, b) => a.dag - b.dag || a.start.localeCompare(b.start));
+  const fam = d.familj || [], namnFor = ids => fam.filter(x => ids.includes(x.id)).map(x => x.barn).join(' och ');
+  const svar = st.staendeSvar?.klientId === k.id ? st.staendeSvar : null;
+  return `<section class="panel" id="staende">
+    <div class="section-head"><h3>Stående tider</h3><span class="small muted">${lista.length || ''}</span></div>
+    <p class="small muted" style="margin:0 0 8px">En stående tid bokas automatiskt varje vecka där tiden finns och är ledig, innan veckan öppnas för andra. Den betalas som när du bokar: paketet, potten eller Swish. Föräldern får en notis.</p>
+    ${lista.length ? `<ul class="list small">${lista.map(e => `<li class="row"><span class="grow"><b>Varje ${VARJE[e.dag]} ${esc(e.start)}</b>${fam.length > 1 ? ` · ${esc(namnFor(e.barnIds))}` : ''}${e.undantag?.length ? `<div class="muted">Avbokad vecka ${e.undantag.map(v => Number(v.split('-W')[1])).join(', ')}</div>` : ''}</span>
+      <button type="button" class="film" data-action="klient-staende-bort" data-sid="${e.id}">✕</button></li>`).join('')}</ul>` : ''}
+    ${svar ? `<div class="note small" style="margin:10px 0">${svar.bokade.length ? `<b>Bokad:</b> ${svar.bokade.map(esc).join(', ')}.` : 'Inga kommande veckor med den tiden än. Den bokas när du lägger ut veckorna.'}${svar.missade.length ? `<div style="margin-top:4px"><b>Kunde inte bokas:</b> ${svar.missade.map(esc).join('; ')}.</div>` : ''}</div>` : ''}
+    <form data-form="klient-staende" class="rad-form" style="margin-top:10px">
+      <label>Dag <select name="dag">${VARJE.slice(1).map((n, i) => `<option value="${i + 1}">${n[0].toUpperCase() + n.slice(1)}</option>`).join('')}</select></label>
+      <label>Tid <input type="time" name="start" step="300" required></label>
+      <button class="btn secondary" type="submit">Lägg till stående tid</button>
     </form>
   </section>`;
 }
@@ -506,6 +529,12 @@ export async function klienterAction(action, el, e) {
 async function klienterActionNu(action, el, e) {
   const { toast, route, go } = ui;
   const d = st.vald, k = d?.klient;
+  if (action === 'klient-staende-bort') {
+    if (!el.dataset.armed) { el.dataset.armed = '1'; el.textContent = 'Ta bort?'; setTimeout(() => { delete el.dataset.armed; el.textContent = '✕'; }, 4000); return true; }
+    const r = await api.admin.del(`/admin/klient/${k.id}/staende/${el.dataset.sid}`);
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    st.staendeSvar = null; await klientLadda(k.id); toast('Den stående tiden är borttagen. Tider som redan är bokade ligger kvar.'); route(); return true;
+  }
   if (action === 'klient-for-kod') {
     const r = await api.admin.post(`/admin/klient/${k.id}/foralder/${el.dataset.fid}`, { skicka: true });
     if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
@@ -645,6 +674,16 @@ export async function klienterSubmit(kind, f, fd) {
 }
 async function klienterSubmitNu(kind, f, fd) {
   const { toast, route, go } = ui;
+  if (kind === 'klient-staende') {
+    const k = st.vald?.klient; if (!k) return true;
+    const knapp = f.querySelector('button[type=submit]'); if (knapp) knapp.disabled = true;
+    const r = await api.admin.post(`/admin/klient/${k.id}/staende`, { dag: +fd.get('dag'), start: fd.get('start') });
+    if (knapp) knapp.disabled = false;
+    if (!r.ok) { toast(`Gick inte: ${r.fel}`); return true; }
+    st.staendeSvar = { klientId: k.id, bokade: r.bokade || [], missade: r.missade || [] };
+    await klientLadda(k.id);
+    toast(r.bokade?.length ? `Stående tid sparad och bokad ${r.bokade.length} ${r.bokade.length === 1 ? 'gång' : 'gånger'}` : 'Stående tid sparad'); route(); return true;
+  }
   if (kind === 'klient-foralder') {
     const k = st.vald?.klient; if (!k) return true;
     const r = await api.admin.post(`/admin/klient/${k.id}/foralder`, { namn: fd.get('namn'), telefon: fd.get('telefon'), skicka: true });

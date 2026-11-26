@@ -185,11 +185,14 @@ function lasSlots() {
     return { id, dag: Number(row.dataset.dag), start: row.querySelector('[data-f=start]').value || gammal.start, slut: row.querySelector('[data-f=slut]').value || gammal.slut, plats: row.querySelector('[data-f=plats]').value };
   });
 }
+// stående tider som bokades när veckan sparades (Haris 2026-11-26)
+const staendeText = s => !s?.bokade?.length ? '' : `Stående tider bokade: ${s.bokade.join(', ')}.${s.missade?.length ? ` Kunde inte bokas: ${s.missade.join('; ')}.` : ''}`;
 async function sparaVecka(slots, oppen, extra = {}) {
   const r = await api.admin.put(`/admin/vecka/${st.vald}`, { oppen, slots, ...extra });
   if (r.ok) {
     const i = st.veckor.findIndex(w => w.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka);
     if (r.kastade) ui.toast(`${r.kastade} ${r.kastade === 1 ? 'dubblett togs' : 'dubbletter togs'} bort: tider som krockade på samma dag`);
+    else if (r.staende?.bokade?.length) ui.toast(staendeText(r.staende));
   }
   return r;
 }
@@ -265,7 +268,7 @@ export async function tiderAction(action, el) {
   }
   if (action === 'tid-duplicera') {
     const r = await api.admin.post(`/admin/vecka/${st.vald}/duplicera`, {});
-    if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); st.vald = r.vecka.v; toast(`Tiderna kopierade till vecka ${Number(r.vecka.v.split('-W')[1])} (stängd tills du öppnar den)`); }
+    if (r.ok) { const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka); st.vald = r.vecka.v; toast(`Tiderna kopierade till vecka ${Number(r.vecka.v.split('-W')[1])} (stängd tills du öppnar den). ${staendeText(r.staende)}`.trim()); }
     else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }
@@ -305,7 +308,7 @@ export async function tiderSubmit(kind, f, fd) {
   if (r.ok) {
     st.schema = { schema, langd, plats: fd.get('plats'), ersatt };
     const i = st.veckor.findIndex(x => x.v === r.vecka.v); if (i >= 0) st.veckor[i] = r.vecka; else st.veckor.push(r.vecka);
-    toast(`${r.nya} ${r.nya === 1 ? 'tid' : 'tider'} inlagda${r.bort ? `, ${r.bort} gamla borttagna` : ''}. Veckan har ${r.vecka.slots.length} tider${stangdText()}`);
+    toast(`${r.nya} ${r.nya === 1 ? 'tid' : 'tider'} inlagda${r.bort ? `, ${r.bort} gamla borttagna` : ''}. Veckan har ${r.vecka.slots.length} tider${stangdText()} ${staendeText(r.staende)}`.trim());
   } else toast(`Gick inte: ${r.fel}`);
   route(); return true;
 }

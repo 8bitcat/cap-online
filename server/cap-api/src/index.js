@@ -896,6 +896,58 @@ export default {
     const tillKlient = (k, typ, title, text, hash = '') => { if (!k) return; noteraKlient(k, typ, title, text, hash); bakgrund(pushTyp(env, typ, { title, text, hash, till: [k.huvud || k.id] })); };
     const tillHaris = (title, text, hash = '/admin/tider') => bakgrund(pushTyp(env, 'haris', { title, text, hash, admin: true }));
     const barnNamn = (k, u) => [k?.barn || u?.barn, k?.efternamn].filter(Boolean).join(' ') || k?.foralder || u?.namn || 'En förälder';
+    // Stående tider (Haris 2026-11-26: "kan du fixa så att jag kan ha stående tider till vissa klienter?"). En stående
+    // tid ligger på familjens huvudklient: fk.staende = [{id, dag, start, barnIds, fran, undantag: [vecka]}]. Den bokas
+    // i varje kommande vecka där tiden finns och är ledig: när Haris lägger ut eller ändrar en vecka (innan den öppnas
+    // för andra) och när han lägger till den stående tiden. Betalning som när Haris bokar: paketet, potten, annars Swish.
+    // Avbokas en stående tid en viss vecka läggs veckan i undantag, så att den inte bokas om.
+    const bokaStaende = async (veckorAttBoka, { bara = null } = {}) => {
+      const klienter = (await hamtaKlienter(env)).filter(x => x.staende?.length && (!bara || x.id === bara));
+      const ut = { bokade: [], missade: [], veckor: [] };
+      if (!klienter.length) return ut;
+      const allaV = await hamtaAlla(env, 'vecka:'), cfgB = await hamtaBetalning(env), nuL = lokal();
+      // veckorna som bokas ersätter sina sparade kopior, så att paketet räknas rätt över flera bokningar
+      for (const w of veckorAttBoka) { const i = allaV.findIndex(x => x.v === w.v); if (i >= 0) allaV[i] = w; else allaV.push(w); }
+      const andrade = new Set();
+      for (const fk of klienter) {
+        const fam = fk.syskon?.length ? await familj(env, fk) : [fk];
+        for (const e of fk.staende) for (const w of veckorAttBoka) {
+          if (!w.slots?.length || (e.undantag || []).includes(w.v)) continue;
+          const dagen = datumFor(w.v, e.dag);
+          if (dagen < (e.fran || '') || `${dagen}T${e.start}` <= nuL) continue;
+          const s = w.slots.find(x => x.dag === e.dag && x.start === e.start);
+          const namn = barnText(fam.filter(x => e.barnIds.includes(x.id)).map(x => x.barn)) || fk.barn;
+          if (!s) { ut.missade.push(`${namn}: ingen tid ${DAGK[e.dag]} ${e.start} vecka ${Number(w.v.split('-W')[1])}`); continue; }
+          if (s.bokad?.uid === fk.id) {
+            const ids = [...new Set([...bokadeBarn(s.bokad), ...e.barnIds])];
+            if (ids.length !== bokadeBarn(s.bokad).length && fam.length > 1) { s.bokad.barnIds = ids; s.bokad.barn = barnText(fam.filter(x => ids.includes(x.id)).map(x => x.barn)); if (!ut.veckor.includes(w.v)) ut.veckor.push(w.v); }
+            continue;
+          }
+          if (s.bokad || (s.hall && s.hall.tills > Date.now())) { ut.missade.push(`${namn}: ${tidText(w.v, s)} är redan bokad av ${s.bokad?.barn || 'någon annan'}`); continue; }
+          const pk = ledigtPaket(fk, allaV), pott = !pk && pottRacker(fk, allaV, cfgB);
+          s.bokad = { uid: fk.id, namn: fk.foralder, barn: namn, telefon: fk.telefon, email: fk.email, t: nu(), av: 'haris', staende: e.id, pris: pk ? null : klientPris(fk, cfgB), paket: pk?.id || null, pott };
+          if (fam.length > 1) s.bokad.barnIds = [...e.barnIds];
+          s.hall = null;
+          logga(fk, pk ? 'bokad' : pott ? 'pott' : 'styck', `Stående tid bokad: ${tidText(w.v, s)}${pk ? ` med ett pass ur ${pk.namn}` : pott ? `, ${krText(s.bokad.pris)} ur potten` : s.bokad.pris ? `, ${krText(s.bokad.pris)}` : ''}`, 0, 'haris');
+          tillKlient(fk, 'bokning', 'Er stående tid är bokad', `${namn} tränar ${tidText(w.v, s)}${s.plats ? `, ${s.plats}` : ''}. Kan ni inte? Avboka i appen senast 24 timmar före.`, `/boka/${w.v}`);
+          ut.bokade.push(`${namn} ${tidText(w.v, s)}`);
+          if (!ut.veckor.includes(w.v)) ut.veckor.push(w.v);
+          andrade.add(fk);
+        }
+      }
+      for (const fk of andrade) await sparaKlient(env, fk);
+      return ut;
+    };
+    // en avbokad stående tid: veckan blir ett undantag, så att den inte bokas om
+    // har anroparen familjens klient i minnet (och sparar den själv) skickas den med, annars hämtas och sparas den här
+    const staendeUndantag = async (b, v, iMinnet = null) => {
+      if (!b?.staende) return;
+      const fk = iMinnet?.id === b.uid ? iMinnet : await hamtaKlient(env, b.uid);
+      const e = fk?.staende?.find(x => x.id === b.staende);
+      if (!e) return;
+      e.undantag = [...new Set([...(e.undantag || []), v])].slice(-60);
+      if (fk !== iMinnet) await sparaKlient(env, fk);
+    };
 
     // ---------- leveransstatus från 46elks ----------
     if (p === '/sms/status' && req.method === 'POST') {
@@ -1185,6 +1237,7 @@ export default {
           }
           logga(kl || {}, 'avbokad', sen ? `Avbokade ${tidText(v, s)} mindre än 24 timmar före: ${sen}` : `Avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet drogs inte' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, sen && s.bokad.paket ? -1 : 0, 'foralder');
           if (kl) await sparaKlient(env, kl);
+          await staendeUndantag(s.bokad, v);
           tillHaris(sen ? 'Sen avbokning' : 'Avbokning', `${barnNamn(kl, user)} avbokade ${tidText(v, s)}${sen ? `, mindre än 24 timmar före. ${sen}` : ''} Tiden är ledig igen.`);
           s.bokad = null;
         }
@@ -1492,7 +1545,7 @@ export default {
         const ids = await klientIndex(env); if (!ids.includes(k.id)) { ids.push(k.id); await env.DB.put('klienter', JSON.stringify(ids)); }
         return svar({ ok: true, klient: publikKlient(k), lank: l, kod, sms, hamtaText: smsHamta(env, k), loggaText: smsLogga(env, k, kod), hamtaLank: hamtaLank(env), ...(await smsDag(env)) });
       }
-      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket|pris|utanfor|pott|syskon|foralder)(?:\/([a-z0-9]+))?)?$/.exec(p);
+      const mk = /^\/admin\/klient\/([a-z0-9]+)(?:\/(lank|niva|bedomning|media|boka|avboka|paket|tidpaket|pris|utanfor|pott|syskon|foralder|staende)(?:\/([a-z0-9]+))?)?$/.exec(p);
       if (mk) {
         const barnK = await hamtaKlient(env, mk[1]);
         if (!barnK) return fel('klienten finns inte', 404);
@@ -1563,6 +1616,29 @@ export default {
         }
         const d = (await json()) || {};
         // typ: hamta (sms 1), logga (sms 2) eller bada. ny: true ger en ny inloggningslänk (den gamla slutar gälla).
+        // stående tider: POST {dag, start} bokar direkt i kommande veckor där tiden finns; DELETE …/staende/<id>
+        if (del === 'staende') {
+          const fk = await betalare(env, barnK);
+          if (req.method === 'DELETE' && sub) {
+            fk.staende = (fk.staende || []).filter(x => x.id !== sub);
+            await sparaKlient(env, fk); return svar({ ok: true, staende: fk.staende });
+          }
+          if (req.method === 'POST') {
+            const dag = Math.round(+d.dag), start = String(d.start || '');
+            if (!(dag >= 1 && dag <= 7) || !tidOk(start)) return fel('välj veckodag och tid');
+            if ((fk.staende || []).some(x => x.dag === dag && x.start === start && x.barnIds.includes(barnK.id))) return fel('den stående tiden finns redan', 409);
+            if ((fk.staende || []).length >= 10) return fel('högst tio stående tider per familj');
+            const e = { id: nyttId('st'), dag, start, barnIds: [barnK.id], fran: idag(), skapad: nu(), undantag: [] };
+            fk.staende = [...(fk.staende || []), e];
+            await sparaKlient(env, fk);
+            // boka direkt i de kommande veckorna som redan finns
+            const nuV = veckaAv();
+            const kommande = (await hamtaAlla(env, 'vecka:')).filter(w => w.v >= nuV).sort((a, b) => a.v.localeCompare(b.v));
+            const r = await bokaStaende(kommande, { bara: fk.id });
+            for (const w of kommande) if (r.veckor.includes(w.v)) await env.DB.put(`vecka:${w.v}`, JSON.stringify(w));
+            return svar({ ok: true, staende: (await hamtaKlient(env, fk.id))?.staende || fk.staende, ...r });
+          }
+        }
         // fler föräldrar: lägg till (namn, mobil) → kod och sms-text, ny kod (POST …/foralder/<id>), ta bort
         if (del === 'foralder') {
           if (req.method === 'DELETE' && sub) {
@@ -1816,6 +1892,7 @@ export default {
               logga(fk, 'styck', `Haris strök ${k.barn} från ${tidText(v, s)}`, 0, 'haris');
               if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Tiden är ändrad', `${k.barn} är struken från ${tidText(v, s)}. ${s.bokad.barn} tränar som vanligt.`, `/boka/${v}`);
             } else {
+              await staendeUndantag(s.bokad, v, fk);
               logga(fk, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? (kortsPass(v, s) ? ', passet tillbaka' : ', passet drogs inte') : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket && kortsPass(v, s) ? 1 : 0, 'haris');
               if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Tiden är avbokad', `Haris har avbokat ${tidText(v, s)}.${s.bokad.paket ? ' Passet är tillbaka i paketet.' : s.bokad.pott ? ' Beloppet är tillbaka i potten.' : ''}`, `/boka/${v}`);
               s.bokad = null;
@@ -1890,6 +1967,7 @@ export default {
           vecka.oppen = !!d.oppen;
           const st = stadaSlots((Array.isArray(d.slots) ? d.slots : []).slice(0, 80).map(s => renSlot(s, gamla[s.id])));
           vecka.slots = st.slots;
+          const staende = await bokaStaende([Object.assign(vecka, { v })]);
           // Carl 2026-10-28: "en notis som går ut när man öppnar veckan för bokning, till alla föräldrar". En gång per vecka.
           let notis = null;
           if (!varOppen && vecka.oppen && d.notis !== false && !vecka.notis && v >= veckaAv()) {
@@ -1904,6 +1982,7 @@ export default {
           else await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
           const borta = Object.values(gamla).filter(s => s.bokad && !vecka.slots.some(n => n.bokad && n.bokad.uid === s.bokad.uid && n.bokad.t === s.bokad.t));
           for (const s of borta) {
+            await staendeUndantag(s.bokad, v);
             const kl = await hamtaKlient(env, s.bokad.uid);
             if (kl) {
               logga(kl, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? (kortsPass(v, s) ? ', passet tillbaka' : ', passet drogs inte') : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket && kortsPass(v, s) ? 1 : 0, 'haris');
@@ -1911,7 +1990,7 @@ export default {
               await sparaKlient(env, kl);
             }
           }
-          return svar({ ok: true, vecka, kastade: st.kastade, notis });
+          return svar({ ok: true, vecka, kastade: st.kastade, notis, staende });
         }
         // Veckoschemat (Haris 2026-11-22: "det går inte att sätta olika tider för olika dagar … vissa dagar har jag till 18
         // och helger har jag endast två tider"): schema = [{dag, pa, start, slut}] med egna tider per dag. ersatt = ta
@@ -1941,17 +2020,19 @@ export default {
             nya++;
           }
           vecka.slots = stadaSlots(vecka.slots).slots;
+          const staende = vecka.slots.length ? await bokaStaende([Object.assign(vecka, { v })]) : { bokade: [], missade: [] };
           if (!vecka.oppen && !vecka.slots.length) await env.DB.delete(`vecka:${v}`);
           else await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
-          return svar({ ok: true, vecka, nya, bort });
+          return svar({ ok: true, vecka, nya, bort, staende });
         }
         if (mv[2] === '/duplicera' && req.method === 'POST') {
           const till = VECKA_RE.test(String(d.till || '')) ? d.till : veckaPlus(v, 1);
           const ny = stadaHall(await hamtaVecka(env, till));
           for (const s of vecka.slots) if (!ny.slots.some(x => x.dag === s.dag && minuter(s.start) < minuter(x.slut) && minuter(s.slut) > minuter(x.start))) ny.slots.push(renSlot({ dag: s.dag, start: s.start, slut: s.slut, plats: s.plats }));
           ny.slots = stadaSlots(ny.slots).slots;
+          const staende = await bokaStaende([Object.assign(ny, { v: till })]);
           await env.DB.put(`vecka:${till}`, JSON.stringify(ny));
-          return svar({ ok: true, vecka: ny });
+          return svar({ ok: true, vecka: ny, staende });
         }
         if (mv[2] === '/betald' && req.method === 'POST') {
           const s = vecka.slots.find(x => x.id === String(d.slot || ''));
