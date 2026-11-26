@@ -1,0 +1,540 @@
+<title>CAP Övningsbanken</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,800&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: en smal spalt som en telefon (Haris svarar i mobilen), lista → frågekort → tillbaka. CAP:s mörka tema med teal. */
+:root {
+  --bg: #0b1214; --panel: #121c1f; --panel2: #18262a; --line: #24363b;
+  --fg: #e8f1f1; --muted: #8ea4a6; --accent: #00d4cb; --accent-fg: #00211f;
+  --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; --chip: #1b2b2f;
+  --display: "DM Sans", system-ui, sans-serif; --body: "DM Sans", system-ui, sans-serif; --mono: "DM Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f2f6f6; --panel: #ffffff; --panel2: #eaf1f1; --line: #d3e0e0;
+  --fg: #0d1b1d; --muted: #546a6c; --accent: #00857e; --accent-fg: #ffffff;
+  --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --chip: #e6eeee; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f2f6f6; --panel: #ffffff; --panel2: #eaf1f1; --line: #d3e0e0;
+  --fg: #0d1b1d; --muted: #546a6c; --accent: #00857e; --accent-fg: #ffffff;
+  --ok: #15803d; --warn: #b45309; --bad: #b91c1c; --chip: #e6eeee; color-scheme: light; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); margin: 0; }
+.wrap { max-width: 720px; margin: 0 auto; padding-block: 18px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+h2 { font-size: 19px; font-weight: 700; }
+h3 { font-size: 15px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.eyebrow { font: 500 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.stack { display: grid; gap: 14px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+header.top { display: grid; gap: 10px; margin-bottom: 16px; }
+.progress { height: 8px; border-radius: 99px; background: var(--chip); overflow: hidden; }
+.progress > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+nav.tabs { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 16px; padding-bottom: 2px; }
+nav.tabs button { flex: none; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.tab { background: var(--chip); border: 1px solid var(--line); border-radius: 99px; padding: 7px 14px; font-weight: 500; }
+.tab[aria-selected="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 700; }
+.btn.sec { background: var(--chip); color: var(--fg); border: 1px solid var(--line); font-weight: 500; }
+.btn:disabled { opacity: .5; cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.banner { border: 1px solid var(--warn); background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+.banner.ok { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--panel)); }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip { background: var(--chip); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; font-size: 14px; line-height: 1.2; }
+.chip[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 22%, var(--chip)); border-color: var(--accent); color: var(--fg); font-weight: 600; }
+.chip[aria-pressed="true"]::before { content: "✓ "; color: var(--accent); }
+.grp { margin: 18px 0 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.list { display: grid; gap: 8px; }
+.item { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.item:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.thumb { width: 44px; height: 58px; flex: none; border-radius: 8px; background: var(--panel2) center/cover; display: grid; place-items: center; font-size: 18px; color: var(--muted); }
+.item b { display: block; font-weight: 600; }
+.pill { flex: none; font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 6px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.pill.klar { color: var(--ok); border-color: var(--ok); }
+.pill.bort { color: var(--bad); border-color: var(--bad); }
+.pill.osaker { color: var(--warn); border-color: var(--warn); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 16px; }
+.q { display: grid; gap: 8px; }
+.q > label, .q > .lab { font-weight: 700; font-size: 15px; }
+.q .hint { font-size: 13px; color: var(--muted); }
+.opts { display: flex; gap: 6px; flex-wrap: wrap; }
+input[type=text], input[type=number], textarea, select { width: 100%; background: var(--panel2); color: var(--fg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+input[type=number] { width: 110px; font-family: var(--mono); }
+textarea { min-height: 76px; resize: vertical; }
+.lands { background: var(--panel2); border-radius: 10px; padding: 10px 12px; font-size: 14px; display: grid; gap: 4px; }
+.lands b { color: var(--accent); font-weight: 600; }
+.player { position: relative; background: #000; border-radius: 14px; overflow: hidden; max-width: 320px; aspect-ratio: 9/16; max-height: 62vh; margin: 0 auto; width: 100%; }
+.player video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.player .laddar { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(0, 0, 0, .65); color: #fff; font-size: 13px; padding: 6px 12px; border-radius: 99px; white-space: nowrap; pointer-events: none; }
+.clipbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.back { background: none; border: 0; color: var(--accent); padding: 0; font-weight: 600; }
+.sticky { position: sticky; bottom: 0; padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(transparent, var(--bg) 30%); display: flex; gap: 8px; }
+.sticky .btn { flex: 1; }
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-weight: 600; z-index: 20; }
+.guide ol { margin: 0; padding-left: 22px; display: grid; gap: 10px; }
+.guide li::marker { color: var(--accent); font-family: var(--mono); }
+.path { font-family: var(--mono); font-size: 13px; background: var(--panel2); padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
+.blocks { display: grid; gap: 6px; }
+.blocks div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--line); padding: 6px 0; font-size: 14px; }
+.blocks div:last-child { border-bottom: 0; }
+.empty { text-align: center; padding: 30px 10px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">CAP · till Haris</span>
+    <h1>Övningsbanken</h1>
+    <p class="muted">Här är alla övningar som finns i appen i dag. Gå igenom dem en i taget och svara på frågorna. Svaren sparas direkt och Carl läser in dem, så hamnar varje övning på rätt ställe i appen.</p>
+    <div class="row small"><span class="num" id="klarText">0 av 59 klara</span><span class="grow"></span><span class="muted" id="sparStatus">Hämtar svaren…</span></div>
+    <div class="progress"><i id="bar"></i></div>
+    <div id="banner" hidden></div>
+    <div class="banner ok"><b>Övningarna ändrar du nu i CAP-appen.</b> Öppna appen och gå till <b>Admin → Övningar → Ändra övningsbanken</b>. Där ändrar, lägger till och tar du bort övningar och kopplar filmer, och det gäller direkt. Den här sidan används inte längre.</div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Delar">
+    <button class="tab" role="tab" data-tab="lista" aria-selected="true">Övningarna</button>
+    <button class="tab" role="tab" data-tab="ny" aria-selected="false">+ Ny övning</button>
+    <button class="tab" role="tab" data-tab="allmant" aria-selected="false">Allmänna frågor</button>
+    <button class="tab" role="tab" data-tab="guide" aria-selected="false">Så funkar det</button>
+  </nav>
+
+  <main id="vy"><p class="empty">Hämtar övningarna…</p></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+
+const NIVA = ['1 Bollkompis', '2 Touchmästare', '3 Dribblare', '4 Spelmotor', '5 Matchvinnare'];
+const LISTOR = {
+  var: ['Träna hemma (stigen)', 'Pass med Haris', 'Träna något specifikt (biblioteket)'],
+  position: ['Alla', 'Målvakt', 'Back', 'Mittfältare', 'Anfallare'],
+  alder: ['7–8', '9–10', '11–12', '13–14', '15–16', '17+'],
+  erfarenhet: ['Nybörjare', 'Spelat 1–2 år', 'Spelat 3+ år'],
+  fas: ['Uppvärmning', 'Huvuddel', 'Avslut'],
+  fardighet: ['Första touch', 'Driv', 'Vändningar', 'Jonglering & bollkänsla', 'Passning insida', 'Långa tillslag', 'Avslut', 'Dribbling & finter', 'Nickar', 'Snabba fötter', 'Reaktion', 'Balans', 'Spelförståelse', 'Målvaktsspel'],
+  utr: ['Boll', 'Koner', 'Mål', 'Vägg', 'Medspelare', 'Stege/häckar'],
+  sallskap: ['Ensam', 'Med förälder', 'Med kompis'],
+  yta: ['Liten (5×5 m)', 'Mellan (10×10 m)', 'Stor (halvplan)'],
+  plats: ['Utomhus', 'Inomhus', 'Hemma'],
+  typ: ['Övning', 'Tidtagning', 'Bedömning', 'Nivåprov'],
+};
+const GRUPPER = [
+  ['film', 'Filmade moment i CAP-passet', o => !!o.film],
+  ['plan', 'Övningar som saknar film', o => !o.film && o.typ === 'Övning' && !/^(avslut|mall)-/.test(o.id)],
+  ['tid', 'Tidtagningar på stigen', o => o.typ === 'Tidtagning'],
+  ['prov', 'Nivåproven', o => o.typ === 'Nivåprov'],
+  ['ovr', 'Avslut och passmallen', o => /^(avslut|mall)-/.test(o.id)],
+];
+
+let OV = [];                 // övningarna ur appen
+let SVAR = {};               // svar/<id>
+let NYA = {};                // nya/<id>
+let ALLM = {};               // allmant/svar
+let db = null, kanSpara = null, laddat = false;
+let flik = 'lista', filter = 'alla', oppen = null, utkast = null;
+
+// ---------- lokal reserv (om sparandet inte fungerar finns svaren kvar i den här webbläsaren)
+const LS = 'cap-ovningsbank-svar';
+function lokal() { try { return JSON.parse(localStorage.getItem(LS) || '{}'); } catch { return {}; } }
+function sparaLokalt(nyckel, v) { try { const l = lokal(); l[nyckel] = v; localStorage.setItem(LS, JSON.stringify(l)); } catch {} }
+
+function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => el.hidden = true, 2200); }
+function nu() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+// ---------- flera val: nivå, fas och yta (äldre svar hade ett enda värde)
+const lista = x => Array.isArray(x) ? x : (x === '' || x == null ? [] : [x]);
+const nivor = v => lista(v.niva).map(Number).filter(Boolean).sort((a, b) => a - b);
+const nivaText = v => { const n = nivor(v); return !n.length ? '' : n.length === 1 ? `nivå ${n[0]}` : `nivå ${n.join(', ')}`; };
+function flera(v) { if (!v) return v; v.niva = nivor(v); v.fas = lista(v.fas); v.yta = lista(v.yta); if (v.beslut === 'ny') v.typ = lista(v.typ); return v; }
+
+// ---------- vart övningen hamnar i appen
+function hamnar(v) {
+  const rader = [];
+  if (v.beslut === 'bort') return ['<b>Tas bort</b> ur appen när Carl läser in svaren.'];
+  if (v.var?.includes('Träna hemma (stigen)')) {
+    const pos = (v.position || []).filter(p => p !== 'Alla');
+    const n = nivor(v)[0] || 0; // stigen: den lägsta valda nivån
+    let blk = !n ? 'välj nivå ovan' : pos.length ? `Positionsblocket (249 kr) för ${pos.join(', ').toLowerCase()}` :
+      n === 1 ? 'Etapp 1, gratis för alla' : n === 2 ? 'Etapp 2, blocket Nivå 2: Passa och dribbla (129 kr)' :
+      n === 3 ? 'Etapp 3, blocket Nivå 3: Finter och koordination (149 kr)' : `Etapp ${n}, blocket Nivå 4–5: Matchfart (199 kr)`;
+    rader.push(`Stigen: <b>${esc(blk)}</b>`);
+  }
+  if (v.var?.includes('Pass med Haris')) rader.push(`Admin → Övningar: <b>valbar när du planerar pass${nivor(v).length ? `, filtret Nivå ${nivor(v).join(', ')}` : ''}</b>`);
+  if (v.var?.includes('Träna något specifikt (biblioteket)')) rader.push(`Föräldrarna: <b>Träna något specifikt${v.fardighet?.length ? `, under ${esc(v.fardighet[0])}` : ''}</b>`);
+  return rader.length ? rader : ['Välj var den ska användas, så syns det här vart den hamnar.'];
+}
+
+// ---------- förifyllt ur appen, sedan Haris svar ovanpå
+function grund(o) {
+  return {
+    beslut: '', namn: o.namn, desc: o.desc, typ: o.typ, tid: o.tid ?? '', maltid: o.maltid ?? '',
+    niva: o.niva ? [+o.niva] : [], position: o.position && o.position !== 'Alla' ? [o.position] : ['Alla'],
+    alder: [], erfarenhet: [], fas: o.fas ? [o.fas] : [], fardighet: [...(o.fardighet || [])], utr: [...(o.utr || [])],
+    sallskap: [...(o.sallskap || [])], yta: o.yta ? [o.yta] : [], plats: [], var: [], film: '', start: o.film?.start ?? '', slut: o.film?.slut ?? '', kommentar: '',
+  };
+}
+const svarFor = o => SVAR[o.id] || lokal()['svar/' + o.id] || null;
+function status(o) { const s = svarFor(o); return !s ? '' : s.beslut === 'bort' ? 'bort' : s.beslut === 'osaker' ? 'osaker' : 'klar'; }
+
+// ---------- sidhuvud
+function huvud() {
+  const klara = OV.filter(o => status(o)).length;
+  $('#klarText').textContent = `${klara} av ${OV.length} klara`;
+  $('#bar').style.width = OV.length ? `${Math.round(100 * klara / OV.length)}%` : '0';
+}
+function sattStatus() {
+  const s = $('#sparStatus'), b = $('#banner');
+  if (!laddat) { s.textContent = 'Hämtar svaren…'; return; }
+  if (db && kanSpara !== false) { s.textContent = 'Svaren sparas hos Carl'; b.hidden = true; return; }
+  s.textContent = 'Sparas bara i den här webbläsaren';
+  b.hidden = false; b.className = 'banner';
+  b.innerHTML = `<b>Svaren når inte Carl härifrån än.</b> Be Carl bjuda in dig som <b>Redigerare</b> på den här sidan (Dela → din e-post). Tills dess sparas allt i den här webbläsaren. Du kan också trycka <b>Kopiera mina svar</b> under Så funkar det och skicka texten till Carl.`;
+}
+
+// ---------- lista
+function vyLista() {
+  const f = [['alla', 'Alla'], ['kvar', 'Kvar att svara'], ['klar', 'Klara']];
+  const passar = o => filter === 'alla' || (filter === 'kvar' ? !status(o) : !!status(o));
+  let html = `<div class="filters" role="group" aria-label="Visa">${f.map(([k, t]) => `<button class="chip" data-filter="${k}" aria-pressed="${filter === k}">${t}</button>`).join('')}</div>`;
+  for (const [k, titel, test] of GRUPPER) {
+    const rad = OV.filter(test).filter(passar);
+    if (!rad.length) continue;
+    const alla = OV.filter(test), klara = alla.filter(o => status(o)).length;
+    html += `<div class="grp"><h2>${titel}</h2><span class="small muted num">${klara}/${alla.length}</span></div><div class="list">`;
+    html += rad.map(o => {
+      const s = status(o), sv = svarFor(o);
+      const meta = [o.typ !== 'Övning' ? o.typ : '', (sv?.tid || o.tid) ? `${sv?.tid || o.tid} min` : '', nivaText(sv || { niva: o.niva }), (o.position && o.position !== 'Alla') ? o.position : ''].filter(Boolean).join(' · ');
+      return `<button class="item" data-oppna="${o.id}">
+        <span class="thumb" ${o.film ? `style="background-image:url('${esc(o.film.poster)}')"` : ''}>${o.film ? '' : '✎'}</span>
+        <span class="grow"><b>${esc(sv?.namn || o.namn)}</b><span class="small muted">${esc(meta)}</span></span>
+        <span class="pill ${s}">${s === 'klar' ? 'Klar' : s === 'bort' ? 'Ta bort' : s === 'osaker' ? 'Osäker' : 'Svara'}</span></button>`;
+    }).join('') + '</div>';
+  }
+  if (filter === 'kvar' && !OV.some(o => !status(o))) html += `<p class="empty">Alla övningar har svar. Tack! Titta gärna på Allmänna frågor också.</p>`;
+  return html;
+}
+
+// ---------- frågor (samma formulär för befintliga och nya övningar)
+const chips = (falt, val, multi, v) => `<div class="opts" role="group">${val.map(x => {
+  const on = multi ? (v[falt] || []).includes(x) : String(v[falt]) === String(x);
+  return `<button type="button" class="chip" data-falt="${falt}" data-v="${esc(x)}" data-multi="${multi ? 1 : 0}" aria-pressed="${on}">${esc(x)}</button>`; }).join('')}</div>`;
+const nivaChips = v => `<div class="opts" role="group">${NIVA.map((t, i) => `<button type="button" class="chip" data-falt="niva" data-v="${i + 1}" data-multi="1" aria-pressed="${nivor(v).includes(i + 1)}">${t}</button>`).join('')}</div>`;
+
+function formular(v, o, ny) {
+  const tidtagning = lista(v.typ).some(t => t === 'Tidtagning' || t === 'Bedömning');
+  const film = o?.film;
+  return `
+  ${film ? `<div class="stack">
+    <div class="player"><video id="vid" playsinline controls preload="metadata" poster="${esc(film.poster)}" data-src="${esc(film.url)}"></video><span class="laddar" id="vidLaddar">Hämtar filmen…</span></div>
+    <div class="clipbar"><button type="button" class="btn sec" id="spelaKlipp">▶ Spela klippet <span class="num">${esc(v.start)}–${esc(v.slut)} s</span></button></div>
+    <p class="small muted" style="text-align:center">Ur filmen ${esc(film.namn)}</p></div>` : ''}
+
+  ${ny ? '' : `<div class="q"><span class="lab">Ska övningen vara med i appen?</span>
+    ${chips('beslut', ['Ja', 'Osäker', 'Nej, ta bort den'].map(x => x), false, { beslut: { ja: 'Ja', osaker: 'Osäker', bort: 'Nej, ta bort den' }[v.beslut] || '' })}</div>`}
+
+  <div class="q"><label for="f-namn">Namn</label><input type="text" id="f-namn" value="${esc(v.namn)}" placeholder="T.ex. Vändning med sulan"></div>
+  <div class="q"><label for="f-desc">Instruktion till barnet och föräldern</label><span class="hint">Så som det ska stå i appen. Rätta fritt.</span><textarea id="f-desc">${esc(v.desc)}</textarea></div>
+  ${ny ? `<div class="q"><span class="lab">Vad är det för sorts övning?</span><span class="hint">Välj ett eller flera.</span>${chips('typ', LISTOR.typ, true, v)}</div>` : ''}
+
+  <div class="q"><span class="lab">Var ska den användas?</span><span class="hint">Välj ett eller flera.</span>${chips('var', LISTOR.var, true, v)}</div>
+  <div class="q"><span class="lab">Nivå</span><span class="hint">Välj alla nivåer övningen passar för. Samma nivåer som i klientregistret. På stigen hamnar den på den lägsta.</span>${nivaChips(v)}</div>
+  <div class="q"><span class="lab">För vilken position?</span>${chips('position', LISTOR.position, true, v)}</div>
+  <div class="lands" id="lands">${hamnar(v).map(r => `<span>${r}</span>`).join('')}</div>
+
+  <div class="q"><span class="lab">Ålder</span><span class="hint">Välj ett eller flera. Lämna tomt om den passar alla åldrar.</span>${chips('alder', LISTOR.alder, true, v)}</div>
+  <div class="q"><span class="lab">Erfarenhet</span><span class="hint">Lämna tomt om den passar alla.</span>${chips('erfarenhet', LISTOR.erfarenhet, true, v)}</div>
+  <div class="q"><span class="lab">Var i passet?</span><span class="hint">Välj ett eller flera.</span>${chips('fas', LISTOR.fas, true, v)}</div>
+  <div class="q"><label for="f-tid">Hur lång tid tar den i ett pass?</label><div class="row"><input type="number" id="f-tid" min="1" max="60" inputmode="numeric" value="${esc(v.tid)}"> <span class="muted">minuter</span></div></div>
+  ${tidtagning ? `<div class="q"><label for="f-maltid">Måltid</label><span class="hint">Tiden barnet ska klara för att steget räknas som klart.</span><div class="row"><input type="number" id="f-maltid" min="1" inputmode="numeric" value="${esc(v.maltid)}"> <span class="muted">sekunder</span></div></div>` : ''}
+  <div class="q"><span class="lab">Vad tränar den?</span><span class="hint">Det första du väljer blir huvudfärdigheten.</span>${chips('fardighet', LISTOR.fardighet, true, v)}</div>
+  <div class="q"><span class="lab">Vad behövs?</span>${chips('utr', LISTOR.utr, true, v)}</div>
+  <div class="q"><span class="lab">Vem tränar barnet med?</span>${chips('sallskap', LISTOR.sallskap, true, v)}</div>
+  <div class="q"><span class="lab">Hur stor yta?</span><span class="hint">Välj ett eller flera.</span>${chips('yta', LISTOR.yta, true, v)}</div>
+  <div class="q"><span class="lab">Var kan man göra den?</span><span class="hint">Lämna tomt om det går överallt.</span>${chips('plats', LISTOR.plats, true, v)}</div>
+
+  ${film ? `<div class="q"><span class="lab">Stämmer klippet?</span><span class="hint">Appen hoppar till början och stannar i slutet av klippet.</span>
+    ${chips('film', ['Klippet stämmer', 'Justera början eller slut'], false, v)}
+    ${v.film === 'Justera början eller slut' ? `<div class="row"><label class="small" for="f-start">Början</label><input type="number" id="f-start" min="0" step="1" value="${esc(v.start)}"><button type="button" class="btn sec" data-satt="start">Sätt till filmens läge</button></div>
+    <div class="row"><label class="small" for="f-slut">Slut</label><input type="number" id="f-slut" min="0" step="1" value="${esc(v.slut)}"><button type="button" class="btn sec" data-satt="slut">Sätt till filmens läge</button></div>
+    <p class="hint">Spela filmen, pausa där momentet börjar och tryck Sätt till filmens läge. Gör sedan samma sak för slutet.</p>` : ''}</div>`
+  : `<div class="q"><span class="lab">Film</span><span class="hint">Övningen har ingen film i appen än.</span>${chips('film', ['Jag filmar den', 'Det finns redan en film', 'Behövs ingen film'], false, v)}</div>`}
+
+  <div class="q"><label for="f-kommentar">Något mer Carl ska veta?</label><textarea id="f-kommentar" placeholder="T.ex. byt plats med Driv ut till konerna, eller: den här passar bara på gräs.">${esc(v.kommentar)}</textarea></div>`;
+}
+
+function vyOvning(o) {
+  const i = OV.indexOf(o);
+  return `<div class="stack">
+    <button class="back" data-tillbaka>‹ Alla övningar</button>
+    <div><span class="eyebrow num">Övning ${i + 1} av ${OV.length} · ${esc(o.kalla)}</span></div>
+    <div class="card" id="form">${formular(utkast, o, false)}</div>
+    <div class="sticky"><button class="btn" id="spara">Spara</button><button class="btn sec" id="sparaNasta">Spara och nästa ›</button></div>
+  </div>`;
+}
+
+function vyNy() {
+  const lista = Object.entries(NYA).sort((a, b) => String(a[1].t).localeCompare(String(b[1].t)));
+  return `<div class="stack">
+    <p class="muted">Lägg till en övning som inte finns i appen än. Den hamnar i övningsbanken när Carl läser in svaren.</p>
+    ${lista.length ? `<div class="list">${lista.map(([id, n]) => `<button class="item" data-nyoppna="${esc(id)}"><span class="thumb">＋</span><span class="grow"><b>${esc(n.namn || 'Utan namn')}</b><span class="small muted">${esc([lista(n.typ).join(', '), nivaText(n), n.tid ? n.tid + ' min' : ''].filter(Boolean).join(' · '))}</span></span><span class="pill klar">Sparad</span></button>`).join('')}</div>` : ''}
+    <div class="card" id="form">${formular(utkast, null, true)}</div>
+    <div class="sticky"><button class="btn" id="sparaNy">${oppen?.startsWith('ny:') && oppen !== 'ny:' ? 'Spara ändringen' : 'Lägg till övningen'}</button>${oppen?.startsWith('ny:') && oppen !== 'ny:' ? '<button class="btn sec" id="nyTom">Ny tom</button>' : ''}</div>
+  </div>`;
+}
+
+const ALLMANT = [
+  ['passlangd', 'Hur långt ska ett hemmapass vara, som standard?', ['20 min', '30 min', '45 min', '60 min']],
+  ['filmerna', 'De fem filmerna (Uppvärmning, Första touch, Passningar, Dribblingar, Koordination). Vad är de?', ['Hela CAP-passet, 55 min', 'Smakprov ur ett längre pass', 'Annat, jag skriver nedan']],
+  ['utanFilm', 'Övningar som saknar film: ska föräldrarna se dem i appen?', ['Ja, med texten och "Film kommer"', 'Nej, dölj dem tills jag filmat']],
+  ['nivastyr', 'Ska nivån styra var övningen hamnar på stigen? (Nivå 1 = etapp 1 gratis, nivå 2 = Nivå 2-blocket och så vidare.)', ['Ja, så är det enklast', 'Nej, jag väljer etapp själv i Admin → Stigen']],
+  ['ordning', 'Ska övningarna i stigen komma i samma ordning som du kör dem på plan?', ['Ja', 'Nej, enklast först', 'Spelar ingen roll']],
+];
+function vyAllmant() {
+  return `<div class="stack"><div class="card">${ALLMANT.map(([k, f, val]) => `<div class="q"><span class="lab">${esc(f)}</span><span class="hint">Välj ett eller flera.</span><div class="opts">${val.map(x => `<button type="button" class="chip" data-allm="${k}" data-v="${esc(x)}" aria-pressed="${lista(ALLM[k]).includes(x)}">${esc(x)}</button>`).join('')}</div></div>`).join('')}
+    <div class="q"><label for="a-mer">Något annat om övningarna eller passen?</label><textarea id="a-mer">${esc(ALLM.mer || '')}</textarea></div></div>
+    <div class="sticky"><button class="btn" id="sparaAllm">Spara svaren</button></div></div>`;
+}
+
+function vyGuide() {
+  return `<div class="stack guide">
+  <div class="card"><h2>Så fyller du i</h2><ol>
+    <li>Tryck på en övning i listan. Övningar med film visar klippet överst. Tryck <b>▶ Spela klippet</b> för att se just det momentet.</li>
+    <li>Svara på frågorna. Det som redan är ifyllt är Carls gissning utifrån filmerna. Rätta det som är fel och tryck på det som stämmer.</li>
+    <li>Rutan med vart övningen hamnar ändras medan du svarar, så du ser direkt var den syns i appen.</li>
+    <li>Tryck <b>Spara och nästa</b>. Övningen blir grön i listan. Du kan gå tillbaka och ändra när du vill.</li>
+    <li>Saknas en övning? Lägg till den under <b>+ Ny övning</b>.</li>
+    <li>Svara till sist på <b>Allmänna frågor</b>. Det tar en minut.</li>
+  </ol><p class="small muted" style="margin-top:12px">Du behöver inte göra allt på en gång. Det du sparat ligger kvar till nästa gång du öppnar sidan.</p></div>
+
+  <div class="card"><h2>Vad som händer sedan</h2><ol>
+    <li>Carl läser in dina svar. Övningarna i appen får dina namn, instruktioner, tider, nivåer och taggar. De du sa nej till tas bort.</li>
+    <li>Övningar du valt för <b>Träna hemma</b> läggs in på stigen, i den etapp och det träningsblock nivån visar.</li>
+    <li>Övningar som ska filmas hamnar på en lista. När du lagt upp filmen i <span class="path">Admin → Filmbank</span> kopplas den till övningen.</li>
+  </ol></div>
+
+  <div class="card"><h2>Så gör du ett pass i appen</h2><ol>
+    <li>Öppna appen och byt till din vy med <b>⇄</b> uppe vid klockan.</li>
+    <li>Gå till <span class="path">Klienter</span>, välj barnet och tryck <b>Planera nytt pass</b>. Passet börjar med Samtal före och slutar med Samtal efter.</li>
+    <li>Tryck <b>+ Ur övningsbanken</b>. Filtrera på fas, nivå eller <b>🎥 Med film</b>, eller sök på en färdighet som "Första touch". Välj övningarna med <b>+ Välj</b>.</li>
+    <li>Tryck <b>Planera pass</b>. Övningarna läggs in med sin tid, och du flyttar dem med pilarna.</li>
+    <li>På plan trycker du <b>▶ Kör passet</b>. Varje övning med film visar sitt klipp. Du kan filma barnet och ta tid direkt i blocket.</li>
+    <li>Kryssa i <b>Delat med föräldern</b>, så ser familjen passet, tiderna och filmerna under Träna med Haris.</li>
+  </ol><p class="small muted" style="margin-top:12px">Du kan också börja i <span class="path">Övningar</span>: välj övningar, tryck Planera pass och välj barnet. Passen som är bokade i dag hittar du under <span class="path">Idag</span>.</p></div>
+
+  <div class="card"><h2>Nivån och träningsblocken</h2>
+    <p class="small muted">På stigen styr nivån vilket block en övning ingår i. Familjerna köper blocken i appen.</p>
+    <div class="blocks">
+      <div><span>Nivå 1, etapp 1</span><b>Gratis</b></div>
+      <div><span>Nivå 2, etapp 2: Passa och dribbla</span><b class="num">129 kr</b></div>
+      <div><span>Nivå 3, etapp 3: Finter och koordination</span><b class="num">149 kr</b></div>
+      <div><span>Nivå 4–5, etapp 4–5: Matchfart</span><b class="num">199 kr</b></div>
+      <div><span>En viss position: Positionsblocket</span><b class="num">249 kr</b></div>
+    </div></div>
+
+  <div class="card"><h2>Kopiera mina svar</h2><p class="small muted">Om sparandet inte fungerar: kopiera texten och skicka den till Carl på WhatsApp eller mejl.</p>
+    <button class="btn sec" id="kopiera">Kopiera mina svar</button><textarea id="kopiaText" hidden readonly style="min-height:160px"></textarea></div>
+  </div>`;
+}
+
+// ---------- ritning
+function rita() {
+  huvud(); sattStatus();
+  $$('.tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === flik)));
+  const v = $('#vy');
+  if (!OV.length) { v.innerHTML = '<p class="empty">Hämtar övningarna…</p>'; return; }
+  if (flik === 'lista') v.innerHTML = oppen && !oppen.startsWith('ny:') ? vyOvning(OV.find(o => o.id === oppen)) : vyLista();
+  else if (flik === 'ny') v.innerHTML = vyNy();
+  else if (flik === 'allmant') v.innerHTML = vyAllmant();
+  else v.innerHTML = vyGuide();
+  kopplaVideo();
+}
+function ritaForm() {  // bara formuläret, så att filmen och skrollen ligger still
+  const o = oppen && !oppen.startsWith('ny:') ? OV.find(x => x.id === oppen) : null;
+  const scroll = window.scrollY, tid = $('#vid')?.currentTime;
+  $('#form').innerHTML = formular(utkast, o, !o);
+  kopplaVideo(tid);
+  window.scrollTo(0, scroll);
+}
+
+// ---------- video: hoppa till klippet och stanna i slutet
+// iPhone spelar bara en film som servern kan skicka i bitar (Range), och sidans egna filer skickas hela. Därför hämtas
+// filmen först och spelas sedan från telefonens minne (Haris 2026-11-25: filmen gick inte att spela på iPhone).
+const FILMER = new Map();
+function filmUrl(url) {
+  if (!FILMER.has(url)) {
+    const p = fetch(url).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.blob(); })
+      .then(b => URL.createObjectURL(b.type ? b : new Blob([b], { type: 'video/mp4' })));
+    p.catch(() => FILMER.delete(url));
+    FILMER.set(url, p);
+  }
+  return FILMER.get(url);
+}
+function kopplaVideo(tid) {
+  const v = $('#vid'); if (!v) return;
+  const laddar = $('#vidLaddar');
+  if (v.dataset.src && !v.src) filmUrl(v.dataset.src)
+    .then(u => { if (v.isConnected) { v.src = u; if (laddar) laddar.hidden = true; } })
+    .catch(() => { if (v.isConnected) { v.src = v.dataset.src; if (laddar) laddar.textContent = 'Filmen kunde inte hämtas. Ladda om sidan.'; } });
+  let stopp = null;
+  const start = () => +utkast.start || 0, slut = () => +utkast.slut || 0;
+  v.addEventListener('loadedmetadata', () => { v.currentTime = tid ?? start(); }, { once: true });
+  v.addEventListener('timeupdate', () => { if (stopp && v.currentTime >= stopp) { v.pause(); stopp = null; } });
+  $('#spelaKlipp')?.addEventListener('click', () => { v.currentTime = start(); stopp = slut() || null; v.play().catch(() => {}); });
+}
+
+// ---------- läs formuläret in i utkastet
+function lasFalt() {
+  if (!utkast) return;
+  for (const [id, k] of [['f-namn', 'namn'], ['f-desc', 'desc'], ['f-tid', 'tid'], ['f-maltid', 'maltid'], ['f-start', 'start'], ['f-slut', 'slut'], ['f-kommentar', 'kommentar']]) {
+    const el = document.getElementById(id); if (el) utkast[k] = el.type === 'number' ? (el.value === '' ? '' : +el.value) : el.value;
+  }
+}
+
+// ---------- spara
+async function skriv(sokvag, data) {
+  sparaLokalt(sokvag, data);
+  if (!db || kanSpara === false) return false;
+  try { await db.doc(sokvag).set(data); return true; }
+  catch (e) { if (e?.code === 'invalid_argument') { kanSpara = false; sattStatus(); } else if (e?.code === 'unavailable') { try { await new Promise(r => setTimeout(r, 600 + Math.random() * 600)); await db.doc(sokvag).set(data); return true; } catch {} } return false; }
+}
+// Svar som bara sparats i webbläsaren (innan Haris loggat in eller fått rätt att spara) skickas till Carl så fort
+// sparandet fungerar. Det nyare vinner, så ett svar som redan finns hos Carl skrivs inte över av ett äldre.
+async function skickaLokala() {
+  if (!db || kanSpara === false) return;
+  let n = 0;
+  for (const [sokvag, v] of Object.entries(lokal())) {
+    const [samling, id] = sokvag.split('/');
+    const finns = samling === 'svar' ? SVAR[id] : samling === 'nya' ? NYA[id] : samling === 'allmant' && Object.keys(ALLM).length ? ALLM : null;
+    if (!v || (finns && String(finns.t || '') >= String(v.t || ''))) continue;
+    try { await db.doc(sokvag).set(v); n++; } catch (e) { if (e?.code === 'invalid_argument') { kanSpara = false; sattStatus(); return; } }
+  }
+  if (n) toast(`${n} ${n === 1 ? 'svar' : 'svar'} från den här webbläsaren är skickade till Carl`);
+}
+function rent(v) { const d = JSON.parse(JSON.stringify(v)); d.t = nu(); return d; }
+
+async function sparaOvning(nasta) {
+  lasFalt();
+  const o = OV.find(x => x.id === oppen), d = rent(utkast);
+  if (!d.beslut) d.beslut = 'ja';
+  SVAR[o.id] = d;
+  const ok = await skriv('svar/' + o.id, d);
+  toast(ok ? 'Sparat' : 'Sparat i webbläsaren');
+  if (nasta) {
+    const i = OV.indexOf(o);
+    const n = OV.slice(i + 1).find(x => !status(x)) || OV.find(x => !status(x));
+    if (n) { oppna(n.id); window.scrollTo(0, 0); return; }
+  }
+  oppen = null; utkast = null; rita(); window.scrollTo(0, 0);
+}
+async function sparaNy() {
+  lasFalt();
+  if (!String(utkast.namn || '').trim()) { toast('Skriv ett namn först'); $('#f-namn')?.focus(); return; }
+  const id = oppen && oppen !== 'ny:' ? oppen.slice(3) : 'n' + Date.now().toString(36);
+  const d = rent(utkast); NYA[id] = d;
+  const ok = await skriv('nya/' + id, d);
+  toast(ok ? 'Övningen är tillagd' : 'Sparat i webbläsaren');
+  oppen = 'ny:'; utkast = tomNy(); rita(); window.scrollTo(0, 0);
+}
+async function sparaAllm() {
+  ALLM.mer = $('#a-mer').value;
+  const d = { ...ALLM, t: nu() }; ALLM = d;
+  const ok = await skriv('allmant/svar', d);
+  toast(ok ? 'Svaren är sparade' : 'Sparat i webbläsaren');
+}
+const tomNy = () => ({ beslut: 'ny', namn: '', desc: '', typ: ['Övning'], tid: '', maltid: '', niva: [], position: ['Alla'], alder: [], erfarenhet: [], fas: [], fardighet: [], utr: ['Boll'], sallskap: [], yta: [], plats: [], var: [], film: '', start: '', slut: '', kommentar: '' });
+
+function oppna(id) {
+  const o = OV.find(x => x.id === id); oppen = id;
+  const s = svarFor(o);
+  utkast = flera(s ? { ...grund(o), ...JSON.parse(JSON.stringify(s)) } : grund(o));
+  rita();
+}
+
+function kopiaText() {
+  const rad = (k, v) => v === '' || v == null || (Array.isArray(v) && !v.length) ? '' : `  ${k}: ${Array.isArray(v) ? v.join(', ') : v}\n`;
+  const blk = (rubrik, v) => `${rubrik}\n` + rad('Med', { ja: 'ja', bort: 'NEJ, ta bort', osaker: 'osäker', ny: 'ny' }[v.beslut] || v.beslut) + rad('Namn', v.namn) + rad('Instruktion', v.desc) + rad('Typ', lista(v.typ)) + rad('Används', v.var) + rad('Nivå', nivor(v)) + rad('Position', v.position) + rad('Ålder', v.alder) + rad('Erfarenhet', v.erfarenhet) + rad('Fas', lista(v.fas)) + rad('Tid min', v.tid) + rad('Måltid s', v.maltid) + rad('Färdighet', v.fardighet) + rad('Behövs', v.utr) + rad('Med', v.sallskap) + rad('Yta', lista(v.yta)) + rad('Plats', v.plats) + rad('Film', v.film) + (v.film === 'Justera början eller slut' ? rad('Klipp', `${v.start}–${v.slut} s`) : '') + rad('Kommentar', v.kommentar);
+  let t = 'ÖVNINGSBANKEN – svar från Haris\n\n';
+  for (const o of OV) { const s = svarFor(o); if (s) t += blk(`[${o.id}] ${o.namn}`, s) + '\n'; }
+  const l = lokal();
+  const nya = { ...Object.fromEntries(Object.entries(l).filter(([k]) => k.startsWith('nya/')).map(([k, v]) => [k.slice(4), v])), ...NYA };
+  for (const [id, n] of Object.entries(nya)) t += blk(`[NY ${id}] ${n.namn}`, n) + '\n';
+  const a = Object.keys(ALLM).length ? ALLM : (l['allmant/svar'] || {});
+  if (Object.keys(a).length) { t += 'ALLMÄNT\n'; for (const [k, f] of ALLMANT) if (lista(a[k]).length) t += `  ${f} → ${lista(a[k]).join(', ')}\n`; if (a.mer) t += `  Annat: ${a.mer}\n`; }
+  return t;
+}
+
+// ---------- händelser
+document.addEventListener('click', async e => {
+  const el = e.target.closest('button'); if (!el) return;
+  if (el.dataset.tab) {
+    lasFalt(); flik = el.dataset.tab;
+    if (flik === 'ny' && !oppen?.startsWith('ny:')) { oppen = 'ny:'; utkast = tomNy(); }
+    else if (flik !== 'ny' && oppen?.startsWith('ny:')) { oppen = null; utkast = null; }
+    rita(); window.scrollTo(0, 0); return;
+  }
+  if (el.dataset.filter) { filter = el.dataset.filter; rita(); return; }
+  if (el.dataset.oppna) { oppna(el.dataset.oppna); window.scrollTo(0, 0); return; }
+  if (el.hasAttribute('data-tillbaka')) { oppen = null; utkast = null; rita(); return; }
+  if (el.dataset.nyoppna) { oppen = 'ny:' + el.dataset.nyoppna; utkast = flera({ ...tomNy(), ...JSON.parse(JSON.stringify(NYA[el.dataset.nyoppna])) }); rita(); window.scrollTo(0, 0); return; }
+  if (el.id === 'nyTom') { oppen = 'ny:'; utkast = tomNy(); rita(); return; }
+  if (el.dataset.falt && utkast) {
+    lasFalt();
+    const f = el.dataset.falt, v = el.dataset.v;
+    if (f === 'beslut') utkast.beslut = { 'Ja': 'ja', 'Osäker': 'osaker', 'Nej, ta bort den': 'bort' }[v];
+    else if (el.dataset.multi === '1') {
+      let a = [...(utkast[f] || [])];
+      if (f === 'niva') { a = a.map(Number); const t = +v; a = a.includes(t) ? a.filter(x => x !== t) : [...a, t].sort((x, y) => x - y); }
+      else a = a.includes(v) ? a.filter(x => x !== v) : [...a, v];
+      if (f === 'position') a = v === 'Alla' ? (a.includes('Alla') ? ['Alla'] : []) : a.filter(x => x !== 'Alla');
+      utkast[f] = a;
+    } else utkast[f] = String(utkast[f]) === v ? '' : (f === 'niva' ? +v : v);
+    ritaForm(); return;
+  }
+  if (el.dataset.satt && utkast) { const vid = $('#vid'); if (vid) { lasFalt(); utkast[el.dataset.satt] = Math.round(vid.currentTime); ritaForm(); } return; }
+  if (el.dataset.allm) { const k = el.dataset.allm, x = el.dataset.v, a = lista(ALLM[k]); ALLM = { ...ALLM, mer: $('#a-mer')?.value ?? ALLM.mer, [k]: a.includes(x) ? a.filter(y => y !== x) : [...a, x] }; rita(); return; }
+  if (el.id === 'spara') return sparaOvning(false);
+  if (el.id === 'sparaNasta') return sparaOvning(true);
+  if (el.id === 'sparaNy') return sparaNy();
+  if (el.id === 'sparaAllm') return sparaAllm();
+  if (el.id === 'kopiera') {
+    const t = kopiaText(), ta = $('#kopiaText');
+    try { await navigator.clipboard.writeText(t); toast('Kopierat. Klistra in till Carl.'); }
+    catch { ta.hidden = false; ta.value = t; ta.focus(); ta.select(); toast('Markerat. Kopiera texten.'); }
+  }
+});
+document.addEventListener('input', e => { if (e.target.closest('#form') && utkast) lasFalt(); });
+
+// ---------- start
+fetch('ovningar.json').then(r => r.json()).then(d => { OV = d; rita(); }).catch(() => { $('#vy').innerHTML = '<p class="empty">Övningarna kunde inte hämtas. Ladda om sidan.</p>'; });
+rita();
+
+(async () => {
+  const timer = setTimeout(() => { laddat = true; sattStatus(); }, 10000);
+  try {
+    const [d, u] = await Promise.all([window.claude?.use?.('db') ?? null, window.claude?.use?.('user') ?? null]);
+    db = d;
+    if (u) { const c = await u.can('data.write'); if (c === false) kanSpara = false; }
+    if (!db) { clearTimeout(timer); laddat = true; rita(); return; }
+    let klar = 0; const enKlar = () => { if (++klar === 3) { clearTimeout(timer); laddat = true; sattStatus(); skickaLokala(); } };
+    const fel = () => { clearTimeout(timer); laddat = true; sattStatus(); };
+    db.collection('svar').onSnapshot(s => { SVAR = Object.fromEntries(s.docs.map(x => [x.id, x.data()])); if (!s.metadata.fromCache) enKlar(); if (flik === 'lista' && !utkast) rita(); else huvud(); }, fel);
+    db.collection('nya').onSnapshot(s => { NYA = Object.fromEntries(s.docs.map(x => [x.id, x.data()])); if (!s.metadata.fromCache) enKlar(); if (flik === 'ny' && oppen === 'ny:' && !utkast?.namn) rita(); }, fel);
+    db.doc('allmant/svar').onSnapshot(s => { if (s.exists) ALLM = { ...s.data() }; if (!s.metadata.fromCache) enKlar(); if (flik === 'allmant') rita(); else sattStatus(); }, fel);
+  } catch { clearTimeout(timer); laddat = true; rita(); }
+})();
+</script>
