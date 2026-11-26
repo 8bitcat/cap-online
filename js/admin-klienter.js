@@ -174,7 +174,7 @@ function klientSida() {
   const kommande = d.bokningar.filter(b => b.datum >= idag());
   const tidigare = d.bokningar.filter(b => b.datum < idag());
   const obetalda = tidigare.filter(b => !b.betald && !b.paket && !b.pott).reverse();
-  const harPass = (d.paket || []).some(p => p.kvar > 0);
+  const harPass = (d.paket || []).some(p => (p.ledigt ?? p.kvar) > 0);
   const pottOk = !!(d.pott && d.pott.pris && d.pott.ledigt >= d.pott.pris);
   // hur tiden betalas: paket, pott eller styckvis (Swish/kontant), och knapparna för att byta
   const satt = (b, s, t) => `<button type="button" class="film" data-action="klient-tidpaket" data-v="${b.v}" data-slot="${b.id}" data-satt="${s}">${t}</button>`;
@@ -327,7 +327,7 @@ function paketPanel(d) {
   const kvar = lista.reduce((n, p) => n + p.kvar, 0);
   const utanfor = lista.find(p => p.utanfor);
   const logg = (k.passLogg || []).slice().reverse();
-  const rad = p => `<li class="row"><span class="grow"><b>${esc(p.namn)}</b> · <span class="pk-kvar">${p.kvar} av ${p.antal} kvar</span>
+  const rad = p => `<li class="row"><span class="grow"><b>${esc(p.namn)}</b> · <span class="pk-kvar">${p.kvar} av ${p.antal} kvar${p.bokade ? ` · ${p.bokade} bokade` : ''}</span>
     ${p.antal <= 24 ? `<div class="hal" aria-hidden="true">${Array.from({ length: p.antal }, (_, i) => `<i class="${i < p.anvanda ? 'anv' : ''}"></i>`).join('')}</div>` : ''}
     <div class="small muted">${p.utanfor ? `${p.tidigare || 0} använda innan appen` : p.av === 'foralder' ? 'Köpt i appen' : 'Lagt på av dig'} · ${esc(fmtTid(p.kopt))}</div>
     <div class="betal-rad-admin">${p.utanfor ? '' : `${betalStatus({ ...p, paket: null })} <button type="button" class="film" data-action="klient-paket-betald" data-id="${p.id}" ${p.betald ? '' : 'data-betald="1"'}>${p.betald ? 'Ångra betald' : 'Markera betald'}</button> `}<button type="button" class="film" data-action="klient-paket-bort" data-id="${p.id}">Ta bort</button></div></span></li>`;

@@ -88,7 +88,7 @@ const lokal = d => d.toLocaleString('sv-SE', { timeZone: 'Europe/Stockholm' }).r
   const fore = (await j('GET', '/mina', null, ftok)).paket.reduce((n, p) => n + p.kvar, 0);
   const senP = await j('POST', '/boka/avboka', { v: V, slot: s18, testNu: new Date(start18.getTime() - 3 * 3600e3).toISOString() }, ftok);
   const efter = (await j('GET', '/mina', null, ftok)).paket.reduce((n, p) => n + p.kvar, 0);
-  koll('paket: passet tillbaka? nej, det räknas', senP.ok && /paketet/.test(senP.sen || '') && efter === fore, `${fore} → ${efter} · ${senP.sen}`);
+  koll('paket: sen avbokning räknas som ett pass (ett mindre kvar)', senP.ok && /paketet/.test(senP.sen || '') && efter === fore - 1, `${fore} → ${efter} · ${senP.sen}`);
   await adm('POST', `/admin/klient/${ella}/boka`, { v: V, slot: s18 });
   const tidig = await j('POST', '/boka/avboka', { v: V, slot: s18, testNu: new Date(start18.getTime() - 30 * 3600e3).toISOString() }, ftok);
   const efter2 = (await j('GET', '/mina', null, ftok)).paket.reduce((n, p) => n + p.kvar, 0);

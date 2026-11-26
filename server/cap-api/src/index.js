@@ -494,11 +494,21 @@ function veckaNotisText(vecka) {
 // klienten (k.paket). Använda pass räknas ur bokningarna som pekar på paketet, så en avbokning lämnar tillbaka
 // passet av sig själv. Reglerna från provet: föräldern kan köpa själv, passen går att boka innan paketet är betalt,
 // och kommande obetalda bokningar flyttas in i ett nytt paket.
+// Passen räknas ner när passet körts (Haris 2026-11-26: "jag vill att passen ska räknas ner precis efter passen. Det
+// var en annan som hade bokat på söndag och passet försvann i samma stund hon bokade"). kvar = pass som inte körts,
+// bokade = kommande bokningar ur paketet, ledigt = det som går att boka (kvar minus bokade). tidigare = pass som redan
+// var använda när Haris lade in pass betalda utanför appen, och sena avbokningar.
+const kortsPass = (v, s, nuL = lokal()) => `${datumFor(v, s.dag)}T${s.slut}` <= nuL;
 function paketSaldo(k, veckor) {
-  const anv = {};
-  for (const w of veckor) for (const s of w.slots) if (s.bokad?.uid === k.id && s.bokad.paket) anv[s.bokad.paket] = (anv[s.bokad.paket] || 0) + 1;
-  // tidigare = pass som redan var använda när Haris lade in pass betalda utanför appen
-  return (k.paket || []).map(p => { const anvanda = (p.tidigare || 0) + (anv[p.id] || 0); return { ...p, anvanda, kvar: Math.max(0, p.antal - anvanda) }; });
+  const korda = {}, bokade = {}, nuL = lokal();
+  for (const w of veckor) for (const s of w.slots) if (s.bokad?.uid === k.id && s.bokad.paket) {
+    const m = kortsPass(w.v, s, nuL) ? korda : bokade;
+    m[s.bokad.paket] = (m[s.bokad.paket] || 0) + 1;
+  }
+  return (k.paket || []).map(p => {
+    const anvanda = (p.tidigare || 0) + (korda[p.id] || 0), bok = bokade[p.id] || 0;
+    return { ...p, anvanda, bokade: bok, kvar: Math.max(0, p.antal - anvanda), ledigt: Math.max(0, p.antal - anvanda - bok) };
+  });
 }
 // Carl 2026-10-28: "olika barn ska kunna ha deals" – Haris sätter ett eget pris per pass på barnet
 const klientPris = (k, cfg) => k?.pris || cfg.pris || null;
@@ -508,12 +518,12 @@ const tidText = (v, s) => { const d = new Date(datumFor(v, s.dag) + 'T12:00:00Z'
 // Carl 2026-10-28: "en logg på alla pass" – inlagda och borttagna pass, bokningar och avbokningar, med datum.
 // antal = hur saldot ändrades (+10 inlagt, −1 bokat från paketet, 0 för en bokning som betalas styckvis)
 function logga(k, typ, text, antal = 0, av = '') { k.passLogg = [...(k.passLogg || []), { t: nu(), typ, text: ren(text, 160), antal, av }].slice(-300); }
-const ledigtPaket = (k, veckor) => paketSaldo(k, veckor).find(p => p.kvar > 0) || null;
+const ledigtPaket = (k, veckor) => paketSaldo(k, veckor).find(p => p.ledigt > 0) || null;
 const nyttPaket = (m, av, betald) => ({ id: nyttId('pk'), namn: ren(m.namn, 40) || `${m.antal} pass`, antal: m.antal, pris: m.pris, kopt: nu(), av, betald: betald || !m.pris ? nu() : null, swishad: null });
 async function sparaVeckor(env, veckor) { await Promise.all([...veckor].map(w => env.DB.put(`vecka:${w.v}`, JSON.stringify(w)))); }
 // Ett nytt paket tar över kommande bokningar som inte är betalda eller swishade
 async function flyttaTillPaket(env, k, pk, veckor) {
-  let kvar = paketSaldo(k, veckor).find(p => p.id === pk.id)?.kvar || 0;
+  let kvar = paketSaldo(k, veckor).find(p => p.id === pk.id)?.ledigt || 0;
   const rader = [];
   for (const w of veckor) for (const s of w.slots) {
     const b = s.bokad;
@@ -1139,7 +1149,7 @@ export default {
         s.hall = null;
         await env.DB.put(`vecka:${v}`, JSON.stringify(vecka));
         if (kl) {
-          if (pk) logga(kl, 'bokad', `Bokade ${tidText(v, s)} med ett pass ur ${pk.namn}`, -1, 'foralder');
+          if (pk) logga(kl, 'bokad', `Bokade ${tidText(v, s)} med ett pass ur ${pk.namn} (dras när passet körts)`, kortsPass(v, s) ? -1 : 0, 'foralder');
           else if (pott) logga(kl, 'pott', `Bokade ${tidText(v, s)}, ${krText(s.bokad.pris)} dras ur potten när passet körts`, 0, 'foralder');
           else logga(kl, 'styck', `Bokade ${tidText(v, s)}${s.bokad.pris ? `, ${krText(s.bokad.pris)} med Swish` : ''}`, 0, 'foralder');
           await sparaKlient(env, kl);
@@ -1173,7 +1183,7 @@ export default {
             else sen = 'Passet räknas.';
             if (bk.id !== kl.id) await sparaKlient(env, bk);
           }
-          logga(kl || {}, 'avbokad', sen ? `Avbokade ${tidText(v, s)} mindre än 24 timmar före: ${sen}` : `Avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket && !sen ? 1 : 0, 'foralder');
+          logga(kl || {}, 'avbokad', sen ? `Avbokade ${tidText(v, s)} mindre än 24 timmar före: ${sen}` : `Avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet drogs inte' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, sen && s.bokad.paket ? -1 : 0, 'foralder');
           if (kl) await sparaKlient(env, kl);
           tillHaris(sen ? 'Sen avbokning' : 'Avbokning', `${barnNamn(kl, user)} avbokade ${tidText(v, s)}${sen ? `, mindre än 24 timmar före. ${sen}` : ''} Tiden är ledig igen.`);
           s.bokad = null;
@@ -1681,7 +1691,7 @@ export default {
             const pk = ledigtPaket(k, veckor);
             if (!pk) return fel('inget paket med pass kvar', 409);
             s.bokad.paket = pk.id; s.bokad.pott = false; s.bokad.pris = null; s.bokad.swishad = null;
-            logga(k, 'flytt', `Haris drog ${tidText(w.v, s)} från ${pk.namn}`, -1, 'haris');
+            logga(k, 'flytt', `Haris drog ${tidText(w.v, s)} från ${pk.namn}`, kortsPass(w.v, s) ? -1 : 0, 'haris');
           } else if (satt === 'pott') {
             const pris = klientPris(k, cfgT);
             if (fran !== 'pott' && (!pris || !pottRacker(k, veckor, cfgT))) return fel('potten räcker inte till passet', 409);
@@ -1689,7 +1699,7 @@ export default {
             logga(k, 'pott', `Haris lät ${tidText(w.v, s)} betalas ur potten (${krText(pris)})`, fran === 'paket' ? 1 : 0, 'haris');
           } else {
             s.bokad.paket = null; s.bokad.pott = false; s.bokad.pris = klientPris(k, cfgT);
-            logga(k, 'flytt', `${tidText(w.v, s)} betalas styckvis i stället${fran === 'paket' ? ', passet tillbaka' : fran === 'pott' ? ', beloppet tillbaka i potten' : ''}`, fran === 'paket' ? 1 : 0, 'haris');
+            logga(k, 'flytt', `${tidText(w.v, s)} betalas styckvis i stället${fran === 'paket' ? ', passet tillbaka' : fran === 'pott' ? ', beloppet tillbaka i potten' : ''}`, fran === 'paket' && kortsPass(w.v, s) ? 1 : 0, 'haris');
           }
           await env.DB.put(`vecka:${w.v}`, JSON.stringify(w));
           await sparaKlient(env, k);
@@ -1795,7 +1805,7 @@ export default {
               s.bokad = { uid: fk.id, namn: fk.foralder, barn: barnText(valda.map(x => x.barn)), telefon: fk.telefon, email: fk.email, t: nu(), av: 'haris', pris: pk ? null : klientPris(fk, cfgB), paket: pk?.id || null, pott };
               if (fam.length > 1) s.bokad.barnIds = valda.map(x => x.id);
               s.hall = null;
-              logga(fk, pk ? 'bokad' : pott ? 'pott' : 'styck', `Haris bokade ${tidText(v, s)}${fam.length > 1 ? ` (${s.bokad.barn})` : ''}${pk ? ` med ett pass ur ${pk.namn}` : pott ? `, ${krText(s.bokad.pris)} ur potten` : s.bokad.pris ? `, ${krText(s.bokad.pris)}` : ''}`, pk ? -1 : 0, 'haris');
+              logga(fk, pk ? 'bokad' : pott ? 'pott' : 'styck', `Haris bokade ${tidText(v, s)}${fam.length > 1 ? ` (${s.bokad.barn})` : ''}${pk ? ` med ett pass ur ${pk.namn}` : pott ? `, ${krText(s.bokad.pris)} ur potten` : s.bokad.pris ? `, ${krText(s.bokad.pris)}` : ''}`, pk && kortsPass(v, s) ? -1 : 0, 'haris');
               if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Ny tid bokad', `Haris har bokat en tid åt ${s.bokad.barn || 'er'}: ${tidText(v, s)}${s.plats ? `, ${s.plats}` : ''}.${pk ? ' Passet dras från paketet.' : pott ? ` ${krText(s.bokad.pris)} dras ur potten.` : s.bokad.pris ? ` Betala ${krText(s.bokad.pris)} med Swish i appen.` : ''}`, `/boka/${v}`);
             }
           } else if (s.bokad?.uid === fk.id && bokadeBarn(s.bokad).includes(k.id)) {
@@ -1806,7 +1816,7 @@ export default {
               logga(fk, 'styck', `Haris strök ${k.barn} från ${tidText(v, s)}`, 0, 'haris');
               if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Tiden är ändrad', `${k.barn} är struken från ${tidText(v, s)}. ${s.bokad.barn} tränar som vanligt.`, `/boka/${v}`);
             } else {
-              logga(fk, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket ? 1 : 0, 'haris');
+              logga(fk, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? (kortsPass(v, s) ? ', passet tillbaka' : ', passet drogs inte') : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket && kortsPass(v, s) ? 1 : 0, 'haris');
               if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(fk, 'bokning', 'Tiden är avbokad', `Haris har avbokat ${tidText(v, s)}.${s.bokad.paket ? ' Passet är tillbaka i paketet.' : s.bokad.pott ? ' Beloppet är tillbaka i potten.' : ''}`, `/boka/${v}`);
               s.bokad = null;
             }
@@ -1896,7 +1906,7 @@ export default {
           for (const s of borta) {
             const kl = await hamtaKlient(env, s.bokad.uid);
             if (kl) {
-              logga(kl, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? ', passet tillbaka' : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket ? 1 : 0, 'haris');
+              logga(kl, 'avbokad', `Haris avbokade ${tidText(v, s)}${s.bokad.paket ? (kortsPass(v, s) ? ', passet tillbaka' : ', passet drogs inte') : s.bokad.pott ? `, ${krText(s.bokad.pris || 0)} tillbaka i potten` : ''}`, s.bokad.paket && kortsPass(v, s) ? 1 : 0, 'haris');
               if (`${datumFor(v, s.dag)}T${s.start}` > lokal()) tillKlient(kl, 'bokning', 'Tiden är avbokad', `Haris har tagit bort tiden ${tidText(v, s)}.${s.bokad.paket ? ' Passet är tillbaka i paketet.' : s.bokad.pott ? ' Beloppet är tillbaka i potten.' : ''}`, '/boka');
               await sparaKlient(env, kl);
             }

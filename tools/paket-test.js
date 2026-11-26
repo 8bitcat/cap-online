@@ -71,7 +71,7 @@ const TEL = '070-555 66 77';
   await f.click('[data-action=boka-paket-kop][data-namn="10 pass"]'); await vantaToast(f, 'är ert');
   koll('köpt, bokade tiden ingår', (await toast(f)).includes('En bokad tid ingår nu i paketet'), await toast(f));
   await f.waitForSelector('.paket-kort', { timeout: 10000 });
-  koll('paketkortet: 9 av 10 kvar', (await text(f, '.paket-kort .pk-kvar')) === '9 av 10 pass kvar', await text(f, '.paket-kort .pk-kvar'));
+  koll('paketkortet: 10 av 10 kvar, 1 bokat (dras när passet körts)', (await text(f, '.paket-kort .pk-kvar')) === '10 av 10 pass kvar · 1 bokade', await text(f, '.paket-kort .pk-kvar'));
   const href = await f.$eval('.paket-kort a.btn.swish', e => e.getAttribute('href')).catch(() => '');
   const q = href ? new URL(href).searchParams : new URLSearchParams();
   koll('Swish för paketet: 6 900 kr och meddelandet', q.get('amt') === '6900.00' && q.get('msg') === 'CAP Ida Berg paket 10 pass' && q.get('sw') === '1232852762', href);
@@ -82,39 +82,39 @@ const TEL = '070-555 66 77';
 
   // ---- nästa bokning dras från paketet ----
   await f.goto(base + `index.html#/boka/${vt}`); await f.waitForSelector('.tid', { timeout: 10000 }); await f.waitForTimeout(500);
-  koll('saldot syns på bokningssidan', (await text(f, '.saldo-ruta')).includes('9 pass kvar'), await text(f, '.saldo-ruta'));
+  koll('saldot syns på bokningssidan', (await text(f, '.saldo-ruta')).includes('10 pass kvar'), await text(f, '.saldo-ruta'));
   const hall2 = await boka(0);
-  koll('valet: använd ett köpt pass eller swisha', hall2.includes('Använd ett av dina pass (9 kvar)') && hall2.includes('Swisha 850 kr i stället'), hall2);
-  koll('bokad: passet dras från paketet, 8 kvar, ingen betalruta', (await text(f, '.nyss-bokad')).includes('Passet dras från paketet, 8 kvar') && !(await f.$('.nyss-bokad a.btn.swish')) && !(await f.$('.betal-ark')), await text(f, '.nyss-bokad'));
+  koll('valet: använd ett köpt pass eller swisha', hall2.includes('Använd ett av dina pass (9 kvar att boka)') && hall2.includes('Swisha 850 kr i stället'), hall2);
+  koll('bokad: passet dras från paketet när det körts, ingen betalruta', (await text(f, '.nyss-bokad')).includes('Passet dras från paketet när det körts') && !(await f.$('.nyss-bokad a.btn.swish')) && !(await f.$('.betal-ark')), await text(f, '.nyss-bokad'));
   await f.click('.paket-kort [data-action=boka-paket-swishad]'); await vantaToast(f, 'Tack!');
   koll('Jag har swishat för paketet', await vantaText(f, '.paket-kort', 'Swishad'));
   // ett pass med Swish fast paketet har pass kvar (Carl: "swisha för nytt och använd inte det köpta")
   await (await f.$$('.tid:not([disabled]):not(.min)'))[0].click(); await f.waitForSelector('.hall', { timeout: 8000 });
   await f.click('[data-action=boka-bekrafta][data-betalning=swish]'); await f.waitForSelector('.betal-ark', { timeout: 10000 }).catch(() => {});
   koll('Swisha i stället: rutan Betala passet', (await text(f, '.betal-ark a.btn.swish')) === 'Betala 850 kr med Swish', await text(f, '.betal-ark'));
-  await f.click('[data-action=boka-ark-stang]'); await vantaText(f, '.paket-kort .pk-kvar', '8 av 10');
-  koll('paketet orört, 8 kvar', (await text(f, '.paket-kort .pk-kvar')) === '8 av 10 pass kvar', await text(f, '.paket-kort .pk-kvar'));
+  await f.click('[data-action=boka-ark-stang]'); await vantaText(f, '.paket-kort .pk-kvar', '2 bokade');
+  koll('paketet orört, 2 bokade', (await text(f, '.paket-kort .pk-kvar')) === '10 av 10 pass kvar · 2 bokade', await text(f, '.paket-kort .pk-kvar'));
 
   // ---- Haris: klientsidan ----
   await a.goto(base + `index.html#/admin/klient/${kid}`); await a.waitForSelector('form[data-form=klient-paket]', { timeout: 10000 });
   const panel = () => a.$eval('form[data-form=klient-paket]', e => e.closest('section').textContent.replace(/\s+/g, ' '));
-  koll('Haris ser paketet: 8 av 10, swishad', (await panel()).includes('8 av 10 kvar') && (await panel()).includes('Swishad enligt föräldern'), (await panel()).slice(0, 160));
+  koll('Haris ser paketet: 8 av 10, swishad', (await panel()).includes('10 av 10 kvar · 2 bokade') && (await panel()).includes('Swishad enligt föräldern'), (await panel()).slice(0, 160));
   await a.click('[data-action=klient-paket-betald]'); await vantaToast(a, 'markerat betalt');
   koll('Markera betald på paketet', await vantaText(a, '.lagg-paket', '') && await a.waitForFunction(() => document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('Betald ✓'), null, { timeout: 8000 }).then(() => true, () => false));
   const rader = async () => a.$$eval('li.row.bokning', l => l.map(x => x.textContent.replace(/\s+/g, ' ')));
   koll('två tider ingår i paket, en med Swish', (await rader()).length === 3 && (await rader()).filter(r => r.includes('Ingår i paket')).length === 2, (await rader()).join(' || ').slice(0, 240));
   await a.click('li.row.bokning [data-action=klient-tidpaket]'); await vantaToast(a, 'styckvis'); await a.waitForFunction(() => document.querySelector('li.row.bokning')?.textContent.includes('Dra från paketet'), null, { timeout: 8000 }).catch(() => {});
-  koll('Betala styckvis i stället', (await rader())[0].includes('850 kr') && (await rader())[0].includes('Dra från paketet') && (await panel()).includes('9 av 10 kvar'), (await rader())[0]);
+  koll('Betala styckvis i stället', (await rader())[0].includes('850 kr') && (await rader())[0].includes('Dra från paketet') && (await panel()).includes('10 av 10 kvar · 1 bokade'), (await rader())[0]);
   await a.click('li.row.bokning [data-action=klient-tidpaket][data-satt="paket"]'); await vantaToast(a, 'dras från paketet'); await a.waitForFunction(() => !document.querySelector('li.row.bokning')?.textContent.includes('Dra från paketet'), null, { timeout: 8000 }).catch(() => {});
-  koll('Dra från paketet', (await rader())[0].includes('Ingår i paket') && (await panel()).includes('8 av 10 kvar'));
+  koll('Dra från paketet', (await rader())[0].includes('Ingår i paket') && (await panel()).includes('10 av 10 kvar · 2 bokade'));
   // Haris lägger på 20 pass, redan betalt
-  await a.selectOption('form[data-form=klient-paket] select[name=mall]', { label: '20 pass · 12 900 kr' });
-  await a.check('form[data-form=klient-paket] input[name=betald]'); await a.click('form[data-form=klient-paket] button[type=submit]'); await vantaToast(a, 'är lagt på'); await a.waitForFunction(() => document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('19 av 20'), null, { timeout: 8000 }).catch(() => {});
-  koll('Haris lägger på 20 pass, betalt (onsdagstiden flyttas in)', (await panel()).includes('19 av 20 kvar') && (await panel()).includes('27 pass kvar'), (await panel()).slice(0, 120));
+  await a.selectOption('form[data-form=klient-paket] select[name=mall]', { index: 1 }); // 20 pass (priset skrivs med hårt mellanslag)
+  await a.check('form[data-form=klient-paket] input[name=betald]'); await a.click('form[data-form=klient-paket] button[type=submit]'); await vantaToast(a, 'är lagt på'); await a.waitForFunction(() => document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('20 av 20'), null, { timeout: 8000 }).catch(() => {});
+  koll('Haris lägger på 20 pass, betalt (onsdagstiden flyttas in)', (await panel()).includes('20 av 20 kvar · 1 bokade') && (await panel()).includes('30 pass kvar'), (await panel()).slice(0, 120));
   await a.screenshot({ path: path.join(UT, 'paket-haris.png'), fullPage: true });
   const del = (await a.$$('[data-action=klient-paket-bort]'))[0];
-  await del.click(); await del.click(); await vantaToast(a, 'borttaget'); await a.waitForFunction(() => !document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('19 av 20'), null, { timeout: 8000 }).catch(() => {});
-  koll('ta bort paketet', !(await panel()).includes('19 av 20'));
+  await del.click(); await del.click(); await vantaToast(a, 'borttaget'); await a.waitForFunction(() => !document.querySelector('form[data-form=klient-paket]')?.closest('section').textContent.includes('20 av 20'), null, { timeout: 8000 }).catch(() => {});
+  koll('ta bort paketet', !(await panel()).includes('20 av 20'));
   // Tider: ingen Markera betald på en paketbokning
   await a.goto(base + 'index.html#/admin/tider'); await a.waitForSelector('.vecka-titel');
   for (let i = 0; i < 14 && !(await text(a, '.vecka-titel b')).endsWith(` ${Number(vt.split('-W')[1])}`); i++) { await a.click('[data-action=tid-vecka]:last-of-type'); await a.waitForTimeout(200); }
@@ -124,8 +124,8 @@ const TEL = '070-555 66 77';
   // ---- avbokning ger tillbaka passet ----
   await f.goto(base + `index.html#/boka/${vt}`); await f.waitForSelector('#mina li.row.bokning', { timeout: 10000 });
   const av = (await f.$$('#mina [data-action=boka-avboka]'))[0];
-  await av.click(); await av.click(); await vantaToast(f, 'Avbokad'); await vantaText(f, '.paket-kort .pk-kvar', '9 av 10');
-  koll('avbokat: passet tillbaka (9 av 10)', (await text(f, '.paket-kort .pk-kvar')) === '9 av 10 pass kvar', await text(f, '.paket-kort .pk-kvar'));
+  await av.click(); await av.click(); await vantaToast(f, 'Avbokad'); await vantaText(f, '.paket-kort .pk-kvar', '1 bokade');
+  koll('avbokat: ett bokat pass mindre (10 av 10, 1 bokat)', (await text(f, '.paket-kort .pk-kvar')) === '10 av 10 pass kvar · 1 bokade', await text(f, '.paket-kort .pk-kvar'));
 
   // ---- Haris: eget pris och pass betalda utanför appen ----
   await a.goto(base + `index.html#/admin/klient/${kid}`); await a.waitForSelector('form[data-form=klient-pris]', { timeout: 10000 });
@@ -133,9 +133,9 @@ const TEL = '070-555 66 77';
   koll('eget pris sparat', (await toast(a)).includes('700 kr per pass'), await toast(a));
   await a.fill('form[data-form=klient-utanfor] input[name=antal]', '10'); await a.fill('form[data-form=klient-utanfor] input[name=tidigare]', '3');
   await a.click('form[data-form=klient-utanfor] button[type=submit]'); await vantaToast(a, 'utanför appen');
-  // +7, och den obetalda måndagstiden flyttas in i passen (Khaled 2026-11-26) → 9 + 6 = 15
-  await a.waitForFunction(() => document.querySelector('#pass .pk-kvar')?.textContent.includes('15 pass kvar'), null, { timeout: 8000 }).catch(() => {});
-  koll('utanför appen: 10 från början, 3 använda, obetald tid flyttas in', (await text(a, '#pass .pk-kvar')) === '15 pass kvar', await text(a, '#pass .pk-kvar'));
+  // +7, och den obetalda tiden flyttas in i passen (Khaled 2026-11-26), bokad men inte körd → 10 + 7 = 17
+  await a.waitForFunction(() => document.querySelector('#pass .pk-kvar')?.textContent.includes('17 pass kvar'), null, { timeout: 8000 }).catch(() => {});
+  koll('utanför appen: 10 från början, 3 använda, obetald tid flyttas in', (await text(a, '#pass .pk-kvar')) === '17 pass kvar', await text(a, '#pass .pk-kvar'));
   await a.waitForFunction(() => (document.querySelector('.pass-historik')?.textContent || '').includes('utanför appen'), null, { timeout: 8000 }).catch(() => {});
   koll('Haris ser historiken', (await a.$eval('.pass-historik', e => e.textContent)).includes('Haris lade in 10 pass betalda utanför appen, 3 redan använda'));
   await a.screenshot({ path: path.join(UT, 'paket-haris-pris.png'), fullPage: true });
@@ -146,10 +146,10 @@ const TEL = '070-555 66 77';
   await f.click('[data-action=boka-slapp]'); await f.waitForTimeout(500);
   await f.goto(base + 'index.html#/mina-pass'); await f.waitForSelector('.logg', { timeout: 10000 });
   const mp = await text(f, '#view');
-  koll('Mina pass: saldo och historik', mp.includes('15 pass kvar') && mp.includes('Köpte 10 pass') && mp.includes('Bokade') && mp.includes('Avbokade') && mp.includes('Haris lade in 10 pass betalda utanför appen'), mp.slice(0, 220));
+  koll('Mina pass: saldo och historik', mp.includes('17 pass kvar') && mp.includes('Köpte 10 pass') && mp.includes('Bokade') && mp.includes('Avbokade') && mp.includes('Haris lade in 10 pass betalda utanför appen'), mp.slice(0, 220));
   await f.screenshot({ path: path.join(UT, 'paket-minapass.png'), fullPage: true });
   await f.goto(base + 'index.html#/mer'); await f.waitForTimeout(800);
-  koll('Mer: Mina pass med saldo', (await text(f, '#view')).includes('Mina pass: 15 kvar'));
+  koll('Mer: Mina pass med saldo', (await text(f, '#view')).includes('Mina pass: 17 kvar'));
 
   // ---- Khaled 2026-11-26: bokningar som redan finns flyttas in när Haris lägger in pass betalda utanför appen ----
   for (const k of (await adm('GET', '/admin/klienter')).klienter.filter(x => x.telefon === '+46705556678')) await adm('DELETE', `/admin/klient/${k.id}`);
@@ -162,11 +162,11 @@ const TEL = '070-555 66 77';
   const fore2 = await adm('GET', `/admin/klient/${k2}`);
   koll('två styckpass utan paket', fore2.bokningar.length === 2 && fore2.bokningar.every(x => !x.paket && x.pris), JSON.stringify(fore2.bokningar.map(x => [x.paket, x.pris])));
   const ut2 = await adm('PUT', `/admin/klient/${k2}/utanfor`, { antal: 8, tidigare: 2 });
-  koll('utanför appen tar in de bokade passen: 4 av 8 kvar', ut2.paket?.[0]?.kvar === 4 && ut2.bokningar.every(x => x.paket === ut2.paket[0].id && !x.pris), JSON.stringify(ut2.paket));
+  koll('utanför appen tar in de bokade passen: 6 kvar, 4 att boka', ut2.paket?.[0]?.kvar === 6 && ut2.paket[0].ledigt === 4 && ut2.bokningar.every(x => x.paket === ut2.paket[0].id && !x.pris), JSON.stringify(ut2.paket));
   koll('historiken säger att tiderna flyttades in', (ut2.klient.passLogg || []).some(x => x.text.includes('2 bokade tider flyttades in i Betalda utanför appen')));
   // en tredje tid efter att paketet finns dras direkt från det
   const b3 = await adm('POST', `/admin/klient/${k2}/boka`, { v: vt2, slot: s2[2].id });
-  koll('ny bokning dras från paketet: 3 kvar', (await adm('GET', `/admin/klient/${k2}`)).paket[0].kvar === 3, JSON.stringify(b3).slice(0, 120));
+  koll('ny bokning ur paketet: 3 kvar att boka', (await adm('GET', `/admin/klient/${k2}`)).paket[0].ledigt === 3, JSON.stringify(b3).slice(0, 120));
   await adm('PUT', `/admin/vecka/${vt2}`, { oppen: false, slots: [], notis: false }).catch(() => {});
   await adm('DELETE', `/admin/klient/${k2}`);
 
