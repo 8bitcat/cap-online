@@ -133,8 +133,9 @@ const TEL = '070-555 66 77';
   koll('eget pris sparat', (await toast(a)).includes('700 kr per pass'), await toast(a));
   await a.fill('form[data-form=klient-utanfor] input[name=antal]', '10'); await a.fill('form[data-form=klient-utanfor] input[name=tidigare]', '3');
   await a.click('form[data-form=klient-utanfor] button[type=submit]'); await vantaToast(a, 'utanför appen');
-  await a.waitForFunction(() => document.querySelector('#pass .pk-kvar')?.textContent.includes('16 pass kvar'), null, { timeout: 8000 }).catch(() => {});
-  koll('utanför appen: 10 från början, 3 använda ger +7', (await text(a, '#pass .pk-kvar')) === '16 pass kvar', await text(a, '#pass .pk-kvar'));
+  // +7, och den obetalda måndagstiden flyttas in i passen (Khaled 2026-11-26) → 9 + 6 = 15
+  await a.waitForFunction(() => document.querySelector('#pass .pk-kvar')?.textContent.includes('15 pass kvar'), null, { timeout: 8000 }).catch(() => {});
+  koll('utanför appen: 10 från början, 3 använda, obetald tid flyttas in', (await text(a, '#pass .pk-kvar')) === '15 pass kvar', await text(a, '#pass .pk-kvar'));
   await a.waitForFunction(() => (document.querySelector('.pass-historik')?.textContent || '').includes('utanför appen'), null, { timeout: 8000 }).catch(() => {});
   koll('Haris ser historiken', (await a.$eval('.pass-historik', e => e.textContent)).includes('Haris lade in 10 pass betalda utanför appen, 3 redan använda'));
   await a.screenshot({ path: path.join(UT, 'paket-haris-pris.png'), fullPage: true });
@@ -145,10 +146,29 @@ const TEL = '070-555 66 77';
   await f.click('[data-action=boka-slapp]'); await f.waitForTimeout(500);
   await f.goto(base + 'index.html#/mina-pass'); await f.waitForSelector('.logg', { timeout: 10000 });
   const mp = await text(f, '#view');
-  koll('Mina pass: saldo och historik', mp.includes('16 pass kvar') && mp.includes('Köpte 10 pass') && mp.includes('Bokade') && mp.includes('Avbokade') && mp.includes('Haris lade in 10 pass betalda utanför appen'), mp.slice(0, 220));
+  koll('Mina pass: saldo och historik', mp.includes('15 pass kvar') && mp.includes('Köpte 10 pass') && mp.includes('Bokade') && mp.includes('Avbokade') && mp.includes('Haris lade in 10 pass betalda utanför appen'), mp.slice(0, 220));
   await f.screenshot({ path: path.join(UT, 'paket-minapass.png'), fullPage: true });
   await f.goto(base + 'index.html#/mer'); await f.waitForTimeout(800);
-  koll('Mer: Mina pass med saldo', (await text(f, '#view')).includes('Mina pass: 16 kvar'));
+  koll('Mer: Mina pass med saldo', (await text(f, '#view')).includes('Mina pass: 15 kvar'));
+
+  // ---- Khaled 2026-11-26: bokningar som redan finns flyttas in när Haris lägger in pass betalda utanför appen ----
+  for (const k of (await adm('GET', '/admin/klienter')).klienter.filter(x => x.telefon === '+46705556678')) await adm('DELETE', `/admin/klient/${k.id}`);
+  const k2 = (await adm('POST', '/admin/klient', { foralder: 'Sami', telefon: '070-555 66 78', barn: 'Kim', efternamn: 'Ek', fodd: 2015 })).klient.id;
+  const vt2 = veckaOm(11);
+  await adm('PUT', `/admin/vecka/${vt2}`, { oppen: false, slots: [1, 2, 3].map(dag => ({ dag, start: '15:00', slut: '16:00' })), notis: false });
+  const s2 = (await adm('GET', '/admin/veckor')).veckor.find(w => w.v === vt2).slots;
+  await adm('PUT', `/admin/vecka/${vt2}`, { oppen: true, slots: s2, notis: false });
+  for (const s of s2.slice(0, 2)) await adm('POST', `/admin/klient/${k2}/boka`, { v: vt2, slot: s.id });
+  const fore2 = await adm('GET', `/admin/klient/${k2}`);
+  koll('två styckpass utan paket', fore2.bokningar.length === 2 && fore2.bokningar.every(x => !x.paket && x.pris), JSON.stringify(fore2.bokningar.map(x => [x.paket, x.pris])));
+  const ut2 = await adm('PUT', `/admin/klient/${k2}/utanfor`, { antal: 8, tidigare: 2 });
+  koll('utanför appen tar in de bokade passen: 4 av 8 kvar', ut2.paket?.[0]?.kvar === 4 && ut2.bokningar.every(x => x.paket === ut2.paket[0].id && !x.pris), JSON.stringify(ut2.paket));
+  koll('historiken säger att tiderna flyttades in', (ut2.klient.passLogg || []).some(x => x.text.includes('2 bokade tider flyttades in i Betalda utanför appen')));
+  // en tredje tid efter att paketet finns dras direkt från det
+  const b3 = await adm('POST', `/admin/klient/${k2}/boka`, { v: vt2, slot: s2[2].id });
+  koll('ny bokning dras från paketet: 3 kvar', (await adm('GET', `/admin/klient/${k2}`)).paket[0].kvar === 3, JSON.stringify(b3).slice(0, 120));
+  await adm('PUT', `/admin/vecka/${vt2}`, { oppen: false, slots: [], notis: false }).catch(() => {});
+  await adm('DELETE', `/admin/klient/${k2}`);
 
   // städa
   await adm('PUT', `/admin/vecka/${vt}`, { oppen: false, slots: [], notis: false }).catch(() => {});

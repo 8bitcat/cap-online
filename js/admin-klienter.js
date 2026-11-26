@@ -180,7 +180,7 @@ function klientSida() {
   const satt = (b, s, t) => `<button type="button" class="film" data-action="klient-tidpaket" data-v="${b.v}" data-slot="${b.id}" data-satt="${s}">${t}</button>`;
   const knappar = b => k.huvud ? '' : b.paket ? `${satt(b, 'styck', 'Betala styckvis i stället')}${pottOk ? ` ${satt(b, 'pott', 'Ur potten i stället')}` : ''}`
     : b.pott ? satt(b, 'styck', 'Betala styckvis i stället')
-    : `<button type="button" class="film" data-action="klient-betald" data-v="${b.v}" data-slot="${b.id}" ${b.betald ? '' : 'data-betald="1"'}>${b.betald ? 'Ångra betald' : 'Markera betald'}</button>${harPass && !b.betald && !b.swishad ? ` ${satt(b, 'paket', 'Dra från paketet')}` : ''}${pottOk && !b.betald && !b.swishad ? ` ${satt(b, 'pott', 'Dra från potten')}` : ''}`;
+    : `<button type="button" class="film" data-action="klient-betald" data-v="${b.v}" data-slot="${b.id}" ${b.betald ? '' : 'data-betald="1"'}>${b.betald ? 'Ångra betald' : 'Markera betald'}</button>${harPass && !b.betald ? ` ${satt(b, 'paket', 'Dra från paketet')}` : ''}${pottOk && !b.betald ? ` ${satt(b, 'pott', 'Dra från potten')}` : ''}`;
   const tidRad = (b, kan) => `<li class="row bokning"><span class="grow"><b>${DAGL[b.dag]} ${fmtIso(b.datum)}</b> · ${esc(b.start)}–${esc(b.slut)}${b.plats ? ` · ${esc(b.plats)}` : ''}<div class="small muted">v. ${Number(b.v.split('-W')[1])} · bokad av ${b.av === 'haris' ? 'Haris' : 'föräldern'}${b.barnIds?.length > 1 ? ` · ${esc(b.barn)} tillsammans` : ''}</div>
     <div class="betal-rad-admin">${betalStatus(b)} ${knappar(b)}</div></span>${kan ? `<button class="film" data-action="klient-avboka" data-v="${b.v}" data-slot="${b.id}">Avboka</button>` : ''}</li>`;
   return `

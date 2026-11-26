@@ -1749,11 +1749,16 @@ export default {
             pk.antal = antal; pk.tidigare = tidigare;
             const efter = paketSaldo(k, veckor).find(x => x.id === pk.id).kvar;
             logga(k, 'utanfor', `Haris ändrade passen betalda utanför appen: ${antal} från början, ${tidigare} använda`, efter - fore, 'haris');
+            // Khaled 2026-11-26: kommande obetalda bokningar ska in i passen, som för vanliga paket
+            const flyttade = efter > 0 ? await flyttaTillPaket(env, k, pk, veckor) : 0;
+            if (flyttade) logga(k, 'flytt', `${flyttade === 1 ? 'En bokad tid' : `${flyttade} bokade tider`} flyttades in i ${pk.namn}`, -flyttade);
             if (efter > fore) tillKlient(k, 'pass', 'Nya pass', `Haris har lagt in ${efter - fore} pass till åt ${k.barn || 'er'}. Ni har ${paketSaldo(k, veckor).reduce((x, y) => x + y.kvar, 0)} pass kvar.`, '/mina-pass');
           } else {
             pk = { id: nyttId('pk'), namn: 'Betalda utanför appen', antal, tidigare, pris: 0, kopt: nu(), av: 'haris', betald: nu(), swishad: null, utanfor: true };
             k.paket = [...(k.paket || []), pk];
             logga(k, 'in', `Haris lade in ${antal} pass betalda utanför appen${tidigare ? `, ${tidigare} redan använda` : ''}`, antal - tidigare, 'haris');
+            const flyttade = antal > tidigare ? await flyttaTillPaket(env, k, pk, veckor) : 0;
+            if (flyttade) logga(k, 'flytt', `${flyttade === 1 ? 'En bokad tid' : `${flyttade} bokade tider`} flyttades in i ${pk.namn}`, -flyttade);
             if (antal - tidigare > 0) tillKlient(k, 'pass', 'Nya pass', `Haris har lagt in ${antal - tidigare} pass åt ${k.barn || 'er'}. Ni har ${paketSaldo(k, veckor).reduce((x, y) => x + y.kvar, 0)} pass kvar.`, '/mina-pass');
           }
           k.uppdaterad = nu();
