@@ -895,3 +895,19 @@ body.inloggning .login-skarm { min-height: calc(100dvh - 40px); }
 .ovf-pill.bort { color: #f87171; border-color: currentColor; }
 .ovf-pill.osaker { color: #fbbf24; border-color: currentColor; }
 .ovf-knappar { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(transparent, var(--bg) 35%); padding-top: 14px; }
+
+/* Guiden för Haris (Mer → Hur gör jag?, #/admin/guide) */
+.guide-val .list li { padding: 0; }
+.guide-rad { display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: inherit; text-decoration: none; }
+.guide-ikon { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(0, 212, 203, .1); font-size: 18px; }
+.guide-gul { color: #ffd166; font-weight: 600; }
+.guide-steg { list-style: none; margin: 10px 0 18px; padding: 0; display: grid; gap: 30px; counter-reset: gsteg; }
+.guide-steg > li { counter-increment: gsteg; display: grid; gap: 12px; justify-items: center; }
+.guide-text { justify-self: stretch; }
+.guide-text h3 { margin: 0 0 4px; display: flex; gap: 10px; align-items: center; }
+.guide-text h3::before { content: counter(gsteg); flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--brand); color: var(--bg); font-size: 16px; font-weight: 800; }
+.guide-text p { margin: 0; color: var(--muted); }
+.guide-text p b { color: var(--text); }
+.guide-steg img { width: 100%; max-width: 300px; height: auto; border-radius: 22px; border: 5px solid var(--line); }
+.guide-bra { margin: 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); }
+.guide-bra b { color: var(--text); }

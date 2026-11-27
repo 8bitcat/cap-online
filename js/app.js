@@ -137,6 +137,7 @@ const routes = [
   [/^\/admin\/pass\/ny\/([a-z0-9]+)$/, kid => adminPage('pass', 'ny', kid)],
   [/^\/admin\/pass\/([a-z0-9]+)(?:\/(kor))?$/, (id, lage) => adminPage('pass', id, lage)],
   [/^\/admin\/fragor\/([a-z0-9-]+)$/, id => adminPage('fragor', id)],
+  [/^\/admin\/guide(?:\/([a-z]+))?$/, id => adminPage('guide', id)],
   [/^\/admin\/(\w+)$/, flik => adminPage(flik)],
   [/^\/boka$/, () => bokaPage()],
   [/^\/boka\/(\d{4}-W\d{2})$/, v => bokaPage(v)],
@@ -241,7 +242,7 @@ function renderTabs() {
 }
 
 function activeTab(path) {
-  if (path.startsWith('/admin')) { if (/^\/admin\/(klient|pass)/.test(path)) return '/admin/klienter'; const t = TABS.admin.map(x => x[0]).filter(h => path.startsWith(h))[0]; return t || '/admin/klienter'; }
+  if (path.startsWith('/admin')) { if (/^\/admin\/(klient|pass)/.test(path)) return '/admin/klienter'; if (path.startsWith('/admin/guide')) return '/admin/mer'; const t = TABS.admin.map(x => x[0]).filter(h => path.startsWith(h))[0]; return t || '/admin/klienter'; }
   const alias = { '/plan': '/planera', '/modul': '/utbildning', '/nasta-steg': '/bibliotek', '/spelarkort': '/spelarkort', '/passet': '/', '/notiser': '/bibliotek', '/med-haris': '/boka', '/mina-pass': '/boka', '/utveckling': '/' };
   Object.assign(alias, { '/spelarkort': '/mer', '/bibliotek': '/mer', '/foralder': '/mer', '/notiser': '/mer', '/pin': '/mer', '/app': '/mer', '/pass': '/stig', '/passet': '/stig', '/film': '/stig', '/planera': '/stig', '/plan': '/stig' });
   for (const k in alias) if (path.startsWith(k)) return alias[k];

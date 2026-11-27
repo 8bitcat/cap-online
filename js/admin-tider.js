@@ -9,6 +9,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 const DAG = ['', 'Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'];
+const DAGL = ['', 'Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag']; // DAG + 'dag' gav «Tordag»
 const MAN = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
 let st = { nu: null, veckor: [], mandag: {}, vald: null, laddat: false, nyTid: null, bokaFor: null };
@@ -69,7 +70,7 @@ export function tiderView() {
   for (let d = 1; d <= 7; d++) {
     const slots = w.slots.filter(x => x.dag === d);
     if (!slots.length) continue;
-    dagar += `<div class="dag"><div class="dag-rubrik"><b>${DAG[d]}dag</b> <span class="muted small">${fmtDatum(datumFor(v, d))}</span></div>
+    dagar += `<div class="dag"><div class="dag-rubrik"><b>${DAGL[d]}</b> <span class="muted small">${fmtDatum(datumFor(v, d))}</span></div>
       <div class="list">${slots.map(x => `<div class="step slotrad ${x.bokad ? 'bokad' : ''}" data-id="${x.id}" data-dag="${x.dag}">
         <span class="num">${x.bokad ? '●' : '○'}</span>
         <div style="display:grid;gap:6px">
@@ -119,7 +120,7 @@ export function tiderView() {
     ${st.nyTid ? `<form data-form="tid-ny" class="panel brand" style="margin-bottom:14px">
       <h3 style="margin-top:0">Ny tid</h3>
       <div class="auto-rad">
-        <label>Dag <select name="dag">${[1, 2, 3, 4, 5, 6, 7].map(d => `<option value="${d}" ${d === (st.nyTid.dag || 1) ? 'selected' : ''}>${DAG[d]}dag ${fmtDatum(datumFor(v, d))}</option>`).join('')}</select></label>
+        <label>Dag <select name="dag">${[1, 2, 3, 4, 5, 6, 7].map(d => `<option value="${d}" ${d === (st.nyTid.dag || 1) ? 'selected' : ''}>${DAGL[d]} ${fmtDatum(datumFor(v, d))}</option>`).join('')}</select></label>
         <label>Från <input type="time" name="start" value="${esc(st.nyTid.start || '17:00')}" required></label>
         <label>Till <input type="time" name="slut" value="${esc(st.nyTid.slut || '18:00')}" required></label>
       </div>
@@ -153,7 +154,7 @@ function schemaPanel(v, w) {
     <form data-form="tid-auto" class="auto-form schema-form">
       <div class="schema">${[1, 2, 3, 4, 5, 6, 7].map(d => { const r = rad(d); return `<div class="schema-rad ${r.pa ? '' : 'av'}" data-dag="${d}">
         <label class="schema-dag"><input type="checkbox" name="pa${d}" ${r.pa ? 'checked' : ''}><span><b>${DAG[d]}</b> <small class="muted">${fmtDatum(datumFor(v, d))}</small><small class="schema-antal">${r.pa ? passText(antalPass(r.start, r.slut, s.langd || 60)) : 'ledig'}</small></span></label>
-        <input type="time" name="start${d}" value="${esc(r.start)}" aria-label="${DAG[d]}dag från"><span class="muted">–</span><input type="time" name="slut${d}" value="${esc(r.slut)}" aria-label="${DAG[d]}dag till">
+        <input type="time" name="start${d}" value="${esc(r.start)}" aria-label="${DAGL[d]} från"><span class="muted">–</span><input type="time" name="slut${d}" value="${esc(r.slut)}" aria-label="${DAGL[d]} till">
       </div>`; }).join('')}</div>
       <div class="auto-rad">
         <label>Ett pass är <select name="langd">${[30, 45, 60, 75, 90, 120].map(m => `<option value="${m}" ${m === (s.langd || 60) ? 'selected' : ''}>${m} min</option>`).join('')}</select></label>
@@ -285,7 +286,7 @@ export async function tiderSubmit(kind, f, fd) {
     const krock = w.slots.find(x => x.dag === ny.dag && min(ny.start) < min(x.slut) && min(ny.slut) > min(x.start));
     if (krock) { toast(`Krockar med ${krock.start}–${krock.slut} samma dag`); return true; }
     const r = await sparaVecka([...lasSlots(), ny], w.oppen);
-    if (r.ok) { st.nyTid = null; toast(`Tillagd: ${DAG[ny.dag]}dag ${ny.start}–${ny.slut}${stangdText()}`); } else toast(`Gick inte: ${r.fel}`);
+    if (r.ok) { st.nyTid = null; toast(`Tillagd: ${DAGL[ny.dag]} ${ny.start}–${ny.slut}${stangdText()}`); } else toast(`Gick inte: ${r.fel}`);
     route(); return true;
   }
   if (kind !== 'tid-auto') return false;
@@ -294,7 +295,7 @@ export async function tiderSubmit(kind, f, fd) {
   const pa = schema.filter(x => x.pa);
   if (!pa.length && !ersatt) { toast('Bocka i minst en dag'); return true; }
   const fel = pa.find(x => !x.start || !x.slut || antalPass(x.start, x.slut, langd) < 1);
-  if (fel) { toast(`${DAG[fel.dag]}dag: sluttiden måste vara minst ${langd} min efter starten`); return true; }
+  if (fel) { toast(`${DAGL[fel.dag]}: sluttiden måste vara minst ${langd} min efter starten`); return true; }
   // att ersätta lediga tider i en vecka kräver ett andra tryck, så att inget försvinner av misstag
   const lediga = vecka().slots.filter(x => !x.bokad).length;
   const knapp = f.querySelector('button[type=submit]');

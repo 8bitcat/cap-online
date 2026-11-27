@@ -60,6 +60,8 @@ def build(out, pages=False, stamp=None):
         shutil.copy(ROOT / "assets" / name, out / "assets" / name)
     for p in (ROOT / "assets" / "posters").glob("*.jpg"):
         shutil.copy(p, out / "assets" / "posters" / p.name)
+    # guiden för Haris (Mer → Hur gör jag?)
+    shutil.copytree(ROOT / "assets" / "guide", out / "assets" / "guide")
     (out / "media").mkdir()
     for p in (ROOT / "media" / "small").glob("*.mp4"):
         shutil.copy(p, out / "media" / p.name)

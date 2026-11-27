@@ -13,6 +13,7 @@ import { filmbankInit, filmbankView, filmbankAction, filmbankAfterRender, filmba
 import { kopplaJamfor } from './passfilm.js';
 import { ovfInit, ovfView, ovfAction, ovfAfterRender } from './admin-ovfragor.js';
 import { lugnt } from './lugnt.js';
+import { guidePanel, guideView } from './admin-guide.js';
 import { sattR2 } from './media.js';
 import { pushAdminAv, pushSatt, notisStod } from './notiser.js';
 
@@ -80,10 +81,11 @@ export function adminPage(flik = 'klienter', id, lage) {
   <p class="small muted" style="text-align:center"><a href="#/login">‹ Till appen</a></p>`;
 
   if (flik === 'klient') flik = 'klienter';
-  if (!FLIKAR.some(([k]) => k === flik) && flik !== 'pass' && flik !== 'fragor') flik = 'klienter';
+  if (!FLIKAR.some(([k]) => k === flik) && flik !== 'pass' && flik !== 'fragor' && flik !== 'guide') flik = 'klienter';
   state.flik = flik;
   const rubrik = { idag: 'Dagens pass', filmbank: 'Filmbanken', klienter: 'Klienter', tider: 'Tider att boka', ovningar: 'Övningsbanken', pass: 'Alla pass', filmer: 'Filmer', stigen: 'Träna själv-stigen', mer: 'Mer' }[flik];
   if (flik === 'fragor') return ovfView(id); // egen rubrik och flikar
+  if (flik === 'guide') return guideView(id); // guiden, nås överst under Mer
   const inre = flik === 'idag' ? idagView()
     : flik === 'filmbank' ? filmbankView()
     : flik === 'klienter' ? klienterView(id, lage)
@@ -105,6 +107,7 @@ function merFlik() {
   // dagens sms-räknare ändras hela tiden; hämta om när fliken visas
   if (Date.now() - (state.hamtat || 0) > 4000 && !state.hamtar) { state.hamtar = true; adminLadda().finally(() => { state.hamtar = false; if (location.hash === '#/admin/mer') ui.route(); }); }
   return `
+  ${guidePanel()}
   <section class="cards">
     <a class="card" href="#/admin/pass"><div class="card-body"><div class="eyebrow">Pass</div><h3>Alla pass</h3><p class="desc">Passen för alla klienter i en lista. Nya pass planeras från klientens sida.</p></div></a>
   </section>
