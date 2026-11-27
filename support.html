@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hjälp · CAP</title>
+<meta name="theme-color" content="#000912">
+<link rel="icon" href="assets/cap-ball-270.png">
+<style>
+  :root { color-scheme: dark; --bg: #000912; --kort: #0b1420; --linje: #243040; --text: #fdfdfd; --mjuk: #9aa5b1; --teal: #00d4cb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  .tillbaka { display: inline-block; margin: 0 0 14px; color: var(--teal); text-decoration: none; font-weight: 700; font-size: 15px; }
+  .eb { font-size: 12px; font-weight: 800; letter-spacing: .2em; color: var(--teal); }
+  h1 { font-size: 30px; line-height: 1.2; margin: 6px 0 8px; }
+  .ingress { color: var(--mjuk); margin: 0 0 20px; }
+  details { background: var(--kort); border: 1px solid var(--linje); border-radius: 12px; margin: 10px 0; }
+  summary { cursor: pointer; padding: 14px 16px; font-weight: 700; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; float: right; color: var(--teal); font-weight: 800; }
+  details[open] summary::after { content: "–"; }
+  details > div { padding: 0 16px 14px; }
+  p, li { color: #d7dde3; margin: 6px 0; }
+  ol, ul { padding-left: 20px; margin: 6px 0; }
+  a { color: var(--teal); }
+  .kontakt { background: linear-gradient(90deg, rgba(10,158,154,.18), rgba(0,240,255,.08)); border: 1px solid #0a9e9a; border-radius: 12px; padding: 16px; margin-top: 28px; }
+  .kontakt p { margin: 4px 0; }
+  .en { margin-top: 28px; border-top: 1px solid var(--linje); padding-top: 8px; }
+  .en h2 { font-size: 20px; margin: 12px 0 6px; }
+  footer { margin-top: 40px; color: var(--mjuk); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="tillbaka" href="./#/mer">‹ Tillbaka till appen</a>
+  <div class="eb">CAP</div>
+  <h1>Hjälp</h1>
+  <p class="ingress">CAP är appen för familjerna som tränar med Haris på Complete Athletic Performance.
+  Här hittar ni svar på det vanligaste.</p>
+
+  <details open>
+    <summary>Logga in</summary>
+    <div>
+      <p>Haris lägger in er med förälderns mobilnummer och skickar ett sms med en kod. Mobilnumret är ert användarnamn.</p>
+      <ol>
+        <li>Hämta CAP och öppna appen.</li>
+        <li>Skriv ditt mobilnummer, och koden från sms:et som lösenord. Tryck <b>Logga in</b>.</li>
+        <li>Välj ett eget lösenord. Sedan loggar du in med mobilnumret och lösenordet.</li>
+      </ol>
+      <p>Har du glömt lösenordet? Tryck <b>Glömt lösenordet?</b> på inloggningssidan. Haris skickar då en ny kod, och du väljer ett nytt lösenord.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Boka en tid</summary>
+    <div>
+      <p>Haris öppnar nya tider vecka för vecka. Tryck <b>Boka</b>, välj en ledig tid och bekräfta. Platsen hålls åt er i
+      60 sekunder medan ni bekräftar. Har ni pass, ett paket eller en pott hos Haris väljer ni om passet ska dras därifrån
+      eller betalas med Swish.</p>
+      <p>Behöver ni avboka? Öppna tiden under era bokningar och tryck <b>Avboka</b>. Ett pass från paketet eller potten
+      kommer då tillbaka.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Betala med Swish</summary>
+    <div>
+      <p>Efter bokningen trycker ni <b>Betala med Swish</b>. Swish öppnas med Haris nummer, beloppet och ett meddelande ifyllt.
+      Godkänn i Swish och tryck sedan <b>Jag har swishat</b> i CAP. Haris bockar av betalningen när han sett den.</p>
+      <p>CAP ser aldrig era kort- eller bankuppgifter.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Pass, paket och pott</summary>
+    <div>
+      <p>Under <b>Mer → Mina pass</b> ser ni hur många pass eller hur mycket pengar som finns kvar, och en historik över allt som
+      lagts in, dragits och lämnats tillbaka.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Notiser</summary>
+    <div>
+      <p>Tillåt notiser när appen frågar, så får ni veta när Haris öppnar nya tider eller har bokat något åt er.
+      Sa ni nej först? Öppna <b>Inställningar → Notiser → CAP</b> på iPhone och slå på <b>Tillåt notiser</b>.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Radera kontot</summary>
+    <div>
+      <p>Gå till <b>Mer → Radera mitt konto</b> i appen. Era uppgifter och barnets uppgifter tas då bort.
+      Läs mer i <a href="integritet.html">integritetspolicyn</a>.</p>
+    </div>
+  </details>
+
+  <div class="kontakt">
+    <p><b>Kontakt</b></p>
+    <p>Complete Athletic Performance, Haris Skenderovic</p>
+    <p>Frågor om appen, inloggningen eller era uppgifter? Mejla <a href="mailto:hello@8bitcat.io"><b>hello@8bitcat.io</b></a>, så svarar vi så snart vi kan.
+    Frågor om träningen och tiderna tar ni direkt med Haris, med sms eller på träningen.</p>
+  </div>
+
+  <section class="en" lang="en">
+    <h2>In English</h2>
+    <p>CAP is the app for the families who train football (soccer) with coach Haris Skenderovic at Complete Athletic Performance in Sweden.
+    Haris adds each family with the parent's mobile number and sends a text message with a one-time code. Sign in with the mobile number and
+    the code, then choose your own password. In the app you book sessions, pay with Swish, see remaining sessions and balance, follow your
+    child's progress and train at home with Haris' videos. Forgot your password? Tap <b>Glömt lösenordet?</b> on the sign-in screen and Haris
+    sends a new code. To delete your account: <b>Mer → Radera mitt konto</b>.</p>
+    <p>Questions about the app or your data? E-mail <a href="mailto:hello@8bitcat.io">hello@8bitcat.io</a>.
+    See the <a href="integritet.html">privacy policy</a> (in Swedish).</p>
+  </section>
+
+  <footer><a href="integritet.html">Integritetspolicy</a> · CAP görs av 8bitcat (Carl Pålsson) åt Complete Athletic Performance</footer>
+</main>
+</body>
+</html>
